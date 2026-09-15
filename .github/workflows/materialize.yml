@@ -12,29 +12,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Check import payload
+      - name: Check source payload
         id: check
         shell: bash
         run: |
-          if compgen -G '.gmp-import/chunk-*' > /dev/null; then
-            echo "has_import=true" >> "$GITHUB_OUTPUT"
+          if test -f .gmp-import/READY; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
           else
-            echo "has_import=false" >> "$GITHUB_OUTPUT"
+            echo "ready=false" >> "$GITHUB_OUTPUT"
           fi
-      - name: Rebuild source tree
-        if: steps.check.outputs.has_import == 'true'
+      - name: Materialize source
+        if: steps.check.outputs.ready == 'true'
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p /tmp/gmp-import
-          cat .gmp-import/chunk-* | base64 -d > /tmp/gmp-import/project.zip
-          rm -rf /tmp/gmp-import/project
-          unzip -q /tmp/gmp-import/project.zip -d /tmp/gmp-import/project
-          cp -a /tmp/gmp-import/project/global-market-platform/. .
+          mkdir -p /tmp/gmp
+          cat .gmp-import/tar-*.txt | tr -d '\n\r' | base64 -d > /tmp/gmp/project.tar.gz
+          tar -xzf /tmp/gmp/project.tar.gz -C .
           rm -rf .gmp-import
           rm -f index.html
       - name: Commit materialized source
-        if: steps.check.outputs.has_import == 'true'
+        if: steps.check.outputs.ready == 'true'
         shell: bash
         run: |
           set -euo pipefail
