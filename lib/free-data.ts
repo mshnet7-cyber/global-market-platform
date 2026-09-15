@@ -109,20 +109,14 @@ export async function getFreeMetal(currency: string, symbol: 'XAU' | 'XAG', meta
     if (backup && isFresh(backup.timestamp)) {
       quote = backup;
       provider = 'Current.Gold';
-    } else if (!quote && backup) {
-      quote = backup;
-      provider = 'Current.Gold';
+    } else {
+      quote = null;
     }
   }
 
-  if (!quote) return null;
-  const timestamp = quote.timestamp;
-  const age = timestamp ? Date.now() - Date.parse(timestamp) : Infinity;
-  const status = Number.isFinite(age) && age >= -60_000 && age <= LIVE_METAL_MAX_AGE_MS
-    ? 'LIVE'
-    : Number.isFinite(age) && age <= MAX_NEWS_AGE_MS
-      ? 'DELAYED'
-      : 'STALE';
+  if (!quote || !isFresh(quote.timestamp)) return null;
+  const age = Date.now() - Date.parse(quote.timestamp!);
+  const status = age >= -60_000 && age <= LIVE_METAL_MAX_AGE_MS ? 'LIVE' : 'DELAYED';
   return makeMetalSnapshot({
     instrument: `${symbol}/USD`,
     metal,
@@ -132,7 +126,7 @@ export async function getFreeMetal(currency: string, symbol: 'XAU' | 'XAG', meta
     localPerUsd,
     currency,
     provider: `${provider} + Frankfurter`,
-    timestamp,
+    timestamp: quote.timestamp,
     status,
   });
 }
