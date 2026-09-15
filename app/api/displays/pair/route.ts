@@ -44,12 +44,11 @@ export async function POST(request: Request) {
   }
   if (!/^\d{6}$/.test(code)) return NextResponse.json({ ok: false, error: "invalid_code" }, { status: 400, headers: noStore });
 
-  const now = new Date();
   const { data: pairing } = await admin.from("gmp_screen_pairing_codes")
-    .select("id,screen_id")
+    .select("screen_id")
     .eq("code_hash", hash(code))
     .is("consumed_at", null)
-    .gt("expires_at", now.toISOString())
+    .gt("expires_at", new Date().toISOString())
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -68,31 +67,22 @@ export async function POST(request: Request) {
     .maybeSingle();
   if (!subscriptionIsUsable(subscription)) return NextResponse.json({ ok: false, error: "subscription_required" }, { status: 402, headers: noStore });
 
-  const sessionToken = crypto.randomBytes(32).toString("hex");
+  const now = new Date();
   const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
-  const { data: session, error: sessionError } = await admin.from("gmp_screen_sessions")
-    .insert({ screen_id: pairing.screen_id, session_hash: hash(sessionToken), expires_at: expiresAt })
-    .select("id")
-    .single();
-  if (sessionError || !session) return NextResponse.json({ ok: false, error: "session_failed" }, { status: 500, headers: noStore });
+  const sessionToken = crypto.randomBytes(32).toString("hex");
+  const { data: consumed, error } = await admin.rpc("gmp_consume_pairing_code", {
+    p_code_hash: hash(code),
+    p_session_hash: hash(sessionToken),
+    p_session_expires_at: expiresAt,
+    p_now: now.toISOString(),
+  });
 
-  const { data: consumed } = await admin.from("gmp_screen_pairing_codes")
-    .update({ consumed_at: now.toISOString() })
-    .eq("id", pairing.id)
-    .is("consumed_at", null)
-    .select("id")
-    .maybeSingle();
-  if (!consumed) {
-    await admin.from("gmp_screen_sessions").delete().eq("id", session.id);
-    return NextResponse.json({ ok: false, error: "code_already_used" }, { status: 409, headers: noStore });
+  if (error || !consumed?.ok) {
+    const message = String(error?.message ?? "");
+    if (message.includes("invalid_or_expired")) return NextResponse.json({ ok: false, error: "code_already_used" }, { status: 409, headers: noStore });
+    return NextResponse.json({ ok: false, error: "pairing_failed" }, { status: 500, headers: noStore });
   }
 
-  const { error: screenError } = await admin.from("gmp_screens").update({ status: "connected", last_seen_at: now.toISOString(), updated_at: now.toISOString() }).eq("id", pairing.screen_id);
-  if (screenError) {
-    await admin.from("gmp_screen_sessions").delete().eq("id", session.id);
-    return NextResponse.json({ ok: false, error: "screen_update_failed" }, { status: 500, headers: noStore });
-  }
-
-  if (contentType.includes("application/json")) return NextResponse.json({ ok: true, screen_id: pairing.screen_id, session: sessionToken, expires_at: expiresAt }, { headers: noStore });
-  return NextResponse.redirect(new URL(`/display?paired=1&screen=${pairing.screen_id}`, request.url));
+  if (contentType.includes("application/json")) return NextResponse.json({ ok: true, screen_id: consumed.screen_id, session: sessionToken, expires_at: expiresAt }, { headers: noStore });
+  return NextResponse.redirect(new URL(`/display?paired=1&screen=${consumed.screen_id}`, request.url));
 }
