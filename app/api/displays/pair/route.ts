@@ -21,6 +21,12 @@ function allowAttempt(key: string) {
   return true;
 }
 
+function subscriptionIsUsable(subscription: { status: string; current_period_end: string | null } | null) {
+  if (!subscription || !["active", "grace_period"].includes(subscription.status)) return false;
+  if (!subscription.current_period_end) return true;
+  return new Date(subscription.current_period_end).getTime() > Date.now();
+}
+
 export async function POST(request: Request) {
   const admin = createSupabaseAdminClient();
   const noStore = { "cache-control": "no-store" };
@@ -53,8 +59,14 @@ export async function POST(request: Request) {
   if (!screen) return NextResponse.json({ ok: false, error: "screen_not_found" }, { status: 404, headers: noStore });
   const { data: store } = await admin.from("gmp_stores").select("organization_id").eq("id", screen.store_id).maybeSingle();
   if (!store) return NextResponse.json({ ok: false, error: "store_not_found" }, { status: 404, headers: noStore });
-  const { data: subscription } = await admin.from("gmp_subscriptions").select("status").eq("organization_id", store.organization_id).maybeSingle();
-  if (!subscription || !["active", "grace_period"].includes(subscription.status)) return NextResponse.json({ ok: false, error: "subscription_required" }, { status: 402, headers: noStore });
+  const { data: subscription } = await admin
+    .from("gmp_subscriptions")
+    .select("status,current_period_end")
+    .eq("organization_id", store.organization_id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!subscriptionIsUsable(subscription)) return NextResponse.json({ ok: false, error: "subscription_required" }, { status: 402, headers: noStore });
 
   const sessionToken = crypto.randomBytes(32).toString("hex");
   const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
