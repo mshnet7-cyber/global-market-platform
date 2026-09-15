@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -7,9 +8,16 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+const RTL_LANGUAGES = new Set(["ar", "fa", "he", "ur"]);
+
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const headerStore = await headers();
+  const rawLanguage = headerStore.get("x-gmp-language")?.toLowerCase() ?? "en";
+  const language = /^[a-z]{2,3}$/.test(rawLanguage) ? rawLanguage : "en";
+  const dir = RTL_LANGUAGES.has(language) ? "rtl" : "ltr";
+
   return (
-    <html lang="en" dir="ltr">
+    <html lang={language} dir={dir}>
       <body>{children}</body>
     </html>
   );
