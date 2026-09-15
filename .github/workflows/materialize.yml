@@ -9,11 +9,20 @@ permissions:
 
 jobs:
   materialize:
-    if: ${{ hashFiles('.gmp-import/chunk-*') != '' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Check import payload
+        id: check
+        shell: bash
+        run: |
+          if compgen -G '.gmp-import/chunk-*' > /dev/null; then
+            echo "has_import=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_import=false" >> "$GITHUB_OUTPUT"
+          fi
       - name: Rebuild source tree
+        if: steps.check.outputs.has_import == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -25,6 +34,7 @@ jobs:
           rm -rf .gmp-import
           rm -f index.html
       - name: Commit materialized source
+        if: steps.check.outputs.has_import == 'true'
         shell: bash
         run: |
           set -euo pipefail
