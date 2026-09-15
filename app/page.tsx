@@ -1,51 +1,24 @@
 import Link from "next/link";
+import { getSnapshot } from "../lib/providers";
+import { countries, languages } from "../lib/config";
 
-const metals = [
-  ["24K", 43.21],
-  ["22K", 39.61],
-  ["21K", 37.81],
-  ["18K", 32.41],
-];
-
-export default function Home() {
-  return (
+export default async function Home({ searchParams }: { searchParams?: Promise<{ country?: string; language?: string }> }) {
+  const params = await searchParams;
+  const country = countries.find(c => c.code === params?.country) ?? countries[0];
+  const language = languages.some(l => l.code === params?.language) ? params?.language! : 'ar';
+  const snapshot = await getSnapshot(country.currency, language, false);
+  const gold = snapshot.gold;
+  return <div className="app-shell">
+    <header className="topbar"><div className="container nav"><Link href="/" className="brand">GLOBAL <span>MARKET</span></Link><nav className="nav-links"><Link href="/gold">Gold</Link><Link href="/silver">Silver</Link><Link href="/markets">Markets</Link><Link href="/stocks">Stocks</Link><Link href="/news">News</Link></nav><div className="nav-actions"><Link className="btn btn-ghost" href="/login">تسجيل الدخول</Link><Link className="btn btn-primary" href="/demo">أنشئ شاشة</Link></div></div></header>
     <main>
-      <header className="topbar">
-        <div className="nav wrap">
-          <Link href="/" className="brand">GLOBAL <span>MARKET</span></Link>
-          <nav className="links"><Link href="/gold">Gold</Link><Link href="/silver">Silver</Link><Link href="/markets">Markets</Link><Link href="/stocks">Stocks</Link><Link href="/news">News</Link></nav>
-          <div className="actions"><Link href="/login" className="btn ghost">تسجيل الدخول</Link><Link href="/demo" className="btn primary">أنشئ شاشة</Link></div>
-        </div>
-      </header>
-
-      <section className="hero wrap">
-        <div className="hero-copy">
-          <div className="eyebrow">GLOBAL MARKET REFERENCE</div>
-          <h1>أسعار وأسواق العالم، في منصة واحدة.</h1>
-          <p>ذهب وفضة وأسواق وأسهم وأخبار مالية، مع العملة المحلية وحالة البيانات بوضوح.</p>
-          <div className="actions"><Link href="/gold" className="btn primary">شاهد الذهب</Link><Link href="/demo" className="btn ghost">جرّب شاشة المحل</Link></div>
-        </div>
-        <div className="gold-card">
-          <div className="card-top"><div><span className="muted">الذهب · مرجع عالمي</span><strong>24K / Gram</strong></div><span className="status">DEMO</span></div>
-          <div className="price">43.210 <small>OMR</small></div>
-          <div className="subline">بيانات العرض التجريبي — لا تمثل سعرًا حيًا</div>
-          <div className="mini-grid"><div><span>Spot</span><b>$4,020.00</b></div><div><span>Bid</span><b>—</b></div><div><span>Ask</span><b>—</b></div></div>
-        </div>
-      </section>
-
-      <section className="wrap section">
-        <div className="section-head"><div><div className="eyebrow">GOLD</div><h2>درجات الذهب</h2></div><Link href="/gold" className="text-link">التفاصيل</Link></div>
-        <div className="grid four">{metals.map(([k, v]) => <div className="card" key={k}><span className="muted">{k}</span><strong className="metric">{v.toFixed(3)} OMR</strong><span className="muted">لكل غرام · تجريبي</span></div>)}</div>
-      </section>
-
-      <section className="wrap section two-col">
-        <div className="card"><div className="eyebrow">MARKETS</div><h2>الأسواق الرئيسية</h2><div className="notice">البيانات الحية للسوق ستُفعّل فقط عند وجود مصدر يسمح بالعرض الخارجي التجاري.</div></div>
-        <div className="card"><div className="eyebrow">NEWS</div><h2>أهم الأخبار</h2><div className="notice">محرك الأخبار يدعم مصادر متعددة، إزالة التكرار، التحقق من الحداثة، وأولوية الدولة واللغة.</div></div>
-      </section>
-
-      <section className="wrap section"><div className="card display-promo"><div><div className="eyebrow">DIGITAL DISPLAY</div><h2>شاشة أسعار احترافية لمحلات الذهب</h2><p>تشغيل على التلفاز أو الكمبيوتر أو الجهاز اللوحي، مع ربط آمن وإمكانية إدارة عدة شاشات.</p></div><Link href="/demo" className="btn primary">ابدأ بالمعاينة</Link></div></section>
-
-      <footer className="footer"><div className="wrap">المعلومات مرجعية وليست خدمة وساطة أو استشارة استثمارية. العلامة التجارية والدومين التجاري لم يُحسما بعد.</div></footer>
-    </main>
-  );
+      <div className="container section"><form className="preference-bar" method="get"><label className="label">الدولة<select className="select" name="country" defaultValue={country.code}>{countries.map(c => <option value={c.code} key={c.code}>{c.name} · {c.currency}</option>)}</select></label><label className="label">Language<select className="select" name="language" defaultValue={language}>{languages.map(l => <option value={l.code} key={l.code}>{l.name}</option>)}</select></label><button className="btn">تطبيق</button></form></div>
+      <div className="container hero"><section><div className="kicker">GLOBAL MARKET REFERENCE</div><h1>أسعار وأسواق العالم، في منصة واحدة.</h1><p className="lede">ذهب وفضة وأسواق وأسهم وأخبار مالية، مع عملة الدولة ولغة المستخدم، وبنية متعددة المصادر مع تحقق وحالة بيانات واضحة.</p><div className="nav-actions" style={{marginTop:24}}><Link href={`/gold?country=${country.code}&language=${language}`} className="btn btn-primary">شاهد الذهب</Link><Link href="/demo" className="btn">جرّب شاشة المحل</Link></div></section>
+        <section className="hero-card"><div className="row"><div><div className="card-title">الذهب — {country.name}</div><div className="metric">24K / Gram</div></div><span className={`pill ${gold.status === 'LIVE' ? 'pill-live' : ''}`}>{gold.status}</span></div><div className="price-xl">{gold.purities['24K'] == null ? '—' : `${gold.purities['24K']?.toFixed(3)} ${country.currency}`}</div><div className="meta">{gold.status === 'LIVE' ? `مصدر: ${gold.provider}` : 'لا توجد بيانات حية مفعلة حاليًا'}</div><div className="kv-grid"><div className="kv"><span className="meta">Bid</span><strong>{gold.bid == null ? '—' : `${gold.bid.toFixed(2)} ${country.currency}`}</strong></div><div className="kv"><span className="meta">Ask</span><strong>{gold.ask == null ? '—' : `${gold.ask.toFixed(2)} ${country.currency}`}</strong></div></div></section>
+      </div>
+      <div className="container section"><div className="section-head"><div><div className="kicker">MARKETS</div><h2>الأسواق الرئيسية</h2></div><Link href="/markets" className="btn">كل الأسواق</Link></div><div className="grid grid-4">{snapshot.markets.length ? snapshot.markets.map(q => <div className="card" key={q.instrument}><div className="card-title">{q.instrument}</div><div className="metric">{q.spot?.toLocaleString()}</div><div className="meta">{q.status} · {q.currency}</div></div>) : <div className="notice" style={{gridColumn:'1/-1'}}>بيانات المؤشرات الحية غير مفعلة حاليًا. لن تعرض المنصة أرقامًا تجريبية على أنها سوق حقيقي.</div>}</div></div>
+      <div className="container section"><div className="section-head"><div><div className="kicker">POPULAR STOCKS</div><h2>الأسهم الرئيسية</h2></div><Link href="/stocks" className="btn">بحث الأسهم</Link></div><div className="grid grid-4">{snapshot.stocks.length ? snapshot.stocks.map(q => <div className="card" key={q.instrument}><div className="card-title">{q.instrument}</div><div className="metric">${q.spot?.toFixed(2)}</div><div className="meta">{q.status}</div></div>) : <div className="notice" style={{gridColumn:'1/-1'}}>مصدر الأسهم التجاري/المسموح للعرض الخارجي غير مفعّل حاليًا.</div>}</div></div>
+      <div id="news" className="container section"><div className="section-head"><div><div className="kicker">TRUSTED NEWS ENGINE</div><h2>أهم الأخبار</h2></div></div><div className="card">{snapshot.news.length ? snapshot.news.map(n => <article className="news-item" key={n.id}><div style={{flex:1}}><div className="row"><div className="news-title">{n.title}</div><span className={`pill ${n.status === 'LIVE' ? 'pill-live' : ''}`}>{n.status}</span></div><div className="news-meta">{n.source} · {n.category} · {n.language}</div></div></article>) : <div className="notice">لم يتم تفعيل مصدر أخبار خارجي في هذه البيئة.</div>}</div></div>
+      <div className="container section"><div className="card notice"><strong>Free-first:</strong> لا يوجد أي مسار يقوم بالترقية إلى خدمة مدفوعة تلقائيًا. عند نفاد المصدر أو فشله، يستخدم النظام بديلًا أو Cache أو يعرض عدم التوفر.</div></div>
+    </main><footer className="footer"><div className="container"><div>الدول في V1: {countries.map(c => c.name).join(' · ')}</div><div style={{marginTop:8}}>المعلومات مرجعية وليست خدمة وساطة أو استشارة استثمارية.</div></div></footer>
+  </div>;
 }
