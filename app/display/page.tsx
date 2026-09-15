@@ -1,25 +1,55 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import DisplayManager, { type DisplayItem } from "./DisplayManager";
+import { createSupabaseServerClient } from "../../lib/supabase/server";
 
-const states = [
-  ["غير مقترنة", "الجهاز لم يتم ربطه"],
-  ["Pairing", "رمز اقتران مؤقت من 6 أرقام"],
-  ["Connected", "جلسة جهاز آمنة وقابلة للإلغاء"],
-  ["Offline", "يعرض آخر Snapshot صالح مع وقت التحديث"],
-  ["Revoked", "تم إلغاء جلسة الجهاز"],
-];
+export default async function DisplayPage() {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) redirect("/login?next=/display");
 
-export default function DisplayPage() {
-  return <main className="wrap section">
-    <div className="eyebrow">DIGITAL DISPLAYS</div>
-    <h1>إدارة الشاشات</h1>
-    <p className="hero-copy">لا تُخزّن كلمة مرور على شاشة المحل. الاقتران يعتمد رمزًا مؤقتًا، والجلسة قابلة للإلغاء عن بُعد.</p>
-    <div className="grid four">
-      {states.map(([title, text]) => <section className="card" key={title}><strong>{title}</strong><div className="notice">{text}</div></section>)}
-    </div>
-    <div className="card" style={{marginTop:20}}>
-      <h2>شاشة تجريبية</h2>
-      <p className="hero-copy">القوالب المعتمدة: Classic وModern وPremium. العرض الحقيقي يستخدم Snapshot ثم Broadcast، مع polling وcache كخطة احتياطية.</p>
-      <div className="actions"><Link href="/demo" className="btn primary">فتح المعاينة</Link><Link href="/connect" className="btn ghost">اقتران شاشة</Link></div>
-    </div>
-  </main>;
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login?next=/display");
+
+  const { data: org } = await supabase
+    .from("gmp_organizations")
+    .select("id,name")
+    .eq("owner_id", user.id)
+    .maybeSingle();
+
+  const { data: stores } = org
+    ? await supabase.from("gmp_stores").select("id,name").eq("organization_id", org.id).order("created_at")
+    : { data: [] };
+
+  const storeIds = (stores ?? []).map((store) => store.id);
+  const { data: screens } = storeIds.length
+    ? await supabase.from("gmp_screens").select("id,store_id,name,status,template").in("store_id", storeIds).order("created_at")
+    : { data: [] };
+
+  const storeMap = new Map((stores ?? []).map((store) => [store.id, store.name]));
+  const displays: DisplayItem[] = (screens ?? []).map((screen) => ({
+    id: screen.id,
+    name: screen.name,
+    status: screen.status,
+    template: screen.template,
+    storeName: storeMap.get(screen.store_id) ?? "Store",
+  }));
+
+  return (
+    <main className="wrap section">
+      <div className="eyebrow">DIGITAL DISPLAYS</div>
+      <h1>إدارة الشاشات</h1>
+      <p className="hero-copy">أنشئ رمز اقتران مؤقتًا من 6 أرقام. أدخله على جهاز العرض فقط؛ لا تُحفظ كلمة مرور الحساب على الشاشة.</p>
+
+      <DisplayManager displays={displays} />
+
+      <section className="card" style={{ marginTop: 20 }}>
+        <h2>حالة النظام</h2>
+        <p className="hero-copy">غير مقترنة · بانتظار الاقتران · متصلة · غير متصلة · ملغاة · منتهية. عند انقطاع الاتصال تعرض الشاشة آخر Snapshot صالح مع وقت التحديث، ولا تسميه LIVE.</p>
+        <div className="actions">
+          <Link href="/demo" className="btn primary">فتح المعاينة</Link>
+          <Link href="/dashboard" className="btn ghost">العودة إلى لوحة التحكم</Link>
+        </div>
+      </section>
+    </main>
+  );
 }
