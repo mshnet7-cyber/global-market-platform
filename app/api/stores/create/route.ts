@@ -19,6 +19,12 @@ function validTimezone(value: string) {
   try { new Intl.DateTimeFormat("en", { timeZone: value }).format(); return true; } catch { return false; }
 }
 
+function subscriptionIsUsable(subscription: { status?: string | null; current_period_end?: string | null } | null) {
+  if (!subscription || !["active", "grace_period"].includes(subscription.status ?? "")) return false;
+  if (!subscription.current_period_end) return true;
+  return new Date(subscription.current_period_end).getTime() > Date.now();
+}
+
 export async function POST(request: Request) {
   const supabase = await createSupabaseServerClient();
   const admin = createSupabaseAdminClient();
@@ -39,11 +45,12 @@ export async function POST(request: Request) {
 
   const { count: storeCount } = await admin.from("gmp_stores").select("id", { count: "exact", head: true }).eq("organization_id", org.id);
   const currentCount = storeCount ?? 0;
-  const { data: subscription } = await admin.from("gmp_subscriptions").select("status,plan_id").eq("organization_id", org.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
-  if (currentCount > 0 && (!subscription || !["active", "grace_period"].includes(subscription.status))) {
+  const { data: subscription } = await admin.from("gmp_subscriptions").select("status,plan_id,current_period_end").eq("organization_id", org.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
+  const subscriptionUsable = subscriptionIsUsable(subscription);
+  if (currentCount > 0 && !subscriptionUsable) {
     return NextResponse.redirect(new URL("/dashboard?error=subscription_required", request.url));
   }
-  if (subscription && ["active", "grace_period"].includes(subscription.status)) {
+  if (subscriptionUsable && subscription) {
     const { data: entitlement } = await admin.from("gmp_plan_entitlements").select("max_stores").eq("plan_id", subscription.plan_id).maybeSingle();
     if (entitlement?.max_stores != null && currentCount >= entitlement.max_stores) return NextResponse.redirect(new URL("/dashboard?error=store_limit", request.url));
   }
