@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { getSnapshot } from "../lib/providers";
-import { countries, languages } from "../lib/config";
+import { appConfig, countries, languages } from "../lib/config";
 
 export default async function Home({ searchParams }: { searchParams?: Promise<{ country?: string; language?: string }> }) {
   const params = await searchParams;
-  const country = countries.find(c => c.code === params?.country) ?? countries[0];
-  const language = languages.some(l => l.code === params?.language) ? params?.language! : 'ar';
+  const country = countries.find(c => c.code === params?.country) ?? countries.find(c => c.code === appConfig.defaultCountry) ?? countries[0];
+  const language = languages.some(l => l.code === params?.language) ? params?.language! : appConfig.defaultLanguage;
   const snapshot = await getSnapshot(country.currency, language, false);
   const gold = snapshot.gold;
   return <div className="app-shell">
@@ -19,6 +19,6 @@ export default async function Home({ searchParams }: { searchParams?: Promise<{ 
       <div className="container section"><div className="section-head"><div><div className="kicker">POPULAR STOCKS</div><h2>الأسهم الرئيسية</h2></div><Link href="/stocks" className="btn">بحث الأسهم</Link></div><div className="grid grid-4">{snapshot.stocks.length ? snapshot.stocks.map(q => <div className="card" key={q.instrument}><div className="card-title">{q.instrument}</div><div className="metric">${q.spot?.toFixed(2)}</div><div className="meta">{q.status}</div></div>) : <div className="notice" style={{gridColumn:'1/-1'}}>مصدر الأسهم التجاري/المسموح للعرض الخارجي غير مفعّل حاليًا.</div>}</div></div>
       <div id="news" className="container section"><div className="section-head"><div><div className="kicker">TRUSTED NEWS ENGINE</div><h2>أهم الأخبار</h2></div></div><div className="card">{snapshot.news.length ? snapshot.news.map(n => <article className="news-item" key={n.id}><div style={{flex:1}}><div className="row"><div className="news-title">{n.title}</div><span className={`pill ${n.status === 'LIVE' ? 'pill-live' : ''}`}>{n.status}</span></div><div className="news-meta">{n.source} · {n.category} · {n.language}</div></div></article>) : <div className="notice">لم يتم تفعيل مصدر أخبار خارجي في هذه البيئة.</div>}</div></div>
       <div className="container section"><div className="card notice"><strong>Free-first:</strong> لا يوجد أي مسار يقوم بالترقية إلى خدمة مدفوعة تلقائيًا. عند نفاد المصدر أو فشله، يستخدم النظام بديلًا أو Cache أو يعرض عدم التوفر.</div></div>
-    </main><footer className="footer"><div className="container"><div>الدول في V1: {countries.map(c => c.name).join(' · ')}</div><div style={{marginTop:8}}>المعلومات مرجعية وليست خدمة وساطة أو استشارة استثمارية.</div></div></footer>
+    </main><footer className="footer"><div className="container"><div>الدول في V1: {countries.length} دولة</div><div style={{marginTop:8}}>المعلومات مرجعية وليست خدمة وساطة أو استشارة استثمارية.</div></div></footer>
   </div>;
 }
