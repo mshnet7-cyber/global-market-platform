@@ -3,6 +3,7 @@ import type { MetalSnapshot, NewsItem } from './types';
 
 const FREE_TIMEOUT_MS = 4500;
 const MAX_NEWS_AGE_MS = 10 * 60 * 1000;
+const MAX_METAL_AGE_MS = 10 * 60 * 1000;
 const LIVE_METAL_MAX_AGE_MS = 90 * 1000;
 
 async function safeJson(url: string, init?: RequestInit) {
@@ -27,7 +28,6 @@ export async function fetchFrankfurterUsdLocal(currency: string): Promise<number
   if (code === 'USD') return 1;
   try {
     const url = new URL(`https://api.frankfurter.dev/v2/rate/usd/${encodeURIComponent(code)}`);
-    if (code === 'OMR') url.searchParams.set('providers', 'CBO');
     const json = await safeJson(url.toString());
     return typeof json.rate === 'number' && Number.isFinite(json.rate) && json.rate > 0 ? json.rate : null;
   } catch {
@@ -35,26 +35,30 @@ export async function fetchFrankfurterUsdLocal(currency: string): Promise<number
   }
 }
 
-function parseUnixTimestamp(value: unknown): string | null {
+function parseTimestamp(value: unknown): string | null {
+  if (typeof value === 'string' && value.trim()) {
+    const parsed = Date.parse(value);
+    if (Number.isFinite(parsed)) return new Date(parsed).toISOString();
+  }
   const number = Number(value);
   if (!Number.isFinite(number) || number <= 0) return null;
   const ms = number < 10_000_000_000 ? number * 1000 : number;
-  const iso = new Date(ms).toISOString();
-  return Number.isNaN(Date.parse(iso)) ? null : iso;
+  return Number.isFinite(ms) ? new Date(ms).toISOString() : null;
 }
 
 export async function fetchGoldApi(symbol: 'XAU' | 'XAG'): Promise<{ price: number; bid: number | null; ask: number | null; timestamp: string | null } | null> {
   try {
-    const json = await safeJson(`https://api.gold-api.com/price/${symbol}/USD`);
-    const price = Number(json.price ?? NaN);
+    const json = await safeJson(`https://api.gold-api.com/price/${symbol}`);
+    const price = Number(json.price);
     if (!Number.isFinite(price) || price <= 0) return null;
     const bid = Number(json.bid);
     const ask = Number(json.ask);
+    const timestamp = parseTimestamp(json.updatedAt ?? json.updated_at ?? json.timestamp);
     return {
       price,
       bid: Number.isFinite(bid) && bid > 0 ? bid : null,
       ask: Number.isFinite(ask) && ask > 0 ? ask : null,
-      timestamp: parseUnixTimestamp(json.timestamp),
+      timestamp,
     };
   } catch {
     return null;
@@ -68,13 +72,9 @@ export async function fetchCurrentGold(symbol: 'XAU' | 'XAG'): Promise<{ price: 
   try {
     const url = new URL(endpoint);
     url.searchParams.set('symbol', symbol);
-    const response = await fetch(url.toString(), {
-      cache: 'no-store',
+    const json = await safeJson(url.toString(), {
       headers: { 'x-api-key': key, Accept: 'application/json' },
-      signal: AbortSignal.timeout(FREE_TIMEOUT_MS),
     });
-    if (!response.ok) return null;
-    const json = await response.json();
     const metal = String(json.metal ?? '').toUpperCase();
     if (metal !== symbol) return null;
     const price = Number(json.price);
@@ -85,17 +85,17 @@ export async function fetchCurrentGold(symbol: 'XAU' | 'XAG'): Promise<{ price: 
       price,
       bid: Number.isFinite(bid) && bid > 0 ? bid : null,
       ask: Number.isFinite(ask) && ask > 0 ? ask : null,
-      timestamp: parseUnixTimestamp(json.timestamp),
+      timestamp: parseTimestamp(json.updatedAt ?? json.updated_at ?? json.timestamp),
     };
   } catch {
     return null;
   }
 }
 
-function isFresh(timestamp: string | null) {
+function isFresh(timestamp: string | null, maxAgeMs: number) {
   if (!timestamp) return false;
   const age = Date.now() - Date.parse(timestamp);
-  return Number.isFinite(age) && age >= -60_000 && age <= MAX_NEWS_AGE_MS;
+  return Number.isFinite(age) && age >= -60_000 && age <= maxAgeMs;
 }
 
 export async function getFreeMetal(currency: string, symbol: 'XAU' | 'XAG', metal: 'gold' | 'silver'): Promise<MetalSnapshot | null> {
@@ -104,9 +104,9 @@ export async function getFreeMetal(currency: string, symbol: 'XAU' | 'XAG', meta
 
   let quote = await fetchGoldApi(symbol);
   let provider = 'Gold API';
-  if (!quote || !isFresh(quote.timestamp)) {
+  if (!quote || !isFresh(quote.timestamp, MAX_METAL_AGE_MS)) {
     const backup = await fetchCurrentGold(symbol);
-    if (backup && isFresh(backup.timestamp)) {
+    if (backup && isFresh(backup.timestamp, MAX_METAL_AGE_MS)) {
       quote = backup;
       provider = 'Current.Gold';
     } else {
@@ -114,9 +114,9 @@ export async function getFreeMetal(currency: string, symbol: 'XAU' | 'XAG', meta
     }
   }
 
-  if (!quote || !isFresh(quote.timestamp)) return null;
+  if (!quote || !isFresh(quote.timestamp, MAX_METAL_AGE_MS)) return null;
   const age = Date.now() - Date.parse(quote.timestamp!);
-  const status = age >= -60_000 && age <= LIVE_METAL_MAX_AGE_MS ? 'LIVE' : 'DELAYED';
+  const status = age <= LIVE_METAL_MAX_AGE_MS ? 'LIVE' : 'DELAYED';
   return makeMetalSnapshot({
     instrument: `${symbol}/USD`,
     metal,
@@ -135,7 +135,7 @@ function newsStatus(publishedAt: string): NewsItem['status'] {
   const ts = Date.parse(publishedAt);
   if (!Number.isFinite(ts)) return 'DELAYED';
   const age = Date.now() - ts;
-  if (age >= -60_000 && age <= 10 * 60_000) return 'LIVE';
+  if (age >= -60_000 && age <= MAX_NEWS_AGE_MS) return 'LIVE';
   if (age <= 12 * 60 * 60_000) return 'DELAYED';
   return 'STALE';
 }
