@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "../../../../lib/supabase/server";
 import { createSupabaseAdminClient } from "../../../../lib/supabase/admin";
-import { isValidCountry, countryDefaults } from "../../../../lib/config";
+import { isValidCountry } from "../../../../lib/config";
 
 function slugify(value: string) {
   return value.toLowerCase().trim().replace(/[^a-z0-9\u0600-\u06ff]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "store";
@@ -32,7 +32,7 @@ export async function POST(request: Request) {
   const currency = String(form.get("currency") ?? "").trim().toUpperCase();
   const submittedTimezone = String(form.get("timezone") ?? "").trim();
   if (!name || !isValidCountry(countryCode) || !validCurrency(currency)) return NextResponse.redirect(new URL("/dashboard?error=store_input", request.url));
-  const timezone = validTimezone(submittedTimezone) ? submittedTimezone : countryDefaults[countryCode as keyof typeof countryDefaults]?.timezone ?? "UTC";
+  const timezone = validTimezone(submittedTimezone) ? submittedTimezone : "UTC";
 
   const { data: org } = await admin.from("gmp_organizations").select("id").eq("owner_id", user.id).order("created_at", { ascending: true }).limit(1).maybeSingle();
   if (!org) return NextResponse.redirect(new URL("/dashboard?error=organization", request.url));
