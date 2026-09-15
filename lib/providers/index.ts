@@ -20,6 +20,7 @@ function quoteInstrumentCode(metal: 'gold' | 'silver', currency: string) {
 
 async function persistMetalSnapshot(snapshot: Awaited<ReturnType<typeof getFreeMetal>>) {
   if (!snapshot?.timestamp || snapshot.spot == null) return;
+  if (snapshot.metal !== 'gold' && snapshot.metal !== 'silver') return;
   const admin = createSupabaseAdminClient();
   if (!admin) return;
 
@@ -59,7 +60,7 @@ async function persistMetalSnapshot(snapshot: Awaited<ReturnType<typeof getFreeM
       provider,
     }, { onConflict: 'snapshot_key' });
   } catch {
-    // A telemetry failure must never turn a valid live quote into an application error.
+    // Telemetry/storage failures must not block a valid live quote.
   }
 }
 
