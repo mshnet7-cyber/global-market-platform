@@ -2,6 +2,12 @@ import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "../../../../lib/supabase/server";
 import { createSupabaseAdminClient } from "../../../../lib/supabase/admin";
 
+function subscriptionIsUsable(subscription: { status: string; current_period_end: string | null } | null) {
+  if (!subscription || !["active", "grace_period"].includes(subscription.status)) return false;
+  if (!subscription.current_period_end) return true;
+  return new Date(subscription.current_period_end).getTime() > Date.now();
+}
+
 export async function POST(request: Request) {
   const supabase = await createSupabaseServerClient();
   const admin = createSupabaseAdminClient();
@@ -19,12 +25,18 @@ export async function POST(request: Request) {
   const { data: org } = await admin.from("gmp_organizations").select("id").eq("id", store.organization_id).eq("owner_id", user.id).maybeSingle();
   if (!org) return NextResponse.redirect(new URL("/display?error=forbidden", request.url));
 
-  const { data: subscription } = await admin.from("gmp_subscriptions").select("plan_id,status").eq("organization_id", org.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
-  if (!subscription || !["active", "grace_period"].includes(subscription.status)) {
+  const { data: subscription } = await admin
+    .from("gmp_subscriptions")
+    .select("plan_id,status,current_period_end")
+    .eq("organization_id", org.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!subscriptionIsUsable(subscription)) {
     return NextResponse.redirect(new URL("/display?error=subscription", request.url));
   }
 
-  if (subscription.plan_id) {
+  if (subscription?.plan_id) {
     const { data: entitlement } = await admin.from("gmp_plan_entitlements").select("max_screens").eq("plan_id", subscription.plan_id).maybeSingle();
     if (entitlement?.max_screens != null) {
       const { data: stores } = await admin.from("gmp_stores").select("id").eq("organization_id", org.id);
@@ -36,7 +48,11 @@ export async function POST(request: Request) {
     }
   }
 
-  const { data: screen, error } = await admin.from("gmp_screens").insert({ store_id: storeId, name, status: "unpaired", template: "classic" }).select("id").single();
+  const { data: screen, error } = await admin
+    .from("gmp_screens")
+    .insert({ store_id: storeId, name, status: "unpaired", template: "classic" })
+    .select("id")
+    .single();
   if (error || !screen) return NextResponse.redirect(new URL("/display?error=screen", request.url));
   return NextResponse.redirect(new URL(`/display?screen=${screen.id}&created=1`, request.url));
 }
