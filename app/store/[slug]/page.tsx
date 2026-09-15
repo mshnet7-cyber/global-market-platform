@@ -18,16 +18,19 @@ export default async function StorePage({ params, searchParams }: { params: Prom
   const query = await searchParams;
   const admin = createSupabaseAdminClient();
   let store: any = null;
+  let settings: any = null;
 
   if (admin) {
-    const { data } = await admin.from("gmp_stores").select("id,name,slug,phone,whatsapp,logo_path,country_code,currency,timezone,gmp_store_settings:gmp_store_settings!gmp_store_settings_store_id_fkey(language,template,orientation)").eq("slug", slug).maybeSingle();
-    store = data;
+    const storeResult = await admin.from("gmp_stores").select("id,name,slug,phone,whatsapp,logo_path,country_code,currency,timezone").eq("slug", slug).maybeSingle();
+    store = storeResult.data;
+    if (store?.id) {
+      const settingsResult = await admin.from("gmp_store_settings").select("language,template,orientation").eq("store_id", store.id).maybeSingle();
+      settings = settingsResult.data;
+    }
   }
 
   const country = countries.find((c) => c.code === String(store?.country_code ?? "OM").toUpperCase()) ?? countries.find((c) => c.code === "OM") ?? countries[0];
-  const settings = store?.gmp_store_settings;
-  const configuredLanguage = Array.isArray(settings) ? settings[0]?.language : settings?.language;
-  const language = query?.language && isValidLanguage(query.language) ? query.language.toLowerCase() : String(configuredLanguage ?? "ar").toLowerCase();
+  const language = query?.language && isValidLanguage(query.language) ? query.language.toLowerCase() : String(settings?.language ?? "ar").toLowerCase();
   const messages = getMessages(language);
   const currency = String(store?.currency ?? country.currency).toUpperCase();
   const locale = `${language}-${country.code}`;
