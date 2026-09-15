@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "../../../../../lib/supabase/server";
+import { createSupabaseServerClient } from "../../../../lib/supabase/server";
 
 function slugify(value: string) {
   return value.toLowerCase().trim().replace(/[^a-z0-9\u0600-\u06ff]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "store";
@@ -24,6 +24,7 @@ export async function POST(request: Request) {
   }
   const { data: store, error } = await supabase.from("gmp_stores").insert({ organization_id: org.id, name, slug, country_code: "OM", currency: "OMR", timezone: "Asia/Muscat" }).select("id").single();
   if (error || !store) return NextResponse.redirect(new URL("/dashboard?error=store", request.url));
-  await supabase.from("gmp_store_settings").insert({ store_id: store.id });
+  const { error: settingsError } = await supabase.from("gmp_store_settings").insert({ store_id: store.id });
+  if (settingsError) return NextResponse.redirect(new URL("/dashboard?error=settings", request.url));
   return NextResponse.redirect(new URL("/dashboard?created=store", request.url));
 }
