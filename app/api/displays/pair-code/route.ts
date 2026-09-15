@@ -33,12 +33,21 @@ export async function POST(request: Request) {
 
   const now = new Date();
   const nowIso = now.toISOString();
-  await admin.from("gmp_screen_pairing_codes").update({ consumed_at: nowIso }).eq("screen_id", screenId).is("consumed_at", null);
-  const code = String(crypto.randomInt(0, 1000000)).padStart(6, "0");
   const expires = new Date(now.getTime() + 10 * 60 * 1000).toISOString();
-  const { error } = await admin.from("gmp_screen_pairing_codes").insert({ screen_id: screenId, code_hash: hash(code), expires_at: expires });
-  if (error) return NextResponse.json({ ok: false, error: "code_generation_failed" }, { status: 500 });
-  const { error: screenError } = await admin.from("gmp_screens").update({ status: "pairing", updated_at: nowIso }).eq("id", screenId);
-  if (screenError) return NextResponse.json({ ok: false, error: "screen_update_failed" }, { status: 500 });
+  const code = String(crypto.randomInt(0, 1000000)).padStart(6, "0");
+
+  const { data, error } = await admin.rpc("gmp_issue_pairing_code", {
+    p_screen_id: screenId,
+    p_code_hash: hash(code),
+    p_expires_at: expires,
+    p_now: nowIso,
+  });
+
+  if (error || !data?.ok) {
+    const message = String(error?.message ?? "");
+    if (message.includes("screen_not_found")) return NextResponse.json({ ok: false, error: "screen_not_found" }, { status: 404 });
+    return NextResponse.json({ ok: false, error: "code_generation_failed" }, { status: 500 });
+  }
+
   return NextResponse.json({ ok: true, code, expires_at: expires }, { headers: { "cache-control": "no-store" } });
 }
