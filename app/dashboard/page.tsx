@@ -25,7 +25,8 @@ export default async function DashboardPage() {
     if (!orgError && org) {
       await admin.from("gmp_profiles").upsert({ id: user.id, display_name: name }, { onConflict: "id" });
       await admin.from("gmp_organization_members").upsert({ organization_id: org.id, user_id: user.id, role: "owner" }, { onConflict: "organization_id,user_id" });
-      const { data: store } = await admin.from("gmp_stores").insert({ organization_id: org.id, name, slug: `${slugBase}-store-${user.id.slice(0, 8)}`, country_code: appConfig.defaultCountry, currency: appConfig.defaultCurrency, timezone: "UTC" }).select("id").single();
+      const country = countries.find((c) => c.code === appConfig.defaultCountry) ?? countries[0];
+      const { data: store } = await admin.from("gmp_stores").insert({ organization_id: org.id, name, slug: `${slugBase}-store-${user.id.slice(0, 8)}`, country_code: country.code, currency: country.currency, timezone: country.timezone }).select("id").single();
       if (store) await admin.from("gmp_store_settings").insert({ store_id: store.id });
       organizations = [org];
     }
