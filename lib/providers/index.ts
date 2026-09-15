@@ -1,6 +1,7 @@
 import { unstable_cache } from 'next/cache';
 import { mockGold, mockMarkets, mockNews, mockSilver, mockStocks } from './mock';
 import { fetchMarketaux, fetchNewsData, getFreeMetal, rankAndDeduplicateNews } from '../free-data';
+import { createSupabaseAdminClient } from '../supabase/admin';
 
 export const providerRegistry = {
   gold: ['Gold API', 'Current.Gold (backup)', 'Demo fallback'],
@@ -11,6 +12,53 @@ export const providerRegistry = {
   news: ['Marketaux', 'NewsData.io', 'Official feeds / RSS where permitted', 'Demo fallback'],
 };
 
+async function persistMetalSnapshot(snapshot: Awaited<ReturnType<typeof getFreeMetal>>) {
+  if (!snapshot?.timestamp || snapshot.spot == null) return;
+  const admin = createSupabaseAdminClient();
+  if (!admin) return;
+
+  const instrumentCode = snapshot.metal === 'gold' ? 'XAUUSD' : 'XAGUSD';
+  const observedAt = new Date(snapshot.timestamp).toISOString();
+  const provider = snapshot.provider.split(' + ')[0] || snapshot.provider;
+
+  try {
+    const { data: latest } = await admin
+      .from('gmp_price_quotes')
+      .select('observed_at,bid,ask,value,provider')
+      .eq('instrument_code', instrumentCode)
+      .order('observed_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const unchanged = latest && new Date(latest.observed_at).toISOString() === observedAt
+      && Number(latest.value) === Number(snapshot.spot / (snapshot.currency === 'USD' ? 1 : 1));
+
+    if (!unchanged) {
+      await admin.from('gmp_price_quotes').insert({
+        instrument_code: instrumentCode,
+        bid: snapshot.bid,
+        ask: snapshot.ask,
+        value: snapshot.currency === 'USD' ? snapshot.spot : null,
+        currency: snapshot.currency,
+        unit: snapshot.unit,
+        status: snapshot.status,
+        observed_at: observedAt,
+        provider,
+      });
+    }
+
+    await admin.from('gmp_price_snapshots').upsert({
+      snapshot_key: `${snapshot.metal}:${snapshot.currency}`,
+      payload: snapshot,
+      status: snapshot.status,
+      observed_at: observedAt,
+      provider,
+    }, { onConflict: 'snapshot_key' });
+  } catch {
+    // Persistence is secondary to serving a valid live quote; do not break the public page on telemetry failure.
+  }
+}
+
 async function buildSnapshot(currency = 'OMR', language = 'ar', allowDemo = false) {
   const [liveGold, liveSilver, marketauxNews, newsdataNews] = await Promise.all([
     getFreeMetal(currency, 'XAU', 'gold'),
@@ -18,6 +66,8 @@ async function buildSnapshot(currency = 'OMR', language = 'ar', allowDemo = fals
     fetchMarketaux(language),
     fetchNewsData(language),
   ]);
+
+  await Promise.all([persistMetalSnapshot(liveGold), persistMetalSnapshot(liveSilver)]);
 
   const news = rankAndDeduplicateNews([...(marketauxNews ?? []), ...(newsdataNews ?? [])]);
   const unavailableGold = mockGold(currency);
