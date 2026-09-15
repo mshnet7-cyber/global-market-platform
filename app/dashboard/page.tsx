@@ -1,23 +1,42 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { createSupabaseServerClient } from "../../lib/supabase/server";
 
-const checks = [
-  ["الحساب", "جاهز للربط مع Supabase Auth"],
-  ["المتجر", "إدارة المتجر ستكون من هذه المساحة"],
-  ["الشاشات", "اقتران مؤقت وإدارة جلسات العرض"],
-  ["الاشتراك", "Entitlements حسب الخطة وليس اسم الخطة"],
-];
+export default async function DashboardPage() {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) redirect("/login?next=/dashboard");
 
-export default function DashboardPage() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login?next=/dashboard");
+
+  const { data: organizations } = await supabase
+    .from("gmp_organizations")
+    .select("id,name,slug,created_at")
+    .order("created_at", { ascending: true });
+
   return <main className="wrap section">
     <div className="eyebrow">DASHBOARD</div>
     <h1>لوحة التحكم</h1>
-    <p className="hero-copy">المساحة الخاصة بالمالك والإدارة. لا تعتمد هذه الصفحة على بيانات متجر أو اشتراك وهمية.</p>
-    <div className="grid four">
-      {checks.map(([title, text]) => <section className="card" key={title}><strong>{title}</strong><div className="notice">{text}</div></section>)}
-    </div>
+    <p className="hero-copy">مرحباً {user.email}. هذه المساحة خاصة بالحسابات والمتاجر والشاشات والاشتراكات.</p>
+
+    <section className="card" style={{marginTop:24}}>
+      <strong>المؤسسات</strong>
+      {organizations?.length ? (
+        <div className="grid" style={{marginTop:16}}>
+          {organizations.map((org) => <div className="notice" key={org.id}>
+            <strong>{org.name}</strong><br />
+            <span>{org.slug}</span>
+          </div>)}
+        </div>
+      ) : (
+        <div className="notice" style={{marginTop:16}}>لا توجد مؤسسة مرتبطة بهذا الحساب بعد.</div>
+      )}
+    </section>
+
     <div className="actions" style={{marginTop:24}}>
       <Link href="/display" className="btn primary">إدارة الشاشات</Link>
       <Link href="/pricing" className="btn ghost">الخطط</Link>
+      <Link href="/" className="btn ghost">الواجهة العامة</Link>
     </div>
   </main>;
 }
