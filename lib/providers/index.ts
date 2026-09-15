@@ -12,33 +12,37 @@ export const providerRegistry = {
   news: ['Marketaux', 'NewsData.io', 'Official feeds / RSS where permitted', 'Demo fallback'],
 };
 
+function quoteInstrumentCode(metal: 'gold' | 'silver', currency: string) {
+  const normalizedCurrency = currency.toUpperCase();
+  if (normalizedCurrency !== 'OMR' && normalizedCurrency !== 'USD') return null;
+  return `${metal === 'gold' ? 'XAU' : 'XAG'}${normalizedCurrency}`;
+}
+
 async function persistMetalSnapshot(snapshot: Awaited<ReturnType<typeof getFreeMetal>>) {
   if (!snapshot?.timestamp || snapshot.spot == null) return;
   const admin = createSupabaseAdminClient();
   if (!admin) return;
 
-  const instrumentCode = snapshot.metal === 'gold' ? 'XAUUSD' : 'XAGUSD';
+  const instrumentCode = quoteInstrumentCode(snapshot.metal, snapshot.currency);
+  if (!instrumentCode) return;
   const observedAt = new Date(snapshot.timestamp).toISOString();
   const provider = snapshot.provider.split(' + ')[0] || snapshot.provider;
 
   try {
     const { data: latest } = await admin
       .from('gmp_price_quotes')
-      .select('observed_at,bid,ask,value,provider')
+      .select('observed_at')
       .eq('instrument_code', instrumentCode)
       .order('observed_at', { ascending: false })
       .limit(1)
       .maybeSingle();
 
-    const unchanged = latest && new Date(latest.observed_at).toISOString() === observedAt
-      && Number(latest.value) === Number(snapshot.spot / (snapshot.currency === 'USD' ? 1 : 1));
-
-    if (!unchanged) {
+    if (!latest || new Date(latest.observed_at).toISOString() !== observedAt) {
       await admin.from('gmp_price_quotes').insert({
         instrument_code: instrumentCode,
         bid: snapshot.bid,
         ask: snapshot.ask,
-        value: snapshot.currency === 'USD' ? snapshot.spot : null,
+        value: snapshot.spot,
         currency: snapshot.currency,
         unit: snapshot.unit,
         status: snapshot.status,
@@ -55,7 +59,7 @@ async function persistMetalSnapshot(snapshot: Awaited<ReturnType<typeof getFreeM
       provider,
     }, { onConflict: 'snapshot_key' });
   } catch {
-    // Persistence is secondary to serving a valid live quote; do not break the public page on telemetry failure.
+    // A telemetry failure must never turn a valid live quote into an application error.
   }
 }
 
