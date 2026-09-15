@@ -5,6 +5,12 @@ import { createSupabaseAdminClient } from "../../../../lib/supabase/admin";
 
 const hash = (v: string) => crypto.createHash("sha256").update(v).digest("hex");
 
+function subscriptionIsUsable(subscription: { status?: string | null; current_period_end?: string | null } | null) {
+  if (!subscription || !["active", "grace_period"].includes(subscription.status ?? "")) return false;
+  if (!subscription.current_period_end) return true;
+  return new Date(subscription.current_period_end).getTime() > Date.now();
+}
+
 export async function POST(request: Request) {
   const supabase = await createSupabaseServerClient();
   const admin = createSupabaseAdminClient();
@@ -22,8 +28,8 @@ export async function POST(request: Request) {
   const { data: org } = await admin.from("gmp_organizations").select("id").eq("id", store.organization_id).eq("owner_id", user.id).maybeSingle();
   if (!org) return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
 
-  const { data: activeSubscription } = await admin.from("gmp_subscriptions").select("status").eq("organization_id", org.id).in("status", ["active", "grace_period"]).maybeSingle();
-  if (!activeSubscription) return NextResponse.json({ ok: false, error: "subscription_required" }, { status: 402 });
+  const { data: activeSubscription } = await admin.from("gmp_subscriptions").select("status,current_period_end").eq("organization_id", org.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
+  if (!subscriptionIsUsable(activeSubscription)) return NextResponse.json({ ok: false, error: "subscription_required" }, { status: 402 });
 
   const now = new Date();
   const nowIso = now.toISOString();
