@@ -44,7 +44,7 @@ export default async function StorePage({ params, searchParams }: { params: Prom
     <h1>{title}</h1>
     <p className="hero-copy">{messages.referenceOnly}</p>
     <section className="gold-card">
-      <div className="card-top"><div><span className="muted">{countryName} · {currency}</span><strong>XAU/USD</strong></div><span className="status">{gold.status}</span></div>
+      <div className="card-top"><div><span className="muted">{countryName} · {currency}</span><strong>XAU/{currency}</strong></div><span className="status">{gold.status}</span></div>
       <div className="price">{formatMoney(gold.perGram24k, locale, currency, 3)} <small>/ gram 24K</small></div>
       <div className="subline">{gold.provider} · {gold.timestamp ?? "—"}</div>
       <div className="mini-grid"><div><span>Spot</span><b>{formatMoney(gold.spot, locale, currency, 2)}</b></div><div><span>Bid</span><b>{formatMoney(gold.bid, locale, currency, 2)}</b></div><div><span>Ask</span><b>{formatMoney(gold.ask, locale, currency, 2)}</b></div></div>
