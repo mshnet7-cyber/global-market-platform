@@ -1,0 +1,35 @@
+name: Materialize project source
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    if: ${{ hashFiles('.gmp-import/chunk-*') != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rebuild source tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/gmp-import
+          cat .gmp-import/chunk-* | base64 -d > /tmp/gmp-import/project.zip
+          rm -rf /tmp/gmp-import/project
+          unzip -q /tmp/gmp-import/project.zip -d /tmp/gmp-import/project
+          cp -a /tmp/gmp-import/project/global-market-platform/. .
+          rm -rf .gmp-import
+          rm -f index.html
+      - name: Commit materialized source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Materialize V0.2.4 source" || exit 0
+          git push
