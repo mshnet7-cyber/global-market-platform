@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import crypto from "node:crypto";
-import { createSupabaseAdminClient } from "../../../../../lib/supabase/admin";
+import { createSupabaseAdminClient } from "../../../../lib/supabase/admin";
 
 const hash = (v: string) => crypto.createHash("sha256").update(v).digest("hex");
 
