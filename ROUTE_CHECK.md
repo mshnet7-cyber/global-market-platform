@@ -1,0 +1,1 @@
+Route audit checkpoint: the current Vercel aliases are not serving the complete V0.2.4 route tree yet. The GitHub source reconciliation remains required before production.
