@@ -3,7 +3,7 @@ import { requireMerchantPlan } from "../../../../lib/merchant-access";
 
 export async function POST(request: Request) {
   try {
-    const { supabase } = await requireMerchantPlan(["pro", "business"]);
+    const { supabase, organization } = await requireMerchantPlan(["pro", "business"]);
     const body = await request.json();
     const storeId = body.store_id ? String(body.store_id) : null;
     const branchId = body.branch_id ? String(body.branch_id) : null;
@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     }
 
     const { data, error } = await supabase.rpc("gmp_create_and_post_sale", {
-      p_organization_id: (await requireMerchantPlan(["pro", "business"])).organization.id,
+      p_organization_id: organization.id,
       p_branch_id: branchId,
       p_store_id: storeId,
       p_customer_id: customerId,
