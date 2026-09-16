@@ -7,14 +7,15 @@ const statuses = new Set(["queued", "sending", "submitted", "accepted", "rejecte
 export async function GET() {
   try {
     const { supabase, organization } = await requireMerchantPlan(["business"]);
-    const [{ data: profiles, error: profileError }, { data: connectors, error: connectorError }, { data: submissions, error: submissionError }] = await Promise.all([
+    const [{ data: profiles, error: profileError }, { data: connectors, error: connectorError }, { data: submissions, error: submissionError }, { data: stores, error: storesError }, { data: sales, error: salesError }] = await Promise.all([
       supabase.from("gmp_country_invoice_profiles").select("id,store_id,country_code,legal_name,tax_number,registration_number,currency,vat_rate,e_invoice_enabled,connector_id,settings,created_at,updated_at").eq("organization_id", organization.id).order("country_code"),
       supabase.from("gmp_compliance_connectors").select("id,country_code,provider_code,provider_name,integration_mode,base_url,api_version,status,capabilities").order("country_code"),
-      supabase.from("gmp_einvoice_submissions").select("id,store_id,sale_id,connector_id,country_code,status,idempotency_key,external_reference,error_code,error_message,submitted_at,response_received_at,created_at,updated_at").eq("organization_id", organization.id).order("created_at", { ascending: false }).limit(50)
+      supabase.from("gmp_einvoice_submissions").select("id,store_id,sale_id,connector_id,country_code,status,idempotency_key,external_reference,error_code,error_message,submitted_at,response_received_at,created_at,updated_at").eq("organization_id", organization.id).order("created_at", { ascending: false }).limit(50),
+      supabase.from("gmp_stores").select("id,name,country_code,currency").eq("organization_id", organization.id).order("name"),
+      supabase.from("gmp_sales").select("id,invoice_no,store_id,total,status,issued_at").eq("organization_id", organization.id).eq("status", "issued").order("issued_at", { ascending: false }).limit(50)
     ]);
-    if (profileError || connectorError || submissionError) return NextResponse.json({ error: profileError?.message ?? connectorError?.message ?? submissionError?.message }, { status: 400 });
-    const { data: stores } = await supabase.from("gmp_stores").select("id,name,country_code,currency,tax_number:phone").eq("organization_id", organization.id).order("name");
-    return NextResponse.json({ profiles: profiles ?? [], connectors: connectors ?? [], submissions: submissions ?? [], stores: stores ?? [] });
+    if (profileError || connectorError || submissionError || storesError || salesError) return NextResponse.json({ error: profileError?.message ?? connectorError?.message ?? submissionError?.message ?? storesError?.message ?? salesError?.message }, { status: 400 });
+    return NextResponse.json({ profiles: profiles ?? [], connectors: connectors ?? [], submissions: submissions ?? [], stores: stores ?? [], sales: sales ?? [] });
   } catch (error) {
     const message = error instanceof Error ? error.message : "unexpected_error";
     return NextResponse.json({ error: message }, { status: message === "merchant_plan_required" ? 403 : 500 });
@@ -53,8 +54,9 @@ export async function POST(request: Request) {
       if (!saleId || !countries.has(countryCode)) return NextResponse.json({ error: "sale_country_required" }, { status: 400 });
       const { data: sale } = await supabase.from("gmp_sales").select("id,store_id,invoice_no,status").eq("id", saleId).eq("organization_id", organization.id).maybeSingle();
       if (!sale) return NextResponse.json({ error: "sale_not_found" }, { status: 404 });
+      if (sale.status !== "issued") return NextResponse.json({ error: "sale_not_issued" }, { status: 409 });
       if (storeId && String(sale.store_id) !== storeId) return NextResponse.json({ error: "sale_store_mismatch" }, { status: 400 });
-      const { data: profile } = await supabase.from("gmp_country_invoice_profiles").select("connector_id,e_invoice_enabled").eq("organization_id", organization.id).eq("country_code", countryCode).eq("store_id", storeId).maybeSingle();
+      const { data: profile } = await supabase.from("gmp_country_invoice_profiles").select("connector_id,e_invoice_enabled").eq("organization_id", organization.id).eq("country_code", countryCode).eq("store_id", sale.store_id).maybeSingle();
       if (!profile?.e_invoice_enabled || !profile.connector_id) return NextResponse.json({ error: "einvoice_profile_not_ready" }, { status: 409 });
       const { data: connector } = await supabase.from("gmp_compliance_connectors").select("id,status").eq("id", profile.connector_id).maybeSingle();
       if (!connector || connector.status !== "active") return NextResponse.json({ error: "connector_not_active", status: connector?.status ?? null }, { status: 409 });
