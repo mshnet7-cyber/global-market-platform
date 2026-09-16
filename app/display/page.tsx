@@ -1,20 +1,21 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import DisplayManager, { type DisplayItem } from "./DisplayManager";
-import { createSupabaseServerClient } from "../../lib/supabase/server";
 import { createSupabaseAdminClient } from "../../lib/supabase/admin";
+import { getMerchantContext } from "../../lib/merchant-access";
 
 export default async function DisplayPage() {
-  const supabase = await createSupabaseServerClient();
+  const context = await getMerchantContext();
   const admin = createSupabaseAdminClient();
-  if (!supabase || !admin) redirect("/login?next=/display");
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login?next=/display");
+  if (!context.user) redirect("/login?next=/display");
+  if (!context.organization || !context.planCode || context.role === "viewer") redirect("/dashboard");
+  if (!admin) redirect("/login?next=/display");
 
-  const { data: org } = await admin.from("gmp_organizations").select("id,name").eq("owner_id", user.id).maybeSingle();
-  const { data: stores } = org
-    ? await admin.from("gmp_stores").select("id,name").eq("organization_id", org.id).order("created_at")
-    : { data: [] };
+  const { data: stores } = await admin
+    .from("gmp_stores")
+    .select("id,name")
+    .eq("organization_id", context.organization.id)
+    .order("created_at");
   const storeIds = (stores ?? []).map((store) => store.id);
   const { data: screens } = storeIds.length
     ? await admin.from("gmp_screens").select("id,store_id,name,status,template").in("store_id", storeIds).order("created_at")
