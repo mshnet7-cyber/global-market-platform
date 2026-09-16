@@ -7,10 +7,8 @@ export const providerRegistry = {
   gold: ['Gold API', 'Current.Gold (backup)', 'Demo fallback'],
   silver: ['Gold API', 'Current.Gold (backup)', 'Demo fallback'],
   fx: ['Frankfurter', 'CBO for OMR', 'Demo fallback'],
-  markets: ['Configured permitted market source', 'Configured backup market source', 'Demo fallback'],
-  stocks: ['Configured permitted stock source', 'Configured backup stock source', 'Demo fallback'],
   news: ['Marketaux', 'NewsData.io', 'Official feeds / RSS where permitted', 'Demo fallback'],
-};
+} as const;
 
 function quoteInstrumentCode(metal: 'gold' | 'silver', currency: string) {
   const normalizedCurrency = currency.toUpperCase();
@@ -60,7 +58,7 @@ async function persistMetalSnapshot(snapshot: Awaited<ReturnType<typeof getFreeM
       provider,
     }, { onConflict: 'snapshot_key' });
   } catch {
-    // Telemetry/storage failures must not block a valid live quote.
+    // Persistence must never block a valid live quote.
   }
 }
 
