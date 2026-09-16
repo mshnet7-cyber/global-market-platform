@@ -20,6 +20,12 @@ const modules = [
   ["/dashboard/tax", "الضرائب", "تقارير الضريبة وبيانات الإقرار"],
 ] as const;
 
+const quickLinks = [
+  ["/dashboard/cameras", "الكاميرات", "إدارة أجهزة المراقبة", "C"],
+  ["/dashboard/compliance", "الامتثال", "الحالات وسجل الأحداث", "✓"],
+  ["/dashboard/invoicing", "الفوترة", "إعدادات الفوترة الإلكترونية", "T"],
+] as const;
+
 export default async function DashboardPage() {
   const context = await getMerchantContext();
   const { supabase, user, organization, role, planCode } = context;
@@ -32,44 +38,31 @@ export default async function DashboardPage() {
   const planRelation = Array.isArray(subscription?.gmp_plans) ? subscription?.gmp_plans[0] : subscription?.gmp_plans;
   const currentPlan = plans.find((plan) => plan.code === (planRelation?.code ?? planCode));
   const business = planCode === "business";
+  const initials = (organization.name?.trim()?.slice(0, 1) || "G").toUpperCase();
 
-  return <main className="wrap section">
-    <div className="eyebrow">MERCHANT</div>
-    <h1>لوحة المحل</h1>
-    <p className="hero-copy">مرحبًا {user.email}. إدارة المحل والفروع والشاشات والخدمات من مكان واحد.</p>
+  return <div className="dashboard-shell">
+    <header className="dashboard-topbar">
+      <div className="container dashboard-nav">
+        <Link href="/dashboard" className="dashboard-brand">GLOBAL <span>MARKET</span></Link>
+        <nav className="dashboard-nav-main">
+          <Link href="/dashboard">الرئيسية</Link><Link href="/dashboard/sales">المبيعات</Link><Link href="/dashboard/inventory">المخزون</Link><Link href="/dashboard/purchases">المشتريات</Link><Link href="/dashboard/accounting">المحاسبة</Link><Link href="/dashboard/reports">التقارير</Link>
+        </nav>
+        <div className="dashboard-user"><div className="dashboard-user-text"><strong>{organization.name}</strong><span>{role === "owner" ? "مالك" : role === "admin" ? "مدير" : "مشاهد"} · {currentPlan?.name ?? "الخطة الحالية"}</span></div><div className="dashboard-user-badge">{initials}</div></div>
+      </div>
+    </header>
 
-    <section className="grid four" style={{marginTop:24}}>{modules.map(([href,title,description]) => <Link href={href} className="card" key={href}><strong>{title}</strong><div className="meta" style={{marginTop:8}}>{description}</div></Link>)}</section>
+    <main className="container dashboard-main">
+      <section className="dashboard-hero"><div><div className="eyebrow">MERCHANT WORKSPACE</div><h1 className="dashboard-title">لوحة المحل</h1><p className="dashboard-subtitle">كل عمليات المحل مرتبة في مساحة تشغيل واحدة، مع وصول سريع للمهام اليومية.</p></div><div className="actions"><Link href="/dashboard/sales" className="btn primary">فتح نقطة البيع</Link><Link href="/display" className="btn ghost">إدارة الشاشات</Link></div></section>
 
-    <section className="grid three" style={{marginTop:20}}>
-      <Link href={business ? "/dashboard/cameras" : "/pricing"} className="card"><strong>الكاميرات والمراقبة</strong><div className="meta" style={{marginTop:8}}>{business ? "إدارة الأجهزة ومشاهدة روابط البث داخل اللوحة." : "متاح ضمن الباقة الكاملة."}</div></Link>
-      <Link href={business ? "/dashboard/compliance" : "/pricing"} className="card"><strong>الامتثال وتوثيق العمليات</strong><div className="meta" style={{marginTop:8}}>{business ? "حالات مراجعة، سجل أحداث وربط رسمي مستقبلي." : "متاح ضمن الباقة الكاملة."}</div></Link>
-      <Link href={business ? "/dashboard/invoicing" : "/pricing"} className="card"><strong>الفوترة حسب الدولة</strong><div className="meta" style={{marginTop:8}}>{business ? "ملف ضريبي وموصل إلكتروني مستقل لكل دولة." : "متاح ضمن الباقة الكاملة."}</div></Link>
-    </section>
+      <section className="dashboard-kpis"><div className="kpi"><div className="kpi-label">الخطة الحالية</div><div className="kpi-value">{currentPlan?.name ?? "—"}</div></div><div className="kpi"><div className="kpi-label">المتاجر والفروع</div><div className="kpi-value">{stores?.length ?? 0}</div></div><div className="kpi"><div className="kpi-label">حالة الاشتراك</div><div className="kpi-value">{subscription?.status ?? "—"}</div></div><div className="kpi"><div className="kpi-label">صلاحية الحساب</div><div className="kpi-value">{role === "owner" ? "مالك" : role === "admin" ? "مدير" : "مشاهد"}</div></div></section>
 
-    <section className="card" style={{marginTop:24}}>
-      <div className="card-top"><strong>المؤسسة</strong><span className="status">{organization.name}</span></div>
-      <div className="notice" style={{marginTop:14}}>{organization.slug} · صلاحية {role === "owner" ? "مالك" : role === "admin" ? "مدير" : "مشاهد"}</div>
-    </section>
+      <section className="section"><div className="section-head"><div><div className="eyebrow">WORKSPACE</div><h2>الوحدات الأساسية</h2></div><span className="meta">اختر العملية التي تريد تنفيذها</span></div><div className="grid grid-4">{modules.map(([href,title,description], index) => <Link href={href} className="card module-card" key={href}><div className="module-icon">{String(index + 1).padStart(2, "0")}</div><strong>{title}</strong><div className="meta">{description}</div><span className="module-arrow">←</span></Link>)}</div></section>
 
-    <section className="card" style={{marginTop:20}}>
-      <div className="card-top"><strong>الاشتراك</strong><span className="status">{currentPlan?.name ?? "غير محدد"}</span></div>
-      <div className="grid three" style={{marginTop:16}}>{plans.map((plan) => <div className="notice" key={plan.code}><strong>{plan.name}</strong><br />{plan.monthly} ر.ع / شهر<br />{plan.sixMonth} ر.ع / 6 أشهر<br />{plan.yearly} ر.ع / سنة<br /><span className="muted">خصم الفرع الإضافي: {plan.discount}</span></div>)}</div>
-      <div className="notice" style={{marginTop:14}}>الشاشة الإضافية: 4 ر.ع شهريًا · 21 ر.ع لـ6 أشهر · 44 ر.ع سنويًا.</div>
-      {subscription?.current_period_end && <div className="muted" style={{marginTop:10}}>انتهاء الفترة الحالية: {new Date(subscription.current_period_end).toLocaleDateString("ar-OM")}</div>}
-    </section>
+      <section className="section"><div className="section-head"><div><div className="eyebrow">CONTROL CENTER</div><h2>الخدمات والإدارة</h2></div></div><div className="grid three">{quickLinks.map(([href,title,description,icon]) => <Link href={business ? href : "/pricing"} className="card module-card" key={href}><div className="module-icon">{icon}</div><strong>{title}</strong><div className="meta">{business ? description : "متاح ضمن الباقة الكاملة."}</div><span className="module-arrow">←</span></Link>)}</div></section>
 
-    <section className="card" style={{marginTop:20}}>
-      <div className="card-top"><strong>المتاجر والفروع</strong><span className="status">{stores?.length ?? 0}</span></div>
-      {stores?.length ? <div className="grid" style={{marginTop:16}}>{stores.map((store) => <Link href={`/store/${store.slug}`} className="notice" key={store.id}><strong>{store.name}</strong><br /><span>{store.country_code} · {store.currency} · {store.timezone}</span></Link>)}</div> : <div className="notice" style={{marginTop:16}}>لم يتم إنشاء متجر بعد.</div>}
-      {role !== "viewer" && <form action="/api/stores/create" method="post" className="grid two-col" style={{marginTop:16}}>
-        <label className="label">اسم المتجر<input className="select" name="name" placeholder="اسم المتجر" minLength={2} maxLength={120} required /></label>
-        <label className="label">الدولة<select className="select" name="country_code" defaultValue={appConfig.defaultCountry}>{countries.map((c) => <option key={c.code} value={c.code}>{c.name} ({c.code})</option>)}</select></label>
-        <label className="label">العملة<input className="select" name="currency" defaultValue={appConfig.defaultCurrency} maxLength={3} required /></label>
-        <label className="label">المنطقة الزمنية<input className="select" name="timezone" defaultValue="Asia/Muscat" required /></label>
-        <div className="actions" style={{alignItems:"end"}}><button className="btn primary" type="submit">إنشاء متجر</button></div>
-      </form>}
-    </section>
+      <section className="card"><div className="section-head"><div><div className="eyebrow">SUBSCRIPTION</div><h2>اشتراكك الحالي</h2></div><span className="status">{currentPlan?.name ?? "غير محدد"}</span></div><div className="plan-strip"><div className="plan-tile highlight"><div className="meta">الباقة الحالية</div><div className="plan-price">{currentPlan?.name ?? "—"}</div><div className="meta">{subscription?.current_period_end ? `تنتهي ${new Date(subscription.current_period_end).toLocaleDateString("ar-OM")}` : "لا يوجد تاريخ انتهاء مسجل"}</div></div>{plans.map((plan) => <div className="plan-tile" key={plan.code}><div className="meta">{plan.name}</div><div className="plan-price">{plan.monthly} ر.ع</div><div className="meta">شهريًا · خصم الفروع {plan.discount}</div></div>)}</div><div className="actions" style={{marginTop:16}}><Link href="/pricing" className="btn primary">عرض الباقات</Link><span className="meta">الشاشة الإضافية: 4 ر.ع شهريًا · 21 ر.ع لـ6 أشهر · 44 ر.ع سنويًا.</span></div></section>
 
-    <div className="actions" style={{marginTop:24}}><Link href="/display" className="btn primary">إدارة الشاشات</Link><Link href="/pricing" className="btn ghost">الباقات</Link><Link href="/" className="btn ghost">الواجهة العامة</Link></div>
-  </main>;
+      <section className="section"><div className="section-head"><div><div className="eyebrow">STORES</div><h2>المتاجر والفروع</h2></div><span className="status">{stores?.length ?? 0}</span></div>{stores?.length ? <div className="grid three">{stores.map((store) => <Link href={`/store/${store.slug}`} className="card" key={store.id}><div className="card-top"><strong>{store.name}</strong><span className="status">{store.country_code}</span></div><div className="meta" style={{marginTop:12}}>{store.currency} · {store.timezone}</div></Link>)}</div> : <div className="empty-state">لم يتم إنشاء متجر بعد. أضف أول متجر من النموذج أدناه.</div>}{role !== "viewer" && <form action="/api/stores/create" method="post" className="card two-col" style={{marginTop:16}}><label className="label">اسم المتجر<input className="select" name="name" placeholder="اسم المتجر" minLength={2} maxLength={120} required /></label><label className="label">الدولة<select className="select" name="country_code" defaultValue={appConfig.defaultCountry}>{countries.map((c) => <option key={c.code} value={c.code}>{c.name} ({c.code})</option>)}</select></label><label className="label">العملة<input className="select" name="currency" defaultValue={appConfig.defaultCurrency} maxLength={3} required /></label><label className="label">المنطقة الزمنية<input className="select" name="timezone" defaultValue="Asia/Muscat" required /></label><div className="actions" style={{gridColumn:"1 / -1"}}><button className="btn primary" type="submit">إنشاء متجر</button></div></form>}</section>
+    </main>
+  </div>;
 }
