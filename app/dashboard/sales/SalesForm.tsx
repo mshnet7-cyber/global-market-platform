@@ -39,7 +39,7 @@ export default function SalesForm({ stores, products }: {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "تعذر إتمام البيع");
-      setResult(`تم إصدار الفاتورة رقم ${data.sale.invoice_no} بإجمالي ${data.sale.total}.`);
+      setResult(`تم إصدار الفاتورة رقم ${data.invoice_no} بإجمالي ${data.total}.`);
     } catch (error) {
       setResult(error instanceof Error ? error.message : "حدث خطأ غير متوقع");
     } finally {
@@ -53,7 +53,7 @@ export default function SalesForm({ stores, products }: {
   return <section className="card" style={{marginTop:24}}>
     <div className="grid two-col">
       <label className="label">المحل<select className="select" value={storeId} onChange={e => setStoreId(e.target.value)}>{stores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
-      <label className="label">طريقة الدفع<select className="select" value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)}><option value="cash">نقدي</option><option value="bank">تحويل/بنك</option><option value="card">بطاقة</option><option value="wallet">محفظة</option><option value="mixed">مختلط</option></select></label>
+      <label className="label">طريقة الدفع<select className="select" value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)}><option value="cash">نقدي</option><option value="bank">تحويل/بنك</option><option value="card">بطاقة</option><option value="wallet">محفظة</option><option value="other">أخرى</option></select></label>
       <label className="label">الصنف<select className="select" value={productId} onChange={e => selectProduct(e.target.value)}>{products.map(p => <option key={p.id} value={p.id}>{p.name}{p.karat ? ` · ${p.karat}` : ""}{p.barcode ? ` · ${p.barcode}` : ""}</option>)}</select></label>
       <label className="label">الكمية<input className="select" inputMode="decimal" value={quantity} onChange={e => setQuantity(e.target.value)} /></label>
       <label className="label">الوزن (غرام)<input className="select" inputMode="decimal" value={weight} onChange={e => setWeight(e.target.value)} /></label>
