@@ -24,27 +24,34 @@ export async function GET(request: Request) {
     const url = new URL(request.url); const moduleName = url.searchParams.get("module") ?? ""; const access = plans[moduleName];
     if (!access) return NextResponse.json({ error: "invalid_module" }, { status: 404 });
     const { supabase, organization } = await requireMerchantPlan(access); const limit = Math.min(Math.max(Number(url.searchParams.get("limit") ?? 20) || 20, 1), 100);
-    if (moduleName === "accounting") {
-      const [{ data: accounts }, { data: entries }] = await Promise.all([
-        supabase.from("gmp_accounts").select("id,code,name,account_type,system_key,active").eq("organization_id", organization.id).order("code"),
-        supabase.from("gmp_journal_entries").select("id,entry_no,description,entry_date,reference_type,reference_id,status,created_at").eq("organization_id", organization.id).order("created_at", { ascending: false }).limit(limit),
-      ]); return NextResponse.json({ accounts: accounts ?? [], entries: entries ?? [] });
+    if (moduleName === "accounting" || moduleName === "expenses") {
+      const [{ data: accounts }, result] = await Promise.all([
+        supabase.from("gmp_accounts").select("id,code,name,account_type,system_key,active").eq("organization_id", organization.id).eq("active", true).order("code"),
+        moduleName === "accounting"
+          ? supabase.from("gmp_journal_entries").select("id,entry_no,description,entry_date,reference_type,reference_id,status,created_at").eq("organization_id", organization.id).order("created_at", { ascending: false }).limit(limit)
+          : supabase.from("gmp_expenses").select("*").eq("organization_id", organization.id).order("created_at", { ascending: false }).limit(limit),
+      ]);
+      return moduleName === "accounting"
+        ? NextResponse.json({ accounts: accounts ?? [], entries: (result.data as Row[] | null) ?? [] })
+        : NextResponse.json({ accounts: accounts ?? [], rows: (result.data as Row[] | null) ?? [] });
     }
     if (moduleName === "tax") {
       const from = url.searchParams.get("from") ?? new Date(Date.UTC(new Date().getUTCFullYear(), 0, 1)).toISOString().slice(0, 10); const to = url.searchParams.get("to") ?? new Date().toISOString().slice(0, 10);
       if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || from > to) return NextResponse.json({ error: "invalid_tax_period" }, { status: 400 });
       const [{ data: sales }, { data: expenses }] = await Promise.all([
         supabase.from("gmp_sales").select("id,invoice_no,subtotal,vat_amount,total,issued_at,status").eq("organization_id", organization.id).gte("issued_at", `${from}T00:00:00.000Z`).lte("issued_at", `${to}T23:59:59.999Z`).neq("status", "voided"),
-        supabase.from("gmp_expenses").select("id,category,amount,vat_amount,expense_date,status").eq("organization_id", organization.id).gte("expense_date", from).lte("expense_date", to).neq("status", "voided"),
+        supabase.from("gmp_expenses").select("id,category,amount,vat_amount,expense_date,status").eq("organization_id", organization.id).gte("expense_date", from).lte("expense_date", to).eq("status", "posted"),
       ]);
       const outputVat=(sales??[]).reduce((s,x)=>s+Number(x.vat_amount??0),0), inputVat=(expenses??[]).reduce((s,x)=>s+Number(x.vat_amount??0),0), salesTotal=(sales??[]).reduce((s,x)=>s+Number(x.total??0),0), expensesTotal=(expenses??[]).reduce((s,x)=>s+Number(x.amount??0),0);
       return NextResponse.json({ from,to,summary:{output_vat:outputVat,input_vat:inputVat,net_vat:outputVat-inputVat,sales_total:salesTotal,expenses_total:expensesTotal},sales:sales??[],expenses:expenses??[] });
     }
-    const table: Record<string,string>={purchases:"gmp_purchases",expenses:"gmp_expenses",repairs:"gmp_repair_orders","buy-gold":"gmp_person_gold_purchases",inventory:"gmp_products"};
+    const table: Record<string,string>={purchases:"gmp_purchases",repairs:"gmp_repair_orders","buy-gold":"gmp_person_gold_purchases",inventory:"gmp_products"};
     const { data,error }=await supabase.from(table[moduleName]).select("*").eq("organization_id",organization.id).order("created_at",{ascending:false}).limit(limit);
     if(error)return NextResponse.json({error:error.message},{status:400}); return NextResponse.json({rows:data??[]});
   } catch(error){const message=error instanceof Error?error.message:"unexpected_error";return NextResponse.json({error:message},{status:message==="merchant_plan_required"?403:500});}
 }
+
+type Row = Record<string, unknown>;
 
 export async function POST(request: Request) {
   try {
@@ -57,9 +64,9 @@ export async function POST(request: Request) {
         const id=String(body.id??""),reason=String(body.reason??"").trim(); if(!id||!reason)return NextResponse.json({error:"expense_id_and_reason_required"},{status:400});
         const {data,error}=await supabase.from("gmp_expenses").update({status:"voided",voided_at:new Date().toISOString(),voided_by:user.id,void_reason:reason.slice(0,500)}).eq("id",id).eq("organization_id",organization.id).eq("status","posted").select("*").single(); if(error)return NextResponse.json({error:error.message},{status:400}); return NextResponse.json({success:true,row:data});
       }
-      const category=String(body.category??"").trim(),amount=num(body.amount),vatAmount=num(body.vat_amount??0); if(!category||amount===null||amount<=0||vatAmount===null||vatAmount<0)return NextResponse.json({error:"invalid_expense"},{status:400});
+      const category=String(body.category??"").trim(),amount=num(body.amount),vatAmount=num(body.vat_amount??0),expenseAccountId=String(body.expense_account_id??""),paymentAccountId=String(body.payment_account_id??""); if(!category||amount===null||amount<=0||vatAmount===null||vatAmount<0||!expenseAccountId||!paymentAccountId||expenseAccountId===paymentAccountId)return NextResponse.json({error:"invalid_expense"},{status:400});
       if (!(await validateBranch(supabase, organization.id, body.branch_id))) return NextResponse.json({error:"branch_not_found"},{status:400});
-      const {data,error}=await supabase.from("gmp_expenses").insert({organization_id:organization.id,branch_id:body.branch_id||null,category:category.slice(0,120),description:body.description?String(body.description).slice(0,1000):null,amount,vat_amount:vatAmount,expense_date:body.expense_date||undefined,created_by:user.id}).select("*").single(); if(error)return NextResponse.json({error:error.message},{status:400}); return NextResponse.json({success:true,row:data},{status:201});
+      const {data,error}=await supabase.rpc("gmp_create_and_post_expense",{p_organization_id:organization.id,p_branch_id:body.branch_id||null,p_category:category.slice(0,120),p_description:body.description?String(body.description).slice(0,1000):null,p_amount:amount,p_vat_amount:vatAmount,p_expense_date:body.expense_date||null,p_expense_account_id:expenseAccountId,p_payment_account_id:paymentAccountId}); if(error)return NextResponse.json({error:error.message},{status:400}); return NextResponse.json(data,{status:201});
     }
     if(moduleName==="repairs"){
       if(body.action==="status"){
