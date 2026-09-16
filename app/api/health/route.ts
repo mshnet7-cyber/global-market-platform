@@ -5,16 +5,17 @@ export const runtime = "nodejs";
 export async function GET() {
   const missing: string[] = [];
   const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const adminKey = process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL) missing.push("NEXT_PUBLIC_SUPABASE_URL");
   if (!publishableKey) missing.push("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY");
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) missing.push("SUPABASE_SERVICE_ROLE_KEY");
+  if (!adminKey) missing.push("SUPABASE_SECRET_KEY");
 
   return NextResponse.json({
     ok: missing.length === 0,
     service: "global-market-platform",
     version: "0.3.2",
     supabaseConfigured: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && publishableKey),
-    adminConfigured: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
+    adminConfigured: Boolean(adminKey),
     missingEnvironmentVariables: missing,
     timestamp: new Date().toISOString(),
   }, {
