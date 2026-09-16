@@ -65,14 +65,17 @@ async function persistMetalSnapshot(snapshot: Awaited<ReturnType<typeof getFreeM
   }
 }
 
-async function buildSnapshot(currency = 'OMR', language = 'ar', allowDemo = false) {
+async function buildSnapshot(currency = 'OMR', language = 'ar', allowDemo = false, includePublicMarkets = false) {
+  const marketPromises = includePublicMarkets
+    ? [getPublicMarketQuotes('markets'), getPublicMarketQuotes('stocks')]
+    : [Promise.resolve({ quotes: [], provider: 'Alpha Vantage' as const }), Promise.resolve({ quotes: [], provider: 'Alpha Vantage' as const })];
+
   const [liveGold, liveSilver, marketauxNews, newsdataNews, publicMarkets, publicStocks] = await Promise.all([
     getFreeMetal(currency, 'XAU', 'gold'),
     getFreeMetal(currency, 'XAG', 'silver'),
     fetchMarketaux(language),
     fetchNewsData(language),
-    getPublicMarketQuotes('markets'),
-    getPublicMarketQuotes('stocks'),
+    ...marketPromises,
   ]);
 
   await Promise.all([persistMetalSnapshot(liveGold), persistMetalSnapshot(liveSilver)]);
@@ -91,12 +94,12 @@ async function buildSnapshot(currency = 'OMR', language = 'ar', allowDemo = fals
   };
 }
 
-export async function getSnapshot(currency = 'OMR', language = 'ar', allowDemo = false) {
+export async function getSnapshot(currency = 'OMR', language = 'ar', allowDemo = false, includePublicMarkets = false) {
   const normalizedCurrency = currency.toUpperCase();
   const normalizedLanguage = language.toLowerCase();
   const cached = unstable_cache(
-    () => buildSnapshot(normalizedCurrency, normalizedLanguage, allowDemo),
-    ['market-snapshot', normalizedCurrency, normalizedLanguage, allowDemo ? 'demo' : 'live'],
+    () => buildSnapshot(normalizedCurrency, normalizedLanguage, allowDemo, includePublicMarkets),
+    ['market-snapshot', normalizedCurrency, normalizedLanguage, allowDemo ? 'demo' : 'live', includePublicMarkets ? 'with-quotes' : 'metals-news'],
     { revalidate: 15, tags: [`market-snapshot:${normalizedCurrency}:${normalizedLanguage}`] },
   );
   return cached();
