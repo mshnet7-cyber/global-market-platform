@@ -25,4 +25,6 @@ Next.js + TypeScript, Supabase/PostgreSQL, Vercel, centralized market-data engin
 
 The application is deployed on Vercel with Supabase as the primary data/authentication layer. CI builds the application on every push and pull request. Production market data remains fail-closed until commercial provider rights are configured.
 
+Current hardening status: legacy Sukna SECURITY DEFINER RPC execution is locked to trusted server-side roles; merchant compliance and e-invoicing status transitions are enforced at the database boundary and checked again at the API boundary; camera endpoints reject credential-bearing URLs; and project structural/contract tests, lint, and production build all pass in CI.
+
 Known external launch dependencies are kept explicit rather than simulated: commercial market-data licensing, payment checkout/webhooks, official e-invoicing integrations, WhatsApp credentials, AI/OCR provider credentials, and Supabase Auth leaked-password protection.
