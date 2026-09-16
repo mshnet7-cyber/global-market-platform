@@ -4,7 +4,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Global Market Platform",
-  description: "Gold, silver, markets, stocks and trusted financial news.",
+  description: "Gold, silver, currencies, trusted news, shop discovery and merchant tools.",
   robots: { index: true, follow: true },
 };
 
