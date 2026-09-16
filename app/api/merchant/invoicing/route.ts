@@ -3,6 +3,12 @@ import { requireMerchantPlan } from "../../../../lib/merchant-access";
 
 const countries = new Set(["OM", "SA", "AE"]);
 const statuses = new Set(["queued", "sending", "submitted", "accepted", "rejected", "failed", "cancelled"]);
+const transitions: Record<string, Set<string>> = {
+  queued: new Set(["sending", "cancelled", "failed"]),
+  sending: new Set(["submitted", "accepted", "rejected", "failed"]),
+  submitted: new Set(["accepted", "rejected", "failed"]),
+  failed: new Set(["queued", "cancelled"]),
+};
 
 export async function GET() {
   try {
@@ -79,6 +85,10 @@ export async function PATCH(request: Request) {
     const id = String(body?.id ?? "");
     const status = String(body?.status ?? "");
     if (!body || !id || !statuses.has(status)) return NextResponse.json({ error: "invalid_submission_update" }, { status: 400 });
+    const { data: current, error: currentError } = await supabase.from("gmp_einvoice_submissions").select("status").eq("id", id).eq("organization_id", organization.id).maybeSingle();
+    if (currentError) return NextResponse.json({ error: currentError.message }, { status: 400 });
+    if (!current) return NextResponse.json({ error: "submission_not_found" }, { status: 404 });
+    if (status !== current.status && (!transitions[current.status] || !transitions[current.status].has(status))) return NextResponse.json({ error: "invalid_submission_transition", from: current.status, to: status }, { status: 409 });
     const { data, error } = await supabase.from("gmp_einvoice_submissions").update({ status, external_reference: body.external_reference ? String(body.external_reference).slice(0, 200) : undefined, error_code: body.error_code ? String(body.error_code).slice(0, 100) : null, error_message: body.error_message ? String(body.error_message).slice(0, 1000) : null }).eq("id", id).eq("organization_id", organization.id).select("*").single();
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
     return NextResponse.json({ success: true, row: data });
