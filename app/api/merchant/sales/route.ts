@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireMerchantPlan } from "../../../../lib/merchant-access";
 
 const MAX_SALE_LINES = 100;
+const PAYMENT_METHODS = new Set(["cash", "bank", "card", "wallet", "other"]);
 
 export async function POST(request: Request) {
   try {
@@ -16,7 +17,7 @@ export async function POST(request: Request) {
     const lines = Array.isArray(body.lines) ? body.lines : [];
     if (!storeId || !lines.length) return NextResponse.json({ error: "store_and_lines_required" }, { status: 400 });
     if (lines.length > MAX_SALE_LINES) return NextResponse.json({ error: "too_many_sale_lines" }, { status: 400 });
-    if (!["cash", "bank", "card", "wallet", "mixed", "other"].includes(paymentMethod)) return NextResponse.json({ error: "invalid_payment_method" }, { status: 400 });
+    if (!PAYMENT_METHODS.has(paymentMethod)) return NextResponse.json({ error: "invalid_payment_method" }, { status: 400 });
 
     const normalized: Array<Record<string, unknown>> = [];
     for (const raw of lines) {
