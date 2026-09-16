@@ -1,0 +1,2 @@
+ALTER TABLE public.gmp_inventory_movements DROP CONSTRAINT IF EXISTS gmp_inventory_movements_movement_type_check;
+ALTER TABLE public.gmp_inventory_movements ADD CONSTRAINT gmp_inventory_movements_movement_type_check CHECK (movement_type = ANY (ARRAY['purchase'::text,'sale'::text,'repair_in'::text,'repair_out'::text,'adjustment_in'::text,'adjustment_out'::text,'transfer_in'::text,'transfer_out'::text,'person_gold_purchase'::text,'return_in'::text,'return_out'::text,'opening_balance'::text]));
