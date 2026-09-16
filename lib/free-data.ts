@@ -23,16 +23,21 @@ async function safeJson(url: string, init?: RequestInit) {
   }
 }
 
-export async function fetchFrankfurterUsdLocal(currency: string): Promise<number | null> {
-  const code = currency.toUpperCase();
-  if (code === 'USD') return 1;
+export async function fetchFrankfurterRate(from: string, to: string): Promise<number | null> {
+  const source = from.toUpperCase();
+  const target = to.toUpperCase();
+  if (source === target) return 1;
   try {
-    const url = new URL(`https://api.frankfurter.dev/v2/rate/usd/${encodeURIComponent(code)}`);
+    const url = new URL(`https://api.frankfurter.dev/v2/rate/${encodeURIComponent(source)}/${encodeURIComponent(target)}`);
     const json = await safeJson(url.toString());
     return typeof json.rate === 'number' && Number.isFinite(json.rate) && json.rate > 0 ? json.rate : null;
   } catch {
     return null;
   }
+}
+
+export async function fetchFrankfurterUsdLocal(currency: string): Promise<number | null> {
+  return fetchFrankfurterRate('USD', currency);
 }
 
 function parseTimestamp(value: unknown): string | null {
