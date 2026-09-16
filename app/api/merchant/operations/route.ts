@@ -39,7 +39,7 @@ export async function GET(request: Request) {
       const from = url.searchParams.get("from") ?? new Date(Date.UTC(new Date().getUTCFullYear(), 0, 1)).toISOString().slice(0, 10); const to = url.searchParams.get("to") ?? new Date().toISOString().slice(0, 10);
       if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || from > to) return NextResponse.json({ error: "invalid_tax_period" }, { status: 400 });
       const [{ data: sales }, { data: expenses }] = await Promise.all([
-        supabase.from("gmp_sales").select("id,invoice_no,subtotal,vat_amount,total,issued_at,status").eq("organization_id", organization.id).eq("status", "issued").gte("issued_at", `${from}T00:00:00.000Z`).lte("issued_at", `${to}T23:59:59.999Z"),
+        supabase.from("gmp_sales").select("id,invoice_no,subtotal,vat_amount,total,issued_at,status").eq("organization_id", organization.id).eq("status", "issued").gte("issued_at", `${from}T00:00:00.000Z`).lte("issued_at", `${to}T23:59:59.999Z`),
         supabase.from("gmp_expenses").select("id,category,amount,vat_amount,expense_date,status").eq("organization_id", organization.id).gte("expense_date", from).lte("expense_date", to).eq("status", "posted"),
       ]);
       const outputVat=(sales??[]).reduce((s,x)=>s+Number(x.vat_amount??0),0), inputVat=(expenses??[]).reduce((s,x)=>s+Number(x.vat_amount??0),0), salesTotal=(sales??[]).reduce((s,x)=>s+Number(x.total??0),0), expensesTotal=(expenses??[]).reduce((s,x)=>s+Number(x.amount??0),0);
