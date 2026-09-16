@@ -13,30 +13,16 @@ type DisplayPayload = {
   server_time: string;
 };
 
-type ScreenInitialState = { session: string | null; payload: DisplayPayload | null };
-
-function readInitialState(): ScreenInitialState {
-  if (typeof window === "undefined") return { session: null, payload: null };
-  try {
-    const session = window.localStorage.getItem(SESSION_KEY);
-    const cached = window.localStorage.getItem(SNAPSHOT_KEY);
-    return { session, payload: cached ? JSON.parse(cached) as DisplayPayload : null };
-  } catch {
-    return { session: null, payload: null };
-  }
-}
-
 function formatNumber(value: number | null, digits = 3) {
   return value == null || !Number.isFinite(value) ? "—" : new Intl.NumberFormat("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(value);
 }
 
 export default function ScreenPage() {
-  const initial = readInitialState();
-  const [session, setSession] = useState<string | null>(initial.session);
+  const [session, setSession] = useState<string | null>(null);
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [connected, setConnected] = useState(false);
-  const [payload, setPayload] = useState<DisplayPayload | null>(initial.payload);
+  const [payload, setPayload] = useState<DisplayPayload | null>(null);
 
   const refresh = useCallback(async (token: string) => {
     try {
@@ -48,21 +34,35 @@ export default function ScreenPage() {
       });
       const data = await response.json().catch(() => null) as (DisplayPayload & { ok?: boolean; error?: string }) | null;
       if (response.status === 401) {
-        window.localStorage.removeItem(SESSION_KEY);
+        try { window.localStorage.removeItem(SESSION_KEY); } catch {}
         setSession(null);
         setConnected(false);
         setError("انتهت جلسة الشاشة أو أُلغي الاقتران.");
         return;
       }
-      if (!response.ok || !data?.ok) throw new Error("snapshot_failed");
+      if (!response.ok || !data?.ok) throw new Error(data?.error ?? "snapshot_failed");
       setPayload(data);
       setConnected(true);
       setError("");
       try { window.localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(data)); } catch {}
     } catch {
       setConnected(false);
-      setError("");
+      setError("لا يوجد اتصال حاليًا. يتم عرض آخر Snapshot صالح وليس LIVE.");
     }
+  }, []);
+
+  useEffect(() => {
+    const bootstrapTimer = window.setTimeout(() => {
+      try {
+        const saved = window.localStorage.getItem(SESSION_KEY);
+        const cached = window.localStorage.getItem(SNAPSHOT_KEY);
+        if (saved) setSession(saved);
+        if (cached) setPayload(JSON.parse(cached) as DisplayPayload);
+      } catch {
+        setError("تعذر استعادة جلسة الشاشة المحلية.");
+      }
+    }, 0);
+    return () => window.clearTimeout(bootstrapTimer);
   }, []);
 
   useEffect(() => {
@@ -91,18 +91,24 @@ export default function ScreenPage() {
         setError(data?.error === "invalid_or_expired" ? "الرمز غير صالح أو انتهت صلاحيته." : "تعذر إتمام الاقتران.");
         return;
       }
-      window.localStorage.setItem(SESSION_KEY, data.session);
+      try { window.localStorage.setItem(SESSION_KEY, data.session); } catch {}
       setSession(data.session);
       setCode("");
       setError("");
-    } catch { setError("تعذر الاتصال بالخادم."); }
+    } catch {
+      setError("تعذر الاتصال بالخادم.");
+    }
   }
 
   function unpair() {
-    try { window.localStorage.removeItem(SESSION_KEY); } catch {}
+    try {
+      window.localStorage.removeItem(SESSION_KEY);
+      window.localStorage.removeItem(SNAPSHOT_KEY);
+    } catch {}
     setSession(null);
     setConnected(false);
     setPayload(null);
+    setError("");
   }
 
   const snapshot = payload?.snapshot ?? null;
@@ -138,9 +144,9 @@ export default function ScreenPage() {
               </div>
             </div>
             <div className="grid five" style={{ marginTop: 18 }}>
-              {(["22K", "21K", "18K", "14K"] as const).map((k) => <div className="card" key={k}><div>{k}</div><strong>{formatNumber(snapshot?.purities?.[k] ?? null, 3)}</strong></div>)}
+              {["22K", "21K", "18K", "14K"].map((k) => <div className="card" key={k}><div>{k}</div><strong>{formatNumber(snapshot?.purities?.[k] ?? null, 3)}</strong></div>)}
             </div>
-            {error ? <div className="notice" style={{ marginTop: 16 }}>لا يوجد اتصال حاليًا. يتم عرض آخر Snapshot صالح وليس LIVE.</div> : null}
+            {error ? <div className="notice" role="status" style={{ marginTop: 16 }}>{error}</div> : null}
             <div className="actions" style={{ justifyContent: "center", marginTop: 18 }}><button className="btn ghost" type="button" onClick={unpair}>إلغاء الاقتران محليًا</button></div>
           </>
         )}
