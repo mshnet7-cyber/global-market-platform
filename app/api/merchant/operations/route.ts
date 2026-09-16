@@ -4,6 +4,7 @@ import { requireMerchantPlan } from "../../../../lib/merchant-access";
 const plans: Record<string, ("pro" | "business")[]> = { purchases: ["pro", "business"], expenses: ["pro", "business"], repairs: ["business"], "buy-gold": ["business"], inventory: ["business"], accounting: ["pro", "business"], tax: ["business"] };
 const methods = new Set(["cash", "bank", "card", "wallet", "other"]);
 const num = (v: unknown) => { const x = Number(v); return Number.isFinite(x) ? x : null; };
+type JournalLine = { account_id: string; debit: number; credit: number; memo: string | null };
 
 export async function GET(request: Request) {
   try {
@@ -76,8 +77,8 @@ export async function POST(request: Request) {
     }
     if(module==="accounting"){
       const lines=Array.isArray(body.lines)?body.lines:[]; const description=String(body.description??"").trim(); if(!description||lines.length<2)return NextResponse.json({error:"journal_required"},{status:400});
-      const normalized=lines.map((line:Record<string,unknown>)=>({account_id:String(line.account_id??""),debit:num(line.debit??0)??-1,credit:num(line.credit??0)??-1,memo:line.memo?String(line.memo).slice(0,500):null}));
-      if(normalized.some(l=>!l.account_id||l.debit<0||l.credit<0||(l.debit>0&&l.credit>0)||(l.debit===0&&l.credit===0)))return NextResponse.json({error:"invalid_journal_line"},{status:400});
+      const normalized: JournalLine[]=lines.map((line:Record<string,unknown>)=>({account_id:String(line.account_id??""),debit:num(line.debit??0)??-1,credit:num(line.credit??0)??-1,memo:line.memo?String(line.memo).slice(0,500):null}));
+      if(normalized.some((l:JournalLine)=>!l.account_id||l.debit<0||l.credit<0||(l.debit>0&&l.credit>0)||(l.debit===0&&l.credit===0)))return NextResponse.json({error:"invalid_journal_line"},{status:400});
       const {data,error}=await supabase.rpc("gmp_create_manual_journal",{p_organization_id:organization.id,p_branch_id:body.branch_id||null,p_description:description.slice(0,500),p_entry_date:body.entry_date||null,p_lines:normalized}); if(error)return NextResponse.json({error:error.message},{status:400}); return NextResponse.json(data,{status:201});
     }
     return NextResponse.json({error:"unsupported_operation"},{status:400});
