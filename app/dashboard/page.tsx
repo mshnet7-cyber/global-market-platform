@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { getMerchantContext } from "../../lib/merchant-access";
 import { countries, appConfig } from "../../lib/config";
 
@@ -28,7 +28,7 @@ export default async function DashboardPage() {
   if (!organization || !role) redirect("/signup?error=account_setup");
 
   const { data: stores } = await supabase.from("gmp_stores").select("id,name,slug,country_code,currency,timezone,branch_id,created_at").eq("organization_id", organization.id).order("created_at", { ascending: true });
-  const { data: subscription } = await supabase.from("gmp_subscriptions").select("status,current_period_end,plan_id,gmp_plans(code,name)").eq("organization_id", organization.id).maybeSingle();
+  const { data: subscription } = await supabase.from("gmp_subscriptions").select("status,current_period_end,plan_id,gmp_plans(code,name)").eq("organization_id", organization.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
   const planRelation = Array.isArray(subscription?.gmp_plans) ? subscription?.gmp_plans[0] : subscription?.gmp_plans;
   const currentPlan = plans.find((plan) => plan.code === (planRelation?.code ?? planCode));
 
