@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createSupabaseServerClient } from "../../lib/supabase/server";
+import { getMerchantContext } from "../../lib/merchant-access";
 import { countries, appConfig } from "../../lib/config";
 
 const plans = [
@@ -21,16 +21,16 @@ const modules = [
 ] as const;
 
 export default async function DashboardPage() {
-  const supabase = await createSupabaseServerClient();
+  const context = await getMerchantContext();
+  const { supabase, user, organization, role, planCode } = context;
   if (!supabase) redirect("/login?next=/dashboard");
-  const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login?next=/dashboard");
-  const { data: organization } = await supabase.from("gmp_organizations").select("id,name,slug,created_at").eq("owner_id", user.id).order("created_at", { ascending: true }).limit(1).maybeSingle();
-  if (!organization) redirect("/signup?error=account_setup");
+  if (!organization || !role) redirect("/signup?error=account_setup");
+
   const { data: stores } = await supabase.from("gmp_stores").select("id,name,slug,country_code,currency,timezone,branch_id,created_at").eq("organization_id", organization.id).order("created_at", { ascending: true });
   const { data: subscription } = await supabase.from("gmp_subscriptions").select("status,current_period_end,plan_id,gmp_plans(code,name)").eq("organization_id", organization.id).maybeSingle();
-  const planRow = Array.isArray(subscription?.gmp_plans) ? subscription?.gmp_plans[0] : subscription?.gmp_plans;
-  const currentPlan = plans.find((plan) => plan.code === planRow?.code);
+  const planRelation = Array.isArray(subscription?.gmp_plans) ? subscription?.gmp_plans[0] : subscription?.gmp_plans;
+  const currentPlan = plans.find((plan) => plan.code === (planRelation?.code ?? planCode));
 
   return <main className="wrap section">
     <div className="eyebrow">MERCHANT</div>
@@ -41,7 +41,7 @@ export default async function DashboardPage() {
 
     <section className="card" style={{marginTop:24}}>
       <div className="card-top"><strong>المؤسسة</strong><span className="status">{organization.name}</span></div>
-      <div className="notice" style={{marginTop:14}}>{organization.slug}</div>
+      <div className="notice" style={{marginTop:14}}>{organization.slug} · صلاحية {role === "owner" ? "مالك" : role === "admin" ? "مدير" : "مشاهد"}</div>
     </section>
 
     <section className="card" style={{marginTop:20}}>
@@ -54,13 +54,13 @@ export default async function DashboardPage() {
     <section className="card" style={{marginTop:20}}>
       <div className="card-top"><strong>المتاجر والفروع</strong><span className="status">{stores?.length ?? 0}</span></div>
       {stores?.length ? <div className="grid" style={{marginTop:16}}>{stores.map((store) => <Link href={`/store/${store.slug}`} className="notice" key={store.id}><strong>{store.name}</strong><br /><span>{store.country_code} · {store.currency} · {store.timezone}</span></Link>)}</div> : <div className="notice" style={{marginTop:16}}>لم يتم إنشاء متجر بعد.</div>}
-      <form action="/api/stores/create" method="post" className="grid two-col" style={{marginTop:16}}>
+      {role !== "viewer" && <form action="/api/stores/create" method="post" className="grid two-col" style={{marginTop:16}}>
         <label className="label">اسم المتجر<input className="select" name="name" placeholder="اسم المتجر" minLength={2} maxLength={120} required /></label>
         <label className="label">الدولة<select className="select" name="country_code" defaultValue={appConfig.defaultCountry}>{countries.map((c) => <option key={c.code} value={c.code}>{c.name} ({c.code})</option>)}</select></label>
         <label className="label">العملة<input className="select" name="currency" defaultValue={appConfig.defaultCurrency} maxLength={3} required /></label>
         <label className="label">المنطقة الزمنية<input className="select" name="timezone" defaultValue="Asia/Muscat" required /></label>
         <div className="actions" style={{alignItems:"end"}}><button className="btn primary" type="submit">إنشاء متجر</button></div>
-      </form>
+      </form>}
     </section>
 
     <div className="actions" style={{marginTop:24}}><Link href="/display" className="btn primary">إدارة الشاشات</Link><Link href="/pricing" className="btn ghost">الباقات</Link><Link href="/" className="btn ghost">الواجهة العامة</Link></div>
