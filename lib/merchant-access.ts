@@ -12,7 +12,7 @@ export async function getMerchantContext() {
 
   const { data: owned } = await supabase
     .from("gmp_organizations")
-    .select("id,name,owner_id")
+    .select("id,name,slug,owner_id")
     .eq("owner_id", user.id)
     .order("created_at", { ascending: true })
     .limit(1)
@@ -24,7 +24,7 @@ export async function getMerchantContext() {
   if (!organization) {
     const { data: membership } = await supabase
       .from("gmp_organization_members")
-      .select("organization_id,role,gmp_organizations(id,name,owner_id)")
+      .select("organization_id,role,gmp_organizations(id,name,slug,owner_id)")
       .eq("user_id", user.id)
       .in("role", ["owner", "admin", "viewer"])
       .order("created_at", { ascending: true })
