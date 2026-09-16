@@ -2,6 +2,8 @@ import { redirect, notFound } from "next/navigation";
 import { getMerchantContext } from "../../../lib/merchant-access";
 import ModuleWorkspace from "./ModuleWorkspace";
 
+type StoreOption = { id: string; name: string; branch_id: string | null; currency: string | null; timezone: string | null };
+
 const modules: Record<string, { title: string; description: string; plan: "pro" | "business" }> = {
   purchases: { title: "المشتريات", description: "إنشاء ومراجعة سجلات المشتريات والموردين.", plan: "pro" },
   expenses: { title: "المصاريف", description: "تسجيل المصروفات ومراجعة ضريبة المدخلات.", plan: "pro" },
@@ -26,5 +28,18 @@ export default async function MerchantModulePage({ params }: { params: Promise<{
   const allowed = config.plan === "pro" ? ["pro", "business"].includes(planCode) : planCode === "business";
   if (!allowed) redirect("/pricing");
 
-  return <main className="wrap section"><div className="eyebrow">MERCHANT MODULE</div><h1>{config.title}</h1><p className="hero-copy">{config.description}</p><ModuleWorkspace module={module}/></main>;
+  const { data: storeRows } = await supabase
+    .from("gmp_stores")
+    .select("id,name,branch_id,currency,timezone")
+    .eq("organization_id", organization.id)
+    .order("name");
+  const stores: StoreOption[] = (storeRows ?? []).map((store) => ({
+    id: String(store.id),
+    name: String(store.name),
+    branch_id: store.branch_id ? String(store.branch_id) : null,
+    currency: store.currency ? String(store.currency) : null,
+    timezone: store.timezone ? String(store.timezone) : null,
+  }));
+
+  return <main className="wrap section"><div className="eyebrow">MERCHANT MODULE</div><h1>{config.title}</h1><p className="hero-copy">{config.description}</p><ModuleWorkspace module={module} stores={stores}/></main>;
 }
