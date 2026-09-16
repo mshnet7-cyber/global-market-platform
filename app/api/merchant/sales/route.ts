@@ -44,14 +44,14 @@ export async function POST(request: Request) {
 
     const { error: linesError } = await supabase.from("gmp_sale_lines").insert(normalized.map(line => ({ ...line, sale_id: sale.id })));
     if (linesError) {
-      await supabase.from("gmp_sales").delete().eq("id", sale.id).eq("organization_id", organization.id);
-      return NextResponse.json({ error: linesError.message }, { status: 400 });
+      await supabase.from("gmp_sales").update({ status: "voided", updated_at: new Date().toISOString() }).eq("id", sale.id).eq("organization_id", organization.id);
+      return NextResponse.json({ error: linesError.message, sale_id: sale.id, status: "voided" }, { status: 400 });
     }
 
     const { data: journalId, error: postError } = await supabase.rpc("gmp_post_sale", { p_organization_id: organization.id, p_branch_id: branchId ?? store.branch_id, p_store_id: store.id, p_sale_id: sale.id, p_payment_method: paymentMethod, p_subtotal: subtotal, p_vat: vat, p_total: total, p_created_by: user.id, p_lines: normalized });
     if (postError || !journalId) {
-      await supabase.from("gmp_sales").delete().eq("id", sale.id).eq("organization_id", organization.id);
-      return NextResponse.json({ error: postError?.message ?? "sale_post_failed" }, { status: 400 });
+      await supabase.from("gmp_sales").update({ status: "voided", updated_at: new Date().toISOString() }).eq("id", sale.id).eq("organization_id", organization.id);
+      return NextResponse.json({ error: postError?.message ?? "sale_post_failed", sale_id: sale.id, status: "voided" }, { status: 400 });
     }
     return NextResponse.json({ success: true, sale, journal_id: journalId }, { status: 201 });
   } catch (error) {
