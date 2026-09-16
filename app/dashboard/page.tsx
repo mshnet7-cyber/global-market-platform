@@ -1,67 +1,85 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "../../lib/supabase/server";
-import { createSupabaseAdminClient } from "../../lib/supabase/admin";
 import { countries, appConfig } from "../../lib/config";
+
+const plans = [
+  { code: "starter", name: "الشاشة", monthly: 5, sixMonth: 25, yearly: 50, discount: "2.5%" },
+  { code: "pro", name: "الأعمال", monthly: 25, sixMonth: 125, yearly: 240, discount: "5%" },
+  { code: "business", name: "الكاملة", monthly: 46, sixMonth: 247, yearly: 450, discount: "8%" },
+];
 
 export default async function DashboardPage() {
   const supabase = await createSupabaseServerClient();
-  const admin = createSupabaseAdminClient();
-  if (!supabase || !admin) redirect("/login?next=/dashboard");
+  if (!supabase) redirect("/login?next=/dashboard");
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login?next=/dashboard");
 
-  let { data: organizations } = await supabase
+  const { data: organization } = await supabase
     .from("gmp_organizations")
     .select("id,name,slug,created_at")
     .eq("owner_id", user.id)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (!organization) redirect("/signup?error=account_setup");
+
+  const { data: stores } = await supabase
+    .from("gmp_stores")
+    .select("id,name,slug,country_code,currency,timezone,branch_id,created_at")
+    .eq("organization_id", organization.id)
     .order("created_at", { ascending: true });
 
-  if (!organizations?.length) {
-    const name = String(user.user_metadata?.display_name ?? user.email?.split("@")[0] ?? "My Organization").trim().slice(0, 120) || "My Organization";
-    const slugBase = name.toLowerCase().replace(/[^a-z0-9\u0600-\u06ff]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "organization";
-    const slug = `${slugBase}-${user.id.slice(0, 8)}`;
-    const { data: org, error: orgError } = await admin.from("gmp_organizations").insert({ name, slug, owner_id: user.id }).select("id,name,slug,created_at").single();
-    if (!orgError && org) {
-      await admin.from("gmp_profiles").upsert({ id: user.id, display_name: name }, { onConflict: "id" });
-      await admin.from("gmp_organization_members").upsert({ organization_id: org.id, user_id: user.id, role: "owner" }, { onConflict: "organization_id,user_id" });
-      const country = countries.find((c) => c.code === appConfig.defaultCountry) ?? countries[0];
-      const { data: store } = await admin.from("gmp_stores").insert({ organization_id: org.id, name, slug: `${slugBase}-store-${user.id.slice(0, 8)}`, country_code: country.code, currency: country.currency, timezone: country.timezone }).select("id").single();
-      if (store) await admin.from("gmp_store_settings").insert({ store_id: store.id });
-      organizations = [org];
-    }
-  }
+  const { data: subscription } = await supabase
+    .from("gmp_subscriptions")
+    .select("status,current_period_end,plan_id,gmp_plans(code,name)")
+    .eq("organization_id", organization.id)
+    .maybeSingle();
 
-  const organization = organizations?.[0];
-  const { data: stores } = organization
-    ? await admin.from("gmp_stores").select("id,name,slug,country_code,currency,timezone,created_at").eq("organization_id", organization.id).order("created_at", { ascending: true })
-    : { data: [] };
+  const planRow = Array.isArray(subscription?.gmp_plans) ? subscription?.gmp_plans[0] : subscription?.gmp_plans;
+  const currentPlan = plans.find((plan) => plan.code === planRow?.code);
 
   return <main className="wrap section">
-    <div className="eyebrow">DASHBOARD</div>
-    <h1>لوحة التحكم</h1>
-    <p className="hero-copy">مرحباً {user.email}. هنا تتم إدارة المؤسسة والمتاجر والشاشات والاشتراكات.</p>
+    <div className="eyebrow">MERCHANT</div>
+    <h1>لوحة المحل</h1>
+    <p className="hero-copy">مرحبًا {user.email}. إدارة المحل والفروع والشاشات والخدمات من مكان واحد.</p>
 
     <section className="card" style={{marginTop:24}}>
-      <strong>المؤسسة</strong>
-      {organization ? <div className="notice" style={{marginTop:16}}><strong>{organization.name}</strong><br /><span>{organization.slug}</span></div> : <div className="notice" style={{marginTop:16}}>تعذر إنشاء المؤسسة تلقائيًا. تحقق من إعدادات قاعدة البيانات.</div>}
+      <div className="card-top"><strong>المؤسسة</strong><span className="status">{organization.name}</span></div>
+      <div className="notice" style={{marginTop:14}}>{organization.slug}</div>
     </section>
 
     <section className="card" style={{marginTop:20}}>
-      <strong>المتاجر</strong>
-      {stores?.length ? <div className="grid" style={{marginTop:16}}>{stores.map((store) => <Link href={`/store/${store.slug}`} className="notice" key={store.id}><strong>{store.name}</strong><br /><span>{store.currency} · {store.country_code} · {store.timezone}</span></Link>)}</div> : <div className="notice" style={{marginTop:16}}>لم يتم إنشاء متجر بعد.</div>}
+      <div className="card-top"><strong>الاشتراك</strong><span className="status">{currentPlan?.name ?? "غير محدد"}</span></div>
+      <div className="grid three" style={{marginTop:16}}>
+        {plans.map((plan) => <div className="notice" key={plan.code}>
+          <strong>{plan.name}</strong><br />
+          {plan.monthly} ر.ع / شهر<br />
+          {plan.sixMonth} ر.ع / 6 أشهر<br />
+          {plan.yearly} ر.ع / سنة<br />
+          <span className="muted">خصم الفرع الإضافي: {plan.discount}</span>
+        </div>)}
+      </div>
+      <div className="notice" style={{marginTop:14}}>الشاشة الإضافية: 4 ر.ع شهريًا · 21 ر.ع لـ6 أشهر · 44 ر.ع سنويًا.</div>
+      {subscription?.current_period_end && <div className="muted" style={{marginTop:10}}>انتهاء الفترة الحالية: {new Date(subscription.current_period_end).toLocaleDateString("ar-OM")}</div>}
+    </section>
+
+    <section className="card" style={{marginTop:20}}>
+      <div className="card-top"><strong>المتاجر والفروع</strong><span className="status">{stores?.length ?? 0}</span></div>
+      {stores?.length ? <div className="grid" style={{marginTop:16}}>{stores.map((store) => <Link href={`/store/${store.slug}`} className="notice" key={store.id}><strong>{store.name}</strong><br /><span>{store.country_code} · {store.currency} · {store.timezone}</span></Link>)}</div> : <div className="notice" style={{marginTop:16}}>لم يتم إنشاء متجر بعد.</div>}
       {organization && <form action="/api/stores/create" method="post" className="grid two-col" style={{marginTop:16}}>
         <label className="label">اسم المتجر<input className="select" name="name" placeholder="اسم المتجر" minLength={2} maxLength={120} required /></label>
         <label className="label">الدولة<select className="select" name="country_code" defaultValue={appConfig.defaultCountry}>{countries.map((c) => <option key={c.code} value={c.code}>{c.name} ({c.code})</option>)}</select></label>
-        <label className="label">العملة<input className="select" name="currency" defaultValue={appConfig.defaultCurrency} placeholder="USD" maxLength={3} required /></label>
-        <label className="label">المنطقة الزمنية<input className="select" name="timezone" defaultValue="UTC" placeholder="America/New_York" required /></label>
+        <label className="label">العملة<input className="select" name="currency" defaultValue={appConfig.defaultCurrency} maxLength={3} required /></label>
+        <label className="label">المنطقة الزمنية<input className="select" name="timezone" defaultValue="Asia/Muscat" required /></label>
         <div className="actions" style={{alignItems:"end"}}><button className="btn primary" type="submit">إنشاء متجر</button></div>
       </form>}
     </section>
 
     <div className="actions" style={{marginTop:24}}>
       <Link href="/display" className="btn primary">إدارة الشاشات</Link>
-      <Link href="/pricing" className="btn ghost">الخطط</Link>
+      <Link href="/pricing" className="btn ghost">الباقات</Link>
       <Link href="/" className="btn ghost">الواجهة العامة</Link>
     </div>
   </main>;
