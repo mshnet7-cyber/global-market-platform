@@ -20,7 +20,7 @@ export async function GET(request: Request) {
       const from = url.searchParams.get("from") ?? new Date(Date.UTC(new Date().getUTCFullYear(), 0, 1)).toISOString().slice(0, 10); const to = url.searchParams.get("to") ?? new Date().toISOString().slice(0, 10);
       const [{ data: sales }, { data: expenses }] = await Promise.all([
         supabase.from("gmp_sales").select("id,invoice_no,subtotal,vat_amount,total,issued_at,status").eq("organization_id", organization.id).gte("issued_at", `${from}T00:00:00.000Z`).lte("issued_at", `${to}T23:59:59.999Z`).neq("status", "voided"),
-        supabase.from("gmp_expenses").select("id,category,amount,vat_amount,expense_date").eq("organization_id", organization.id).gte("expense_date", from).lte("expense_date", to),
+        supabase.from("gmp_expenses").select("id,category,amount,vat_amount,expense_date,status").eq("organization_id", organization.id).gte("expense_date", from).lte("expense_date", to).neq("status", "voided"),
       ]);
       const outputVat=(sales??[]).reduce((s,x)=>s+Number(x.vat_amount??0),0), inputVat=(expenses??[]).reduce((s,x)=>s+Number(x.vat_amount??0),0), salesTotal=(sales??[]).reduce((s,x)=>s+Number(x.total??0),0), expensesTotal=(expenses??[]).reduce((s,x)=>s+Number(x.amount??0),0);
       return NextResponse.json({ from,to,summary:{output_vat:outputVat,input_vat:inputVat,net_vat:outputVat-inputVat,sales_total:salesTotal,expenses_total:expensesTotal},sales:sales??[],expenses:expenses??[] });
@@ -37,8 +37,8 @@ export async function POST(request: Request) {
     const {supabase,user,organization}=await requireMerchantPlan(access);
     if(module==="expenses"){
       if(body.action==="void"){
-        const id=String(body.id??""); if(!id)return NextResponse.json({error:"expense_id_required"},{status:400});
-        const {error}=await supabase.from("gmp_expenses").update({description:`[VOID] ${String(body.reason??"").slice(0,500)}`.trim()}).eq("id",id).eq("organization_id",organization.id); if(error)return NextResponse.json({error:error.message},{status:400}); return NextResponse.json({success:true});
+        const id=String(body.id??""),reason=String(body.reason??"").trim(); if(!id||!reason)return NextResponse.json({error:"expense_id_and_reason_required"},{status:400});
+        const {data,error}=await supabase.from("gmp_expenses").update({status:"voided",voided_at:new Date().toISOString(),voided_by:user.id,void_reason:reason.slice(0,500)}).eq("id",id).eq("organization_id",organization.id).eq("status","posted").select("*").single(); if(error)return NextResponse.json({error:error.message},{status:400}); return NextResponse.json({success:true,row:data});
       }
       const category=String(body.category??"").trim(),amount=num(body.amount),vatAmount=num(body.vat_amount??0); if(!category||amount===null||amount<=0||vatAmount===null||vatAmount<0)return NextResponse.json({error:"invalid_expense"},{status:400});
       const {data,error}=await supabase.from("gmp_expenses").insert({organization_id:organization.id,branch_id:body.branch_id||null,category:category.slice(0,120),description:body.description?String(body.description).slice(0,1000):null,amount,vat_amount:vatAmount,expense_date:body.expense_date||undefined,created_by:user.id}).select("*").single(); if(error)return NextResponse.json({error:error.message},{status:400}); return NextResponse.json({success:true,row:data},{status:201});
@@ -59,8 +59,12 @@ export async function POST(request: Request) {
     if(module==="inventory"){
       if(body.action==="create"){
         const name=String(body.name??"").trim(),storeId=String(body.store_id??""),price=num(body.price??0); if(!name||!storeId||price===null||price<0)return NextResponse.json({error:"invalid_product"},{status:400});
-        const {data:store}=await supabase.from("gmp_stores").select("id").eq("id",storeId).eq("organization_id",organization.id).maybeSingle(); if(!store)return NextResponse.json({error:"store_not_found"},{status:404});
-        const {data,error}=await supabase.from("gmp_products").insert({store_id:storeId,name:name.slice(0,200),sku:body.sku?String(body.sku).slice(0,80):null,barcode:body.barcode?String(body.barcode).slice(0,80):null,category:body.category?String(body.category).slice(0,100):null,karat:body.karat?String(body.karat).slice(0,20):null,weight_grams:num(body.weight_grams),price,cost_price:num(body.cost_price??0)??0,making_charge:num(body.making_charge??0)??0,current_quantity:Math.max(0,num(body.current_quantity??0)??0),current_weight_grams:Math.max(0,num(body.current_weight_grams??0)??0),active:true}).select("*").single(); if(error)return NextResponse.json({error:error.message},{status:400}); return NextResponse.json({success:true,row:data},{status:201});
+        const {data,error}=await supabase.rpc("gmp_create_inventory_product",{p_organization_id:organization.id,p_store_id:storeId,p_name:name,p_sku:body.sku?String(body.sku).slice(0,80):null,p_barcode:body.barcode?String(body.barcode).slice(0,80):null,p_category:body.category?String(body.category).slice(0,100):null,p_karat:body.karat?String(body.karat).slice(0,20):null,p_price:price,p_cost_price:num(body.cost_price??0)??0,p_making_charge:num(body.making_charge??0)??0,p_initial_quantity:Math.max(0,num(body.current_quantity??0)??0),p_initial_weight:Math.max(0,num(body.current_weight_grams??0)??0)});
+        if(error)return NextResponse.json({error:error.message},{status:400}); return NextResponse.json(data,{status:201});
+      }
+      if(body.action==="adjust"){
+        const productId=String(body.product_id??""),qty=num(body.quantity_delta),weight=num(body.weight_delta??0),unitCost=num(body.unit_cost??0); if(!productId||qty===null||weight===null||unitCost===null||unitCost<0)return NextResponse.json({error:"invalid_inventory_adjustment"},{status:400});
+        const {data,error}=await supabase.rpc("gmp_adjust_inventory",{p_organization_id:organization.id,p_product_id:productId,p_quantity_delta:qty,p_weight_delta:weight,p_unit_cost:unitCost,p_movement_type:body.movement_type?String(body.movement_type).slice(0,40):"adjustment"}); if(error)return NextResponse.json({error:error.message},{status:400}); return NextResponse.json(data);
       }
       return NextResponse.json({error:"unsupported_inventory_operation"},{status:400});
     }
@@ -71,11 +75,10 @@ export async function POST(request: Request) {
       const {error:lineError}=await supabase.from("gmp_purchase_lines").insert(normalized.map(line=>({...line,purchase_id:purchase.id}))); if(lineError)return NextResponse.json({error:lineError.message,purchase_id:purchase.id},{status:400}); return NextResponse.json({success:true,row:purchase},{status:201});
     }
     if(module==="accounting"){
-      const lines=Array.isArray(body.lines)?body.lines:[]; const description=String(body.description??"").trim(); if(!description||!lines.length)return NextResponse.json({error:"journal_required"},{status:400});
-      let debit=0,credit=0; const normalized=[]; for(const line of lines){const accountId=String(line.account_id??""),d=num(line.debit??0),c=num(line.credit??0); if(!accountId||d===null||c===null||d<0||c<0||(d>0&&c>0)||(d===0&&c===0))return NextResponse.json({error:"invalid_journal_line"},{status:400}); debit+=d;credit+=c;normalized.push({account_id:accountId,debit:d,credit:c,memo:line.memo?String(line.memo).slice(0,500):null});}
-      if(Math.abs(debit-credit)>0.0005)return NextResponse.json({error:"journal_not_balanced"},{status:400});
-      const {data:entry,error}=await supabase.from("gmp_journal_entries").insert({organization_id:organization.id,branch_id:body.branch_id||null,reference_type:"manual",description:description.slice(0,500),entry_date:body.entry_date||undefined,status:"posted",created_by:user.id}).select("id,entry_no,status").single(); if(error||!entry)return NextResponse.json({error:error?.message??"journal_create_failed"},{status:400});
-      const {error:lineError}=await supabase.from("gmp_journal_lines").insert(normalized.map(l=>({...l,journal_entry_id:entry.id}))); if(lineError)return NextResponse.json({error:lineError.message,entry_id:entry.id},{status:400}); return NextResponse.json({success:true,entry},{status:201});
+      const lines=Array.isArray(body.lines)?body.lines:[]; const description=String(body.description??"").trim(); if(!description||lines.length<2)return NextResponse.json({error:"journal_required"},{status:400});
+      const normalized=lines.map((line:Record<string,unknown>)=>({account_id:String(line.account_id??""),debit:num(line.debit??0)??-1,credit:num(line.credit??0)??-1,memo:line.memo?String(line.memo).slice(0,500):null}));
+      if(normalized.some(l=>!l.account_id||l.debit<0||l.credit<0||(l.debit>0&&l.credit>0)||(l.debit===0&&l.credit===0)))return NextResponse.json({error:"invalid_journal_line"},{status:400});
+      const {data,error}=await supabase.rpc("gmp_create_manual_journal",{p_organization_id:organization.id,p_branch_id:body.branch_id||null,p_description:description.slice(0,500),p_entry_date:body.entry_date||null,p_lines:normalized}); if(error)return NextResponse.json({error:error.message},{status:400}); return NextResponse.json(data,{status:201});
     }
     return NextResponse.json({error:"unsupported_operation"},{status:400});
   } catch(error){const message=error instanceof Error?error.message:"unexpected_error";return NextResponse.json({error:message},{status:message==="merchant_plan_required"?403:500});}
