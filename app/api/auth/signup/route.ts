@@ -44,7 +44,10 @@ export async function POST(request: Request) {
     p_store_slug: storeSlug,
   });
 
-  if (bootstrapError) return redirectWithError(request, "account_setup");
+  if (bootstrapError) {
+    await admin.auth.admin.deleteUser(data.user.id);
+    return redirectWithError(request, "account_setup");
+  }
 
   return data.session
     ? NextResponse.redirect(new URL("/dashboard", request.url))
