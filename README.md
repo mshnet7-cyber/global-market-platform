@@ -1,14 +1,14 @@
 # Global Market Platform
 
-Public multilingual platform for gold, silver, currencies, news, shops, advertising, and digital shop displays, with a specialized merchant operating system for gold and jewelry businesses.
+Public multilingual platform for gold, silver, currencies, markets, stocks, news, shops, advertising, and digital shop displays, with a specialized merchant operating system for gold and jewelry businesses.
 
-## MVP scope
+## Current scope
 
-Public visitor experience: gold, silver, permitted currency reference data, news, shop discovery, and advertising. No visitor account is required.
+Public visitor experience: gold, silver, permitted currency reference data, markets, stocks, news, shop discovery, advertising, and digital-display preview. Visitor accounts are not required for public content.
+
+Market and stock pages are provider-gated. They only publish customer-facing quotes when a configured data provider has the required commercial display/republication rights. Without that approval, the pages fail closed instead of presenting unlicensed data as commercial content.
 
 Merchant experience: optional subscriptions for Screen, Business, and Full plans. Merchant modules include sales/POS, purchases, expenses, customers and suppliers, inventory, repairs, person-to-person gold purchases, accounting, tax reporting, AI/OCR, WhatsApp delivery, printing/PDF, branches, permissions, audit trail, and display management according to plan entitlements.
-
-Stocks and generic Markets are intentionally excluded from the MVP because external customer-facing financial-data licensing is not yet approved. The provider layer may support them later without exposing them publicly.
 
 ## Pricing baseline
 
@@ -20,3 +20,9 @@ Stocks and generic Markets are intentionally excluded from the MVP because exter
 ## Architecture
 
 Next.js + TypeScript, Supabase/PostgreSQL, Vercel, centralized market-data engine, multi-tenant merchant data model, secure display pairing, country-aware compliance configuration, human-reviewed AI extraction, and channel-based delivery (WhatsApp/PDF/print).
+
+## Production readiness
+
+The application is deployed on Vercel with Supabase as the primary data/authentication layer. CI builds the application on every push and pull request. Production market data remains fail-closed until commercial provider rights are configured.
+
+Known external launch dependencies are kept explicit rather than simulated: commercial market-data licensing, payment checkout/webhooks, official e-invoicing integrations, WhatsApp credentials, AI/OCR provider credentials, and Supabase Auth leaked-password protection.
