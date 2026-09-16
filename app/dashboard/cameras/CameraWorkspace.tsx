@@ -3,12 +3,11 @@ import { FormEvent, useEffect, useState } from "react";
 
 type Camera={id:string;name:string;camera_type:string;protocol:string;endpoint_url:string|null;stream_url:string|null;stream_kind:string|null;status:string;enabled:boolean;last_seen_at:string|null;last_error:string|null;store_id:string|null;branch_id:string|null};
 type Option={id:string;name:string;branch_id?:string|null};
-
 const statusLabel:Record<string,string>={unconfigured:"غير مهيأة",online:"متصلة",offline:"غير متصلة",error:"خطأ",disabled:"معطلة"};
 export default function CameraWorkspace({stores,branches}:{stores:Option[];branches:Option[]}){
  const [rows,setRows]=useState<Camera[]>([]),[busy,setBusy]=useState(false),[message,setMessage]=useState("");
  const load=async()=>{const r=await fetch("/api/merchant/cameras",{cache:"no-store"});const d=await r.json().catch(()=>null);if(r.ok)setRows(d.rows??[]);else setMessage(d?.error??"تعذر تحميل الكاميرات");};
- useEffect(()=>{void load();},[]);
+ useEffect(()=>{const timer=window.setTimeout(()=>{void load();},0);return()=>window.clearTimeout(timer);},[]);
  const submit=async(e:FormEvent<HTMLFormElement>)=>{e.preventDefault();setBusy(true);setMessage("");const obj=Object.fromEntries(new FormData(e.currentTarget).entries());const r=await fetch("/api/merchant/cameras",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(obj)});const d=await r.json().catch(()=>null);if(!r.ok)setMessage(d?.error??"تعذر الحفظ");else{e.currentTarget.reset();setMessage("تمت إضافة الكاميرا");await load();}setBusy(false);};
  const update=async(id:string,patch:Record<string,unknown>)=>{const r=await fetch("/api/merchant/cameras",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,...patch})});const d=await r.json().catch(()=>null);if(!r.ok)setMessage(d?.error??"تعذر التعديل");else await load();};
  const remove=async(id:string)=>{if(!confirm("حذف هذه الكاميرا؟"))return;const r=await fetch(`/api/merchant/cameras?id=${encodeURIComponent(id)}`,{method:"DELETE"});if(!r.ok){const d=await r.json().catch(()=>null);setMessage(d?.error??"تعذر الحذف");}else await load();};
