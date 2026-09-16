@@ -1,5 +1,6 @@
 import { unstable_cache } from 'next/cache';
 import { mockGold, mockMarkets, mockNews, mockSilver, mockStocks } from './mock';
+import { getPublicMarketQuotes } from './market-data';
 import { fetchMarketaux, fetchNewsData, getFreeMetal, rankAndDeduplicateNews } from '../free-data';
 import { createSupabaseAdminClient } from '../supabase/admin';
 
@@ -7,6 +8,8 @@ export const providerRegistry = {
   gold: ['Gold API', 'Current.Gold (backup)', 'Demo fallback'],
   silver: ['Gold API', 'Current.Gold (backup)', 'Demo fallback'],
   fx: ['Frankfurter', 'CBO for OMR', 'Demo fallback'],
+  markets: ['Alpha Vantage (EOD/delayed, licensed display required)', 'EODHD (EOD, licensed display required)', 'Demo fallback'],
+  stocks: ['Alpha Vantage (EOD/delayed, licensed display required)', 'EODHD (EOD, licensed display required)', 'Demo fallback'],
   news: ['Marketaux', 'NewsData.io', 'Official feeds / RSS where permitted', 'Demo fallback'],
 } as const;
 
@@ -63,11 +66,13 @@ async function persistMetalSnapshot(snapshot: Awaited<ReturnType<typeof getFreeM
 }
 
 async function buildSnapshot(currency = 'OMR', language = 'ar', allowDemo = false) {
-  const [liveGold, liveSilver, marketauxNews, newsdataNews] = await Promise.all([
+  const [liveGold, liveSilver, marketauxNews, newsdataNews, publicMarkets, publicStocks] = await Promise.all([
     getFreeMetal(currency, 'XAU', 'gold'),
     getFreeMetal(currency, 'XAG', 'silver'),
     fetchMarketaux(language),
     fetchNewsData(language),
+    getPublicMarketQuotes('markets'),
+    getPublicMarketQuotes('stocks'),
   ]);
 
   await Promise.all([persistMetalSnapshot(liveGold), persistMetalSnapshot(liveSilver)]);
@@ -78,8 +83,8 @@ async function buildSnapshot(currency = 'OMR', language = 'ar', allowDemo = fals
   return {
     gold: liveGold ?? (allowDemo ? unavailableGold : { ...unavailableGold, status: 'UNAVAILABLE' as const, spot: null, bid: null, ask: null, perGram24k: null, purities: Object.fromEntries(Object.keys(unavailableGold.purities).map(k => [k, null])) }),
     silver: liveSilver ?? (allowDemo ? unavailableSilver : { ...unavailableSilver, status: 'UNAVAILABLE' as const, spot: null, bid: null, ask: null, perGram24k: null, purities: { '999': null } }),
-    markets: allowDemo ? mockMarkets() : [],
-    stocks: allowDemo ? mockStocks() : [],
+    markets: allowDemo ? mockMarkets() : publicMarkets.quotes,
+    stocks: allowDemo ? mockStocks() : publicStocks.quotes,
     news: news.length ? news : (allowDemo ? mockNews(language) : []),
     providers: providerRegistry,
     generatedAt: new Date().toISOString(),
