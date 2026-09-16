@@ -3,25 +3,53 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 
 type Row = Record<string, unknown>;
-const labels: Record<string,string>={purchases:"المشتريات",expenses:"المصاريف",repairs:"الإصلاحات","buy-gold":"شراء الذهب من الأفراد",inventory:"المخزون",accounting:"المحاسبة",tax:"الضرائب"};
-function Field({name,label,type="text",required=false}:{name:string;label:string;type?:string;required?:boolean}){return <label className="field"><span>{label}</span><input name={name} type={type} required={required} step={type==="number"?"0.001":undefined} /></label>}
+function Field({name,label,type="text",required=false,min}:{name:string;label:string;type?:string;required?:boolean;min?:string}){return <label className="field"><span>{label}</span><input name={name} type={type} required={required} min={min} step={type==="number"?"0.001":undefined} /></label>}
 
 export default function ModuleWorkspace({module}:{module:string}){
   const [rows,setRows]=useState<Row[]>([]),[accounts,setAccounts]=useState<Row[]>([]),[entries,setEntries]=useState<Row[]>([]),[summary,setSummary]=useState<Row|null>(null),[busy,setBusy]=useState(false),[message,setMessage]=useState("");
-  const load=useCallback(async()=>{const r=await fetch(`/api/merchant/operations?module=${encodeURIComponent(module)}&limit=30`,{cache:"no-store"});const d=await r.json();if(r.ok){setRows(d.rows??[]);setAccounts(d.accounts??[]);setEntries(d.entries??[]);setSummary(d.summary??null);}else setMessage(d.error??"تعذر تحميل البيانات");},[module]);
+  const load=useCallback(async()=>{
+    try {
+      const r=await fetch(`/api/merchant/operations?module=${encodeURIComponent(module)}&limit=30`,{cache:"no-store"});
+      const d=await r.json().catch(()=>null);
+      if(!r.ok){setMessage(d?.error??"تعذر تحميل البيانات");return;}
+      setRows(d?.rows??[]);setAccounts(d?.accounts??[]);setEntries(d?.entries??[]);setSummary(d?.summary??null);
+    } catch { setMessage("تعذر الاتصال بالخادم"); }
+  },[module]);
   useEffect(()=>{void load();},[load]);
-  const submit=async(e:FormEvent<HTMLFormElement>)=>{e.preventDefault();setBusy(true);setMessage("");const obj=Object.fromEntries(new FormData(e.currentTarget).entries()) as Record<string,string>;const payload:Record<string,unknown>={module};for(const [k,v] of Object.entries(obj))if(k!=="module_placeholder")payload[k]=v;
-    if(module==="purchases"){payload.lines=[{raw_description:obj.raw_description,quantity:Number(obj.quantity),unit_cost:Number(obj.unit_cost),weight_grams:Number(obj.weight_grams||0),vat_amount:Number(obj.vat_amount||0)}];delete payload.raw_description;delete payload.quantity;delete payload.unit_cost;delete payload.weight_grams;delete payload.vat_amount;}
-    if(module==="accounting"){payload.lines=[{account_id:obj.debit_account,debit:Number(obj.amount),credit:0},{account_id:obj.credit_account,debit:0,credit:Number(obj.amount)}];delete payload.debit_account;delete payload.credit_account;delete payload.amount;}
-    const r=await fetch("/api/merchant/operations",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});const d=await r.json();setBusy(false);setMessage(r.ok?"تم الحفظ بنجاح":(d.error??"تعذر الحفظ"));if(r.ok){e.currentTarget.reset();await load();}};
+
+  const submit=async(e:FormEvent<HTMLFormElement>)=>{
+    e.preventDefault();
+    const form=e.currentTarget;
+    setBusy(true);setMessage("");
+    try {
+      const obj=Object.fromEntries(new FormData(form).entries()) as Record<string,string>;
+      const payload:Record<string,unknown>={module};
+      for(const [k,v] of Object.entries(obj)) payload[k]=v;
+      if(module==="purchases"){
+        payload.lines=[{raw_description:obj.raw_description,quantity:Number(obj.quantity),unit_cost:Number(obj.unit_cost),weight_grams:Number(obj.weight_grams||0),vat_amount:Number(obj.vat_amount||0)}];
+        delete payload.raw_description;delete payload.quantity;delete payload.unit_cost;delete payload.weight_grams;delete payload.vat_amount;
+      }
+      if(module==="accounting"){
+        const amount=Number(obj.amount);
+        payload.lines=[{account_id:obj.debit_account,debit:amount,credit:0},{account_id:obj.credit_account,debit:0,credit:amount}];
+        delete payload.debit_account;delete payload.credit_account;delete payload.amount;
+      }
+      const r=await fetch("/api/merchant/operations",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+      const d=await r.json().catch(()=>null);
+      if(!r.ok){setMessage(d?.error??"تعذر الحفظ");return;}
+      setMessage("تم الحفظ بنجاح");form.reset();await load();
+    } catch { setMessage("تعذر الاتصال بالخادم"); }
+    finally { setBusy(false); }
+  };
+
   const form=()=> <form className="card" onSubmit={submit}>
-    {module==="expenses"&&<><Field name="category" label="التصنيف" required/><Field name="amount" label="المبلغ" type="number" required/><Field name="vat_amount" label="ضريبة القيمة المضافة" type="number"/><Field name="expense_date" label="التاريخ" type="date"/><Field name="description" label="الوصف"/></>}
-    {module==="repairs"&&<><Field name="item_description" label="وصف القطعة" required/><Field name="weight_received_grams" label="الوزن المستلم (غرام)" type="number" required/><Field name="metal" label="المعدن"/><Field name="karat" label="العيار"/><Field name="repair_type" label="نوع الإصلاح"/><Field name="expected_days" label="المدة المتوقعة (أيام)" type="number"/><Field name="amount" label="المبلغ" type="number"/></>}
-    {module==="buy-gold"&&<><Field name="seller_name" label="اسم البائع" required/><Field name="seller_phone" label="الهاتف" required/><Field name="identity_document_path" label="مرجع وثيقة الهوية الآمن" required/><Field name="weight_grams" label="الوزن (غرام)" type="number" required/><Field name="karat" label="العيار"/><Field name="market_reference_price" label="سعر السوق المرجعي" type="number"/><Field name="purchase_price" label="سعر الشراء" type="number" required/><label className="field"><span>طريقة الدفع</span><select name="payment_method" defaultValue="cash"><option value="cash">نقدي</option><option value="bank">تحويل بنكي</option><option value="card">بطاقة</option><option value="wallet">محفظة</option><option value="other">أخرى</option></select></label></>}
-    {module==="inventory"&&<><Field name="store_id" label="معرّف المتجر" required/><Field name="name" label="اسم الصنف" required/><Field name="sku" label="SKU"/><Field name="barcode" label="الباركود"/><Field name="karat" label="العيار"/><Field name="price" label="سعر البيع" type="number" required/><Field name="cost_price" label="سعر التكلفة" type="number"/><Field name="current_quantity" label="الكمية الابتدائية" type="number"/><Field name="current_weight_grams" label="الوزن الابتدائي (غرام)" type="number"/></>}
-    {module==="purchases"&&<><Field name="store_id" label="معرّف المتجر" required/><Field name="raw_description" label="وصف الصنف" required/><Field name="quantity" label="الكمية" type="number" required/><Field name="weight_grams" label="الوزن (غرام)" type="number"/><Field name="unit_cost" label="تكلفة الوحدة" type="number" required/><Field name="vat_amount" label="الضريبة" type="number"/></>}
-    {module==="accounting"&&<><label className="field"><span>الحساب المدين</span><select name="debit_account" required><option value="">اختر</option>{accounts.map(a=><option key={String(a.id)} value={String(a.id)}>{String(a.code)} — {String(a.name)}</option>)}</select></label><label className="field"><span>الحساب الدائن</span><select name="credit_account" required><option value="">اختر</option>{accounts.map(a=><option key={String(a.id)} value={String(a.id)}>{String(a.code)} — {String(a.name)}</option>)}</select></label><Field name="amount" label="المبلغ" type="number" required/><Field name="description" label="البيان" required/><Field name="entry_date" label="التاريخ" type="date"/></>}
-    <button className="btn primary" disabled={busy}>{busy?"جاري الحفظ…":"حفظ"}</button>{message&&<div className="meta" style={{marginTop:10}}>{message}</div>}
+    {module==="expenses"&&<><Field name="category" label="التصنيف" required/><Field name="amount" label="المبلغ" type="number" min="0.001" required/><Field name="vat_amount" label="ضريبة القيمة المضافة" type="number" min="0"/><Field name="expense_date" label="التاريخ" type="date"/><Field name="description" label="الوصف"/></>}
+    {module==="repairs"&&<><Field name="item_description" label="وصف القطعة" required/><Field name="weight_received_grams" label="الوزن المستلم (غرام)" type="number" min="0" required/><Field name="metal" label="المعدن"/><Field name="karat" label="العيار"/><Field name="repair_type" label="نوع الإصلاح"/><Field name="expected_days" label="المدة المتوقعة (أيام)" type="number" min="0"/><Field name="amount" label="المبلغ" type="number" min="0"/></>}
+    {module==="buy-gold"&&<><Field name="seller_name" label="اسم البائع" required/><Field name="seller_phone" label="الهاتف" required/><Field name="identity_document_path" label="مرجع وثيقة الهوية الآمن" required/><Field name="weight_grams" label="الوزن (غرام)" type="number" min="0.001" required/><Field name="karat" label="العيار"/><Field name="market_reference_price" label="سعر السوق المرجعي" type="number" min="0"/><Field name="purchase_price" label="سعر الشراء" type="number" min="0.001" required/><label className="field"><span>طريقة الدفع</span><select name="payment_method" defaultValue="cash"><option value="cash">نقدي</option><option value="bank">تحويل بنكي</option><option value="card">بطاقة</option><option value="wallet">محفظة</option><option value="other">أخرى</option></select></label></>}
+    {module==="inventory"&&<><Field name="store_id" label="معرّف المتجر" required/><Field name="name" label="اسم الصنف" required/><Field name="sku" label="SKU"/><Field name="barcode" label="الباركود"/><Field name="karat" label="العيار"/><Field name="price" label="سعر البيع" type="number" min="0" required/><Field name="cost_price" label="سعر التكلفة" type="number" min="0"/><Field name="current_quantity" label="الكمية الابتدائية" type="number" min="0"/><Field name="current_weight_grams" label="الوزن الابتدائي (غرام)" type="number" min="0"/></>}
+    {module==="purchases"&&<><Field name="store_id" label="معرّف المتجر" required/><Field name="raw_description" label="وصف الصنف" required/><Field name="quantity" label="الكمية" type="number" min="0.001" required/><Field name="weight_grams" label="الوزن (غرام)" type="number" min="0"/><Field name="unit_cost" label="تكلفة الوحدة" type="number" min="0" required/><Field name="vat_amount" label="الضريبة" type="number" min="0"/></>}
+    {module==="accounting"&&<><label className="field"><span>الحساب المدين</span><select name="debit_account" required><option value="">اختر</option>{accounts.map(a=><option key={String(a.id)} value={String(a.id)}>{String(a.code)} — {String(a.name)}</option>)}</select></label><label className="field"><span>الحساب الدائن</span><select name="credit_account" required><option value="">اختر</option>{accounts.map(a=><option key={String(a.id)} value={String(a.id)}>{String(a.code)} — {String(a.name)}</option>)}</select></label><Field name="amount" label="المبلغ" type="number" min="0.001" required/><Field name="description" label="البيان" required/><Field name="entry_date" label="التاريخ" type="date"/></>}
+    <button className="btn primary" disabled={busy}>{busy?"جاري الحفظ…":"حفظ"}</button>{message&&<div className="meta" style={{marginTop:10}} role="status">{message}</div>}
   </form>;
   return <>
     <div className="actions" style={{marginBottom:20}}><Link href="/dashboard" className="btn">العودة للوحة</Link>{module!=="accounting"&&<Link href="/dashboard/sales" className="btn">بيع سريع</Link>}</div>
