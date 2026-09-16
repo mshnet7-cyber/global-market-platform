@@ -24,17 +24,17 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith("/connect");
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!needsAuthRefresh || !url || !anonKey) {
+  const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!needsAuthRefresh || !url || !publishableKey) {
     return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
   let response = NextResponse.next({ request: { headers: requestHeaders } });
-  const supabase = createServerClient(url, anonKey, {
+  const supabase = createServerClient(url, publishableKey, {
     cookies: {
       getAll() { return request.cookies.getAll(); },
       setAll(items) {
-        items.forEach(({ name, value }) => request.cookies.set(name, value));
+        items.forEach(({ name, value, options }) => request.cookies.set(name, value));
         response = NextResponse.next({ request: { headers: requestHeaders } });
         items.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
       },
