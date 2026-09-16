@@ -1,0 +1,10 @@
+REVOKE EXECUTE ON FUNCTION public.sukna_bootstrap_org(text) FROM authenticated;
+REVOKE EXECUTE ON FUNCTION public.sukna_create_order_tx_v2(uuid,uuid,uuid,uuid,text,text,text,text,numeric,numeric,numeric,numeric,jsonb,text) FROM authenticated;
+REVOKE EXECUTE ON FUNCTION public.sukna_post_expense_tx_v1(uuid,text,numeric,text,date,text) FROM authenticated;
+REVOKE EXECUTE ON FUNCTION public.sukna_post_manual_payment_tx_v1(uuid,uuid,uuid,text,text,numeric,text,text) FROM authenticated;
+REVOKE EXECUTE ON FUNCTION public.sukna_post_purchase_tx_v1(uuid,uuid,uuid,text,uuid,numeric,text,numeric,text,text,text) FROM authenticated;
+REVOKE EXECUTE ON FUNCTION public.sukna_post_sale_tx_v2(uuid,uuid,uuid,numeric,numeric,jsonb,text,text,text) FROM authenticated;
+REVOKE EXECUTE ON FUNCTION public.sukna_receive_purchase_tx_v2(uuid,uuid,uuid,numeric,text) FROM authenticated;
+REVOKE EXECUTE ON FUNCTION public.sukna_release_order_reservation_tx_v1(uuid,uuid) FROM authenticated;
+REVOKE EXECUTE ON FUNCTION public.sukna_reserve_order_tx_v1(uuid,uuid) FROM authenticated;
+REVOKE EXECUTE ON FUNCTION public.sukna_transition_order_tx_v1(uuid,uuid,text) FROM authenticated;
