@@ -3,10 +3,15 @@ export type Metal = "gold" | "silver";
 
 export type Quote = {
   instrument: string;
+  symbol?: string;
+  exchange?: string;
   metal?: Metal;
   spot: number | null;
   bid: number | null;
   ask: number | null;
+  previousClose?: number | null;
+  change?: number | null;
+  changePercent?: number | null;
   currency: string;
   unit: string;
   timestamp: string | null;
