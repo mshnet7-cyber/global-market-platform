@@ -18,10 +18,10 @@ export default async function MerchantModulePage({ params }: { params: Promise<{
   if (!config) notFound();
 
   const context = await getMerchantContext();
-  const { supabase, user, organization, planCode } = context;
-  if (!supabase) redirect(`/login?next=/dashboard/${module}`);
-  if (!user) redirect(`/login?next=/dashboard/${module}`);
+  const { supabase, user, organization, role, planCode } = context;
+  if (!supabase || !user) redirect(`/login?next=/dashboard/${module}`);
   if (!organization || !planCode) redirect("/pricing");
+  if (role === "viewer") redirect("/dashboard");
 
   const allowed = config.plan === "pro" ? ["pro", "business"].includes(planCode) : planCode === "business";
   if (!allowed) redirect("/pricing");
