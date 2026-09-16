@@ -33,13 +33,10 @@ export async function proxy(request: NextRequest) {
   const supabase = createServerClient(url, publishableKey, {
     cookies: {
       getAll() { return request.cookies.getAll(); },
-      setAll(items, headers) {
-        items.forEach(({ name, value }) => request.cookies.set(name, value));
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value, options));
         response = NextResponse.next({ request: { headers: requestHeaders } });
-        items.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
-        if (headers) {
-          Object.entries(headers).forEach(([key, value]) => response.headers.set(key, value));
-        }
+        cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
       },
     },
   });
