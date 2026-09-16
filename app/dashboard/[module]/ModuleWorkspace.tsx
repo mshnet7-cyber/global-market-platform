@@ -1,5 +1,5 @@
 "use client";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 
 type Row = Record<string, unknown>;
@@ -8,8 +8,8 @@ function Field({name,label,type="text",required=false}:{name:string;label:string
 
 export default function ModuleWorkspace({module}:{module:string}){
   const [rows,setRows]=useState<Row[]>([]),[accounts,setAccounts]=useState<Row[]>([]),[entries,setEntries]=useState<Row[]>([]),[summary,setSummary]=useState<Row|null>(null),[busy,setBusy]=useState(false),[message,setMessage]=useState("");
-  const load=async()=>{const r=await fetch(`/api/merchant/operations?module=${encodeURIComponent(module)}&limit=30`,{cache:"no-store"});const d=await r.json();if(r.ok){setRows(d.rows??[]);setAccounts(d.accounts??[]);setEntries(d.entries??[]);setSummary(d.summary??null);}else setMessage(d.error??"تعذر تحميل البيانات");};
-  useEffect(()=>{void load();},[module]);
+  const load=useCallback(async()=>{const r=await fetch(`/api/merchant/operations?module=${encodeURIComponent(module)}&limit=30`,{cache:"no-store"});const d=await r.json();if(r.ok){setRows(d.rows??[]);setAccounts(d.accounts??[]);setEntries(d.entries??[]);setSummary(d.summary??null);}else setMessage(d.error??"تعذر تحميل البيانات");},[module]);
+  useEffect(()=>{void load();},[load]);
   const submit=async(e:FormEvent<HTMLFormElement>)=>{e.preventDefault();setBusy(true);setMessage("");const obj=Object.fromEntries(new FormData(e.currentTarget).entries()) as Record<string,string>;const payload:Record<string,unknown>={module};for(const [k,v] of Object.entries(obj))if(k!=="module_placeholder")payload[k]=v;
     if(module==="purchases"){payload.lines=[{raw_description:obj.raw_description,quantity:Number(obj.quantity),unit_cost:Number(obj.unit_cost),weight_grams:Number(obj.weight_grams||0),vat_amount:Number(obj.vat_amount||0)}];delete payload.raw_description;delete payload.quantity;delete payload.unit_cost;delete payload.weight_grams;delete payload.vat_amount;}
     if(module==="accounting"){payload.lines=[{account_id:obj.debit_account,debit:Number(obj.amount),credit:0},{account_id:obj.credit_account,debit:0,credit:Number(obj.amount)}];delete payload.debit_account;delete payload.credit_account;delete payload.amount;}
