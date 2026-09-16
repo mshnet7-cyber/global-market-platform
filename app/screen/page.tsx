@@ -13,25 +13,30 @@ type DisplayPayload = {
   server_time: string;
 };
 
+type ScreenInitialState = { session: string | null; payload: DisplayPayload | null };
+
+function readInitialState(): ScreenInitialState {
+  if (typeof window === "undefined") return { session: null, payload: null };
+  try {
+    const session = window.localStorage.getItem(SESSION_KEY);
+    const cached = window.localStorage.getItem(SNAPSHOT_KEY);
+    return { session, payload: cached ? JSON.parse(cached) as DisplayPayload : null };
+  } catch {
+    return { session: null, payload: null };
+  }
+}
+
 function formatNumber(value: number | null, digits = 3) {
   return value == null || !Number.isFinite(value) ? "—" : new Intl.NumberFormat("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(value);
 }
 
 export default function ScreenPage() {
-  const [session, setSession] = useState<string | null>(null);
+  const initial = readInitialState();
+  const [session, setSession] = useState<string | null>(initial.session);
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [connected, setConnected] = useState(false);
-  const [payload, setPayload] = useState<DisplayPayload | null>(null);
-
-  useEffect(() => {
-    try {
-      const saved = window.localStorage.getItem(SESSION_KEY);
-      if (saved) setSession(saved);
-      const cached = window.localStorage.getItem(SNAPSHOT_KEY);
-      if (cached) setPayload(JSON.parse(cached) as DisplayPayload);
-    } catch {}
-  }, []);
+  const [payload, setPayload] = useState<DisplayPayload | null>(initial.payload);
 
   const refresh = useCallback(async (token: string) => {
     try {
@@ -62,9 +67,13 @@ export default function ScreenPage() {
 
   useEffect(() => {
     if (!session) return;
-    refresh(session);
-    const timer = window.setInterval(() => refresh(session), 30000);
-    return () => window.clearInterval(timer);
+    const runRefresh = () => { void refresh(session); };
+    const initialTimer = window.setTimeout(runRefresh, 0);
+    const timer = window.setInterval(runRefresh, 30000);
+    return () => {
+      window.clearTimeout(initialTimer);
+      window.clearInterval(timer);
+    };
   }, [session, refresh]);
 
   async function pair() {
