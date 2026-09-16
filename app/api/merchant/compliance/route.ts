@@ -5,6 +5,12 @@ const entityTypes = new Set(["gold_purchase", "sale", "customer", "repair", "oth
 const caseTypes = new Set(["review", "suspicious", "report", "government_submission"]);
 const statuses = new Set(["open", "under_review", "submitted", "accepted", "rejected", "closed", "failed"]);
 const directions = new Set(["outbound", "inbound", "internal"]);
+const transitions: Record<string, Set<string>> = {
+  open: new Set(["under_review", "closed", "failed"]),
+  under_review: new Set(["submitted", "closed", "failed"]),
+  submitted: new Set(["accepted", "rejected", "failed"]),
+  failed: new Set(["under_review", "closed"]),
+};
 
 export async function GET(request: Request) {
   try {
@@ -80,10 +86,19 @@ export async function PATCH(request: Request) {
     const id = String(body?.id ?? "");
     if (!body || !id) return NextResponse.json({ error: "case_id_required" }, { status: 400 });
     const patch: Record<string, unknown> = {};
-    if (body.status !== undefined) { const status = String(body.status); if (!statuses.has(status)) return NextResponse.json({ error: "invalid_case_status" }, { status: 400 }); patch.status = status; }
+    if (body.status !== undefined) {
+      const status = String(body.status);
+      if (!statuses.has(status)) return NextResponse.json({ error: "invalid_case_status" }, { status: 400 });
+      const { data: current, error: currentError } = await supabase.from("gmp_compliance_cases").select("status").eq("id", id).eq("organization_id", organization.id).maybeSingle();
+      if (currentError) return NextResponse.json({ error: currentError.message }, { status: 400 });
+      if (!current) return NextResponse.json({ error: "case_not_found" }, { status: 404 });
+      if (status !== current.status && (!transitions[current.status] || !transitions[current.status].has(status))) return NextResponse.json({ error: "invalid_case_transition", from: current.status, to: status }, { status: 409 });
+      patch.status = status;
+    }
     if (body.connector_id !== undefined) patch.connector_id = body.connector_id ? String(body.connector_id) : null;
     if (body.government_reference !== undefined) patch.government_reference = body.government_reference ? String(body.government_reference).slice(0, 200) : null;
     if (body.notes !== undefined) patch.notes = body.notes ? String(body.notes).slice(0, 4000) : null;
+    if (!Object.keys(patch).length) return NextResponse.json({ error: "no_changes" }, { status: 400 });
     const { data, error } = await supabase.from("gmp_compliance_cases").update(patch).eq("id", id).eq("organization_id", organization.id).select("*").single();
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
     return NextResponse.json({ success: true, row: data });
