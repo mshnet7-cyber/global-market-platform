@@ -22,7 +22,7 @@ function allowAttempt(key: string) {
 }
 
 function subscriptionIsUsable(subscription: { status: string; current_period_end: string | null } | null) {
-  if (!subscription || !["active", "grace_period"].includes(subscription.status)) return false;
+  if (!subscription || !["active", "trialing", "grace_period"].includes(subscription.status)) return false;
   if (!subscription.current_period_end) return true;
   return new Date(subscription.current_period_end).getTime() > Date.now();
 }
