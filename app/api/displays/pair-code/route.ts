@@ -1,34 +1,33 @@
 import { NextResponse } from "next/server";
 import crypto from "node:crypto";
-import { createSupabaseServerClient } from "../../../../lib/supabase/server";
 import { createSupabaseAdminClient } from "../../../../lib/supabase/admin";
+import { getMerchantContext } from "../../../../lib/merchant-access";
 
 const hash = (v: string) => crypto.createHash("sha256").update(v).digest("hex");
 
 function subscriptionIsUsable(subscription: { status?: string | null; current_period_end?: string | null } | null) {
-  if (!subscription || !["active", "grace_period"].includes(subscription.status ?? "")) return false;
+  if (!subscription || !["active", "trialing", "grace_period"].includes(subscription.status ?? "")) return false;
   if (!subscription.current_period_end) return true;
   return new Date(subscription.current_period_end).getTime() > Date.now();
 }
 
 export async function POST(request: Request) {
-  const supabase = await createSupabaseServerClient();
+  const context = await getMerchantContext();
   const admin = createSupabaseAdminClient();
-  if (!supabase || !admin) return NextResponse.json({ ok: false, error: "not_configured" }, { status: 503 });
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
+  if (!admin) return NextResponse.json({ ok: false, error: "not_configured" }, { status: 503 });
+  if (!context.user) return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
+  if (!context.organization || !context.planCode || context.role === "viewer") return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
+
   const body = await request.json().catch(() => null) as { screen_id?: string } | null;
   const screenId = String(body?.screen_id ?? "").trim();
   if (!screenId) return NextResponse.json({ ok: false, error: "invalid_screen" }, { status: 400 });
 
   const { data: screen } = await admin.from("gmp_screens").select("id,store_id").eq("id", screenId).maybeSingle();
   if (!screen) return NextResponse.json({ ok: false, error: "screen_not_found" }, { status: 404 });
-  const { data: store } = await admin.from("gmp_stores").select("organization_id").eq("id", screen.store_id).maybeSingle();
-  if (!store) return NextResponse.json({ ok: false, error: "store_not_found" }, { status: 404 });
-  const { data: org } = await admin.from("gmp_organizations").select("id").eq("id", store.organization_id).eq("owner_id", user.id).maybeSingle();
-  if (!org) return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
+  const { data: store } = await admin.from("gmp_stores").select("organization_id").eq("id", screen.store_id).eq("organization_id", context.organization.id).maybeSingle();
+  if (!store) return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
 
-  const { data: activeSubscription } = await admin.from("gmp_subscriptions").select("status,current_period_end").eq("organization_id", org.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
+  const { data: activeSubscription } = await admin.from("gmp_subscriptions").select("status,current_period_end").eq("organization_id", context.organization.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
   if (!subscriptionIsUsable(activeSubscription)) return NextResponse.json({ ok: false, error: "subscription_required" }, { status: 402 });
 
   const now = new Date();
