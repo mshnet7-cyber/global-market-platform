@@ -3,22 +3,9 @@ import crypto from "node:crypto";
 import { createSupabaseAdminClient } from "../../../../lib/supabase/admin";
 
 const hash = (v: string) => crypto.createHash("sha256").update(v).digest("hex");
-const attempts = new Map<string, { count: number; resetAt: number }>();
 
 function requestKey(request: Request) {
   return hash(request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip")?.trim() || "unknown");
-}
-
-function allowAttempt(key: string) {
-  const now = Date.now();
-  const row = attempts.get(key);
-  if (!row || row.resetAt <= now) {
-    attempts.set(key, { count: 1, resetAt: now + 10 * 60 * 1000 });
-    return true;
-  }
-  if (row.count >= 20) return false;
-  row.count += 1;
-  return true;
 }
 
 function subscriptionIsUsable(subscription: { status: string; current_period_end: string | null } | null) {
@@ -31,7 +18,13 @@ export async function POST(request: Request) {
   const admin = createSupabaseAdminClient();
   const noStore = { "cache-control": "no-store" };
   if (!admin) return new NextResponse("Display pairing is not configured.", { status: 503, headers: noStore });
-  if (!allowAttempt(requestKey(request))) return NextResponse.json({ ok: false, error: "rate_limited" }, { status: 429, headers: { ...noStore, "retry-after": "600" } });
+
+  const { data: allowed, error: rateLimitError } = await admin.rpc("gmp_allow_display_pairing_attempt", {
+    p_key_hash: requestKey(request),
+    p_now: new Date().toISOString(),
+  });
+  if (rateLimitError) return NextResponse.json({ ok: false, error: "rate_limit_unavailable" }, { status: 503, headers: noStore });
+  if (!allowed) return NextResponse.json({ ok: false, error: "rate_limited" }, { status: 429, headers: { ...noStore, "retry-after": "600" } });
 
   const contentType = request.headers.get("content-type") ?? "";
   let code = "";
