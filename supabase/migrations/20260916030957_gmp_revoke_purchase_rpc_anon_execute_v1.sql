@@ -1,0 +1,2 @@
+revoke execute on function public.gmp_create_purchase(uuid, uuid, uuid, uuid, text, jsonb) from anon;
+grant execute on function public.gmp_create_purchase(uuid, uuid, uuid, uuid, text, jsonb) to authenticated;
