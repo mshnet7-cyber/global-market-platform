@@ -35,15 +35,16 @@ export async function POST(request: Request) {
   const countryCode = String(form.get("country_code") ?? "").trim().toUpperCase();
   const currency = String(form.get("currency") ?? "").trim().toUpperCase();
   const submittedTimezone = String(form.get("timezone") ?? "").trim();
-  if (!name || !isValidCountry(countryCode) || !validCurrency(currency)) return NextResponse.redirect(new URL("/dashboard?error=store_input", request.url));
-  const timezone = validTimezone(submittedTimezone) ? submittedTimezone : "UTC";
+  if (!name || !isValidCountry(countryCode) || !validCurrency(currency) || !validTimezone(submittedTimezone)) {
+    return NextResponse.redirect(new URL("/dashboard?error=store_input", request.url));
+  }
 
   const { data, error } = await admin.rpc("gmp_create_store", {
     p_org_id: organization.id,
     p_name: name,
     p_country_code: countryCode,
     p_currency: currency,
-    p_timezone: timezone,
+    p_timezone: submittedTimezone,
     p_base_slug: slugify(name),
   });
 
