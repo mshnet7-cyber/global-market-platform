@@ -31,6 +31,7 @@ export default async function DashboardPage() {
   const { data: subscription } = await supabase.from("gmp_subscriptions").select("status,current_period_end,plan_id,gmp_plans(code,name)").eq("organization_id", organization.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
   const planRelation = Array.isArray(subscription?.gmp_plans) ? subscription?.gmp_plans[0] : subscription?.gmp_plans;
   const currentPlan = plans.find((plan) => plan.code === (planRelation?.code ?? planCode));
+  const business = planCode === "business";
 
   return <main className="wrap section">
     <div className="eyebrow">MERCHANT</div>
@@ -38,6 +39,12 @@ export default async function DashboardPage() {
     <p className="hero-copy">مرحبًا {user.email}. إدارة المحل والفروع والشاشات والخدمات من مكان واحد.</p>
 
     <section className="grid four" style={{marginTop:24}}>{modules.map(([href,title,description]) => <Link href={href} className="card" key={href}><strong>{title}</strong><div className="meta" style={{marginTop:8}}>{description}</div></Link>)}</section>
+
+    <section className="grid three" style={{marginTop:20}}>
+      <Link href={business ? "/dashboard/cameras" : "/pricing"} className="card"><strong>الكاميرات والمراقبة</strong><div className="meta" style={{marginTop:8}}>{business ? "إدارة الأجهزة ومشاهدة روابط البث داخل اللوحة." : "متاح ضمن الباقة الكاملة."}</div></Link>
+      <Link href={business ? "/dashboard/compliance" : "/pricing"} className="card"><strong>الامتثال وتوثيق العمليات</strong><div className="meta" style={{marginTop:8}}>{business ? "حالات مراجعة، سجل أحداث وربط رسمي مستقبلي." : "متاح ضمن الباقة الكاملة."}</div></Link>
+      <Link href={business ? "/dashboard/invoicing" : "/pricing"} className="card"><strong>الفوترة حسب الدولة</strong><div className="meta" style={{marginTop:8}}>{business ? "ملف ضريبي وموصل إلكتروني مستقل لكل دولة." : "متاح ضمن الباقة الكاملة."}</div></Link>
+    </section>
 
     <section className="card" style={{marginTop:24}}>
       <div className="card-top"><strong>المؤسسة</strong><span className="status">{organization.name}</span></div>
