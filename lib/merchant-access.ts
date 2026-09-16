@@ -39,8 +39,10 @@ export async function getMerchantContext() {
 
   const { data: subscription } = await supabase
     .from("gmp_subscriptions")
-    .select("status,current_period_end,plan_id,gmp_plans(code)")
+    .select("status,current_period_end,plan_id,gmp_plans(code),created_at")
     .eq("organization_id", organization.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
     .maybeSingle();
   const planRelation = Array.isArray(subscription?.gmp_plans) ? subscription?.gmp_plans[0] : subscription?.gmp_plans;
   const planCode = planRelation?.code as MerchantPlanCode | undefined;
