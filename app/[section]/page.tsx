@@ -1,6 +1,7 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { getSnapshot } from "../../lib/providers";
-import { appConfig, countries, isValidLanguage, languages } from "../../lib/config";
+import { appConfig, countries, isValidLanguage } from "../../lib/config";
 import { getDisplayName, getMessages, isRtlLanguage } from "../../lib/i18n";
 
 const publicSections = new Set(["gold", "silver", "news", "demo"]);
@@ -16,9 +17,7 @@ function formatMoney(value: number | null, locale: string, currency: string, max
 
 export default async function SectionPage({ params, searchParams }: { params: Promise<{ section: string }>; searchParams?: Promise<{ country?: string; language?: string }> }) {
   const { section } = await params;
-  if (!publicSections.has(section)) {
-    return <main className="wrap section"><h1>404</h1><p className="hero-copy">Page not found.</p><Link className="btn primary" href="/">Home</Link></main>;
-  }
+  if (!publicSections.has(section)) notFound();
 
   const query = await searchParams;
   const language = query?.language && isValidLanguage(query.language) ? query.language.toLowerCase() : appConfig.defaultLanguage;
