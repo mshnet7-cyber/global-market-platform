@@ -4,11 +4,8 @@ const TIMEOUT_MS = 5000;
 const MAX_EOD_AGE_MS = 72 * 60 * 60 * 1000;
 
 type MarketProvider = "Alpha Vantage" | "EODHD";
-
-type ProviderResult = {
-  quotes: Quote[];
-  provider: MarketProvider;
-};
+type SymbolDef = { symbol: string; name: string; exchange: string };
+type ProviderResult = { quotes: Quote[]; provider: MarketProvider };
 
 function parseNumber(value: unknown) {
   const n = Number(String(value ?? "").replace(/,/g, ""));
@@ -63,111 +60,132 @@ export const MARKET_SYMBOLS = [
   { symbol: "JPM", name: "JPMorgan Chase", exchange: "NYSE" },
   { symbol: "KO", name: "Coca-Cola", exchange: "NYSE" },
   { symbol: "XOM", name: "Exxon Mobil", exchange: "NYSE" },
-] as const;
+] as const satisfies readonly SymbolDef[];
 
 export const MARKET_INDEX_SYMBOLS = [
   { symbol: "SPY", name: "S&P 500 ETF", exchange: "NYSE Arca" },
   { symbol: "QQQ", name: "Nasdaq-100 ETF", exchange: "NASDAQ" },
   { symbol: "DIA", name: "Dow Jones ETF", exchange: "NYSE Arca" },
   { symbol: "EWJ", name: "Japan ETF", exchange: "NYSE Arca" },
-] as const;
+] as const satisfies readonly SymbolDef[];
 
-function alphaUrl(symbol: string) {
+function alphaUrl(params: Record<string, string>) {
   const key = process.env.ALPHA_VANTAGE_API_KEY;
   if (!key) return null;
   const url = new URL("https://www.alphavantage.co/query");
-  url.searchParams.set("function", "GLOBAL_QUOTE");
-  url.searchParams.set("symbol", symbol);
+  for (const [name, value] of Object.entries(params)) url.searchParams.set(name, value);
   url.searchParams.set("apikey", key);
   return url.toString();
 }
 
-async function fetchAlpha(symbols: readonly { symbol: string; name: string; exchange: string }[]): Promise<ProviderResult | null> {
-  if (!commercialDisplayAllowed()) return null;
-  if (!process.env.ALPHA_VANTAGE_API_KEY) return null;
-  const results: Quote[] = [];
-
-  for (const item of symbols) {
-    const url = alphaUrl(item.symbol);
-    if (!url) continue;
-    try {
-      const json = await safeJson(url);
-      const q = json?.["Global Quote"];
-      const close = parseNumber(q?.["05. price"]);
-      const open = parseNumber(q?.["02. open"]);
-      const previousClose = parseNumber(q?.["08. previous close"]);
-      const date = validTimestamp(q?.["07. latest trading day"] + "T23:59:59Z");
-      if (close == null || !date || !isFresh(date)) continue;
-      const change = parseNumber(q?.["09. change"]);
-      const pct = String(q?.["10. change percent"] ?? "").replace("%", "");
-      const bid = close;
-      const ask = close;
-      results.push({
-        instrument: `${item.name} (${item.symbol})`,
-        spot: close,
-        bid,
-        ask,
-        currency: "USD",
-        unit: "share",
-        timestamp: date,
-        provider: "Alpha Vantage",
-        status: "DELAYED",
-      });
-      void open;
-      void previousClose;
-      void change;
-      void pct;
-    } catch {
-      // Continue with the next symbol. Provider failures are non-fatal.
-    }
-  }
-
-  return results.length ? { quotes: results, provider: "Alpha Vantage" } : null;
+function alphaQuote(item: SymbolDef, q: Record<string, unknown>): Quote | null {
+  const close = parseNumber(q["05. price"]);
+  const previousClose = parseNumber(q["08. previous close"]);
+  const change = parseNumber(q["09. change"]);
+  const changePercent = parseNumber(String(q["10. change percent"] ?? "").replace("%", ""));
+  const date = validTimestamp(`${String(q["07. latest trading day"] ?? "")}T23:59:59Z`);
+  if (close == null || !date || !isFresh(date)) return null;
+  return {
+    instrument: `${item.name} (${item.symbol})`,
+    symbol: item.symbol,
+    exchange: item.exchange,
+    spot: close,
+    bid: close,
+    ask: close,
+    previousClose,
+    change,
+    changePercent,
+    currency: "USD",
+    unit: "share",
+    timestamp: date,
+    provider: "Alpha Vantage",
+    status: "DELAYED",
+  };
 }
 
-async function fetchEodhd(symbols: readonly { symbol: string; name: string; exchange: string }[]): Promise<ProviderResult | null> {
+async function fetchAlpha(symbols: readonly SymbolDef[]): Promise<ProviderResult | null> {
+  if (!commercialDisplayAllowed()) return null;
+  const url = alphaUrl({ function: "TOP_GAINERS_LOSERS" });
+  if (!url) return null;
+  try {
+    const json = await safeJson(url);
+    const allowed = new Map(symbols.map((item) => [item.symbol, item]));
+    const rows = [
+      ...(Array.isArray(json?.top_gainers) ? json.top_gainers : []),
+      ...(Array.isArray(json?.top_losers) ? json.top_losers : []),
+      ...(Array.isArray(json?.most_actively_traded) ? json.most_actively_traded : []),
+    ];
+    const seen = new Set<string>();
+    const quotes: Quote[] = [];
+    for (const row of rows) {
+      const symbol = String(row?.ticker ?? "").toUpperCase();
+      const item = allowed.get(symbol);
+      if (!item || seen.has(symbol)) continue;
+      const quote = alphaQuote(item, {
+        "05. price": row?.price,
+        "07. latest trading day": row?.last_updated,
+        "08. previous close": row?.previous_close,
+        "09. change": row?.change_amount,
+        "10. change percent": row?.change_percentage,
+      });
+      if (quote) {
+        seen.add(symbol);
+        quotes.push(quote);
+      }
+    }
+    return quotes.length ? { quotes, provider: "Alpha Vantage" } : null;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchEodhd(symbols: readonly SymbolDef[]): Promise<ProviderResult | null> {
   if (!commercialDisplayAllowed()) return null;
   const key = process.env.EODHD_API_KEY;
   if (!key) return null;
-  const results: Quote[] = [];
-
+  const quotes: Quote[] = [];
   for (const item of symbols) {
     try {
-      const url = new URL(`https://eodhd.com/api/real-time/${encodeURIComponent(item.symbol)}.${encodeURIComponent(item.exchange === "NASDAQ" ? "US" : "US")}`);
+      const url = new URL(`https://eodhd.com/api/real-time/${encodeURIComponent(item.symbol)}.US`);
       url.searchParams.set("api_token", key);
       url.searchParams.set("fmt", "json");
       const json = await safeJson(url.toString());
       const close = parseNumber(json?.close ?? json?.previousClose);
-      const date = validTimestamp(json?.timestamp ? new Date(Number(json.timestamp) * 1000).toISOString() : json?.date);
-      if (close == null || !date || !isFresh(date)) continue;
-      results.push({
+      const timestamp = json?.timestamp ? new Date(Number(json.timestamp) * 1000).toISOString() : validTimestamp(json?.date);
+      const previousClose = parseNumber(json?.previousClose);
+      if (close == null || !timestamp || !isFresh(timestamp)) continue;
+      const change = previousClose == null ? null : close - previousClose;
+      const changePercent = previousClose ? (change! / previousClose) * 100 : null;
+      quotes.push({
         instrument: `${item.name} (${item.symbol})`,
+        symbol: item.symbol,
+        exchange: item.exchange,
         spot: close,
         bid: parseNumber(json?.bid),
         ask: parseNumber(json?.ask),
+        previousClose,
+        change,
+        changePercent,
         currency: "USD",
         unit: "share",
-        timestamp: date,
+        timestamp,
         provider: "EODHD",
         status: "DELAYED",
       });
     } catch {
-      // Continue with the next symbol. Provider failures are non-fatal.
+      // Continue with remaining instruments; one provider failure is non-fatal.
     }
   }
-
-  return results.length ? { quotes: results, provider: "EODHD" } : null;
+  return quotes.length ? { quotes, provider: "EODHD" } : null;
 }
 
 export async function getPublicMarketQuotes(kind: "stocks" | "markets"): Promise<ProviderResult> {
   const symbols = kind === "stocks" ? MARKET_SYMBOLS : MARKET_INDEX_SYMBOLS;
   const configured = configuredProvider();
   const providers = configured === "alpha" ? ["alpha"] : configured === "eodhd" ? ["eodhd"] : ["alpha", "eodhd"];
-
   for (const provider of providers) {
     const result = provider === "alpha" ? await fetchAlpha(symbols) : await fetchEodhd(symbols);
     if (result?.quotes.length) return result;
   }
-
   return { quotes: [], provider: configured === "eodhd" ? "EODHD" : "Alpha Vantage" };
 }
