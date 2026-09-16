@@ -39,7 +39,7 @@ export async function GET(request: Request) {
       const from = url.searchParams.get("from") ?? new Date(Date.UTC(new Date().getUTCFullYear(), 0, 1)).toISOString().slice(0, 10); const to = url.searchParams.get("to") ?? new Date().toISOString().slice(0, 10);
       if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || from > to) return NextResponse.json({ error: "invalid_tax_period" }, { status: 400 });
       const [{ data: sales }, { data: expenses }] = await Promise.all([
-        supabase.from("gmp_sales").select("id,invoice_no,subtotal,vat_amount,total,issued_at,status").eq("organization_id", organization.id).gte("issued_at", `${from}T00:00:00.000Z`).lte("issued_at", `${to}T23:59:59.999Z`).neq("status", "voided"),
+        supabase.from("gmp_sales").select("id,invoice_no,subtotal,vat_amount,total,issued_at,status").eq("organization_id", organization.id).eq("status", "issued").gte("issued_at", `${from}T00:00:00.000Z`).lte("issued_at", `${to}T23:59:59.999Z"),
         supabase.from("gmp_expenses").select("id,category,amount,vat_amount,expense_date,status").eq("organization_id", organization.id).gte("expense_date", from).lte("expense_date", to).eq("status", "posted"),
       ]);
       const outputVat=(sales??[]).reduce((s,x)=>s+Number(x.vat_amount??0),0), inputVat=(expenses??[]).reduce((s,x)=>s+Number(x.vat_amount??0),0), salesTotal=(sales??[]).reduce((s,x)=>s+Number(x.total??0),0), expensesTotal=(expenses??[]).reduce((s,x)=>s+Number(x.amount??0),0);
@@ -62,7 +62,7 @@ export async function POST(request: Request) {
     if(moduleName==="expenses"){
       if(body.action==="void"){
         const id=String(body.id??""),reason=String(body.reason??"").trim(); if(!id||!reason)return NextResponse.json({error:"expense_id_and_reason_required"},{status:400});
-        const {data,error}=await supabase.from("gmp_expenses").update({status:"voided",voided_at:new Date().toISOString(),voided_by:user.id,void_reason:reason.slice(0,500)}).eq("id",id).eq("organization_id",organization.id).eq("status","posted").select("*").single(); if(error)return NextResponse.json({error:error.message},{status:400}); return NextResponse.json({success:true,row:data});
+        const {data,error}=await supabase.rpc("gmp_void_expense",{p_organization_id:organization.id,p_expense_id:id,p_reason:reason}); if(error)return NextResponse.json({error:error.message},{status:400}); return NextResponse.json(data);
       }
       const category=String(body.category??"").trim(),amount=num(body.amount),vatAmount=num(body.vat_amount??0),expenseAccountId=String(body.expense_account_id??""),paymentAccountId=String(body.payment_account_id??""); if(!category||amount===null||amount<=0||vatAmount===null||vatAmount<0||!expenseAccountId||!paymentAccountId||expenseAccountId===paymentAccountId)return NextResponse.json({error:"invalid_expense"},{status:400});
       if (!(await validateBranch(supabase, organization.id, body.branch_id))) return NextResponse.json({error:"branch_not_found"},{status:400});
