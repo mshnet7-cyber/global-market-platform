@@ -18,15 +18,15 @@ export default async function CurrenciesPage({ searchParams }: { searchParams?: 
   const rates = await Promise.all(BASES.map(async (base) => ({ base, rate: await fetchFrankfurterRate(base, country.currency) })));
   const countryName = getDisplayName("region", country.code, language, country.name);
 
-  return <div className="app-shell" lang={language} dir={isRtlLanguage(language) ? "rtl" : "ltr"}>
-    <header className="topbar"><div className="container nav"><Link href="/" className="brand">GLOBAL <span>MARKET</span></Link><nav className="nav-links"><Link href={`/gold?country=${country.code}&language=${language}`}>{messages.gold}</Link><Link href={`/silver?country=${country.code}&language=${language}`}>{messages.silver}</Link><Link href={`/currencies?country=${country.code}&language=${language}`}>العملات</Link><Link href={`/news?country=${country.code}&language=${language}`}>{messages.news}</Link><Link href="/pricing">الاشتراكات</Link></nav><div className="nav-actions"><Link className="btn btn-ghost" href="/login">{messages.login}</Link><Link className="btn btn-primary" href="/demo">{messages.createDisplay}</Link></div></div></header>
+  return <div className="app-shell currency-page" lang={language} dir={isRtlLanguage(language) ? "rtl" : "ltr"}>
+    <header className="topbar"><div className="container nav site-nav"><Link href="/" className="brand"><span className="brand-mark">GM</span><span>GLOBAL <b>MARKET</b></span></Link><nav className="nav-links" aria-label="Primary"><Link href={`/gold?country=${country.code}&language=${language}`}>{messages.gold}</Link><Link href={`/silver?country=${country.code}&language=${language}`}>{messages.silver}</Link><Link href={`/markets?country=${country.code}&language=${language}`}>{messages.markets}</Link><Link href={`/stocks?country=${country.code}&language=${language}`}>{messages.stocks}</Link><Link href={`/currencies?country=${country.code}&language=${language}`}>{messages.currencies}</Link><Link href={`/news?country=${country.code}&language=${language}`}>{messages.news}</Link></nav><div className="nav-actions"><div className="nav-preferences"><span className="country-dot" />{countryName}<span className="nav-divider" />{language.toUpperCase()}</div><Link className="btn btn-ghost" href="/login">{messages.login}</Link><Link className="btn btn-primary" href="/demo">{messages.createDisplay}</Link></div></div></header>
     <main className="container section">
       <div className="kicker">FX REFERENCE</div>
       <h1>أسعار الصرف المرجعية</h1>
       <p className="hero-copy">1 وحدة من العملة الأساسية مقومة بعملة {countryName} ({country.currency}).</p>
-      <div className="grid grid-4" style={{marginTop:24}}>{rates.map(({ base, rate }) => <section className="card" key={base}><div className="card-title">{base} → {country.currency}</div><div className="metric">{formatRate(rate, locale)}</div><div className="meta">مرجع صرف</div></section>)}</div>
-      <div className="notice" style={{marginTop:24}}>هذه أسعار مرجعية وليست أسعار تحويل أو صرف ملزمة من بنك أو محل صرافة.</div>
+      <div className="grid grid-4 currency-grid">{rates.map(({ base, rate }) => <section className="card" key={base}><div className="card-title">{base} <span className="rate-arrow">→</span> {country.currency}</div><div className="metric">{formatRate(rate, locale)}</div><div className="meta">مرجع صرف</div></section>)}</div>
+      <div className="notice currency-notice">هذه أسعار مرجعية وليست أسعار تحويل أو صرف ملزمة من بنك أو محل صرافة.</div>
     </main>
-    <footer className="footer"><div className="container">{messages.referenceFooter}</div></footer>
+    <footer className="footer-premium"><div className="container footer-bottom"><span>© Global Market</span><span>{messages.referenceFooter}</span></div></footer>
   </div>;
 }
