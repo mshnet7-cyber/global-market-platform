@@ -14,8 +14,7 @@ export async function GET(){
 
 export async function POST(request:Request){
   try{
-    const {supabase,user,organization,role}=await requireMerchantPlan(["pro","business"]);
-    if(role==="viewer") return NextResponse.json({error:"forbidden"},{status:403});
+    const {supabase,user,organization}=await requireMerchantPlan(["pro","business"]);
     const body=await request.json().catch(()=>null) as Record<string,unknown>|null;
     const name=String(body?.name??"Integration key").trim().slice(0,80);
     const requested=Array.isArray(body?.scopes)?body.scopes.map(String):[...API_SCOPES];
@@ -31,12 +30,12 @@ export async function POST(request:Request){
 
 export async function DELETE(request:Request){
   try{
-    const {supabase,user,organization}=await requireMerchantPlan(["pro","business"]);
+    const {supabase,organization}=await requireMerchantPlan(["pro","business"]);
     const id=new URL(request.url).searchParams.get("id")??"";
     if(!id)return NextResponse.json({error:"key_id_required"},{status:400});
     const {error}=await supabase.from("gmp_api_keys").update({revoked_at:new Date().toISOString()}).eq("id",id).eq("organization_id",organization.id);
     if(error)return NextResponse.json({error:error.message},{status:400});
-    await recordAuditEvent({action:"api.key.revoked",organizationId:organization.id,userId:user.id,entityType:"api_key",entityId:id});
+    await recordAuditEvent({action:"api.key.revoked",organizationId:organization.id,entityType:"api_key",entityId:id});
     return NextResponse.json({success:true});
   }catch(error){const message=error instanceof Error?error.message:"unexpected_error";return NextResponse.json({error:message},{status:message==="merchant_plan_required"?403:503});}
 }
