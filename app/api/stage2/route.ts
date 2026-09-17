@@ -48,6 +48,28 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const action = url.searchParams.get("action") || "directory";
   try {
+
+    if (action === "marketplace") {
+      const admin = createSupabaseAdminClient();
+      if (!admin) return json({ error: "not_configured" }, 503);
+      const { data: directory } = await admin.from("gmp_store_directory")
+        .select("store_id,status,description,category,city,services,hours")
+        .eq("status","published").limit(200);
+      const storeIds = (directory ?? []).map((x:any)=>x.store_id);
+      if (!storeIds.length) return json({ stores: [], listings: [] });
+      const [{ data: stores }, { data: listings, error }] = await Promise.all([
+        admin.from("gmp_stores").select("id,name,slug,phone,whatsapp,logo_path,country_code,currency,timezone").in("id",storeIds),
+        admin.from("gmp_marketplace_listings").select("id,store_id,listing_type,title,description,category,price,currency,availability,contact_mode,image_path,metadata,updated_at").in("store_id",storeIds).eq("status","active").order("updated_at",{ascending:false}).limit(500)
+      ]);
+      if(error) return json({error:error.message},400);
+      const dirMap=new Map((directory??[]).map((d:any)=>[d.store_id,d]));
+      const storeMap=new Map((stores??[]).map((s:any)=>[s.id,s]));
+      return json({
+        stores:(stores??[]).map((s:any)=>({store:s,directory:dirMap.get(s.id)??null})),
+        listings:(listings??[]).map((l:any)=>({...l,store:storeMap.get(l.store_id)??null}))
+      });
+    }
+
     if (action === "directory") {
       const admin = createSupabaseAdminClient();
       if (!admin) return json({ error: "not_configured" }, 503);
@@ -59,7 +81,7 @@ export async function GET(request: Request) {
         .eq("status", "published").order("published_at", { ascending: false }).limit(100);
       if (error) return json({ error: error.message }, 400);
       const ids = (rows ?? []).map(r => r.store_id);
-      const { data: stores } = ids.length ? await admin.from("gmp_stores").select("id,name,slug,phone,whatsapp,logo_path,country_code,currency,timezone").in("id", ids) : { data: [] as any[] };
+      const { data: stores } = ids.length ? await admin.from("gmp_stores").select("id,organization_id,name,slug,phone,whatsapp,logo_path,country_code,currency,timezone").in("id", ids) : { data: [] as any[] };
       const storeMap = new Map((stores ?? []).map(s => [s.id, s]));
       const data = (rows ?? []).map(r => ({ ...r, store: storeMap.get(r.store_id) ?? null })).filter(r => {
         const hay = JSON.stringify(r).toLowerCase();
@@ -83,7 +105,7 @@ export async function GET(request: Request) {
         .select("id,listing_type,title,description,category,price,currency,availability,contact_mode,image_path,metadata,updated_at")
         .eq("store_id", store.id).eq("status","active").order("updated_at",{ascending:false}).limit(200);
       const { data: branches } = await admin.from("gmp_branches").select("id,name,code,city,address,phone,whatsapp,active")
-        .eq("organization_id", directory.store_id ? store.organization_id : store.organization_id).eq("active",true).order("name").limit(50);
+        .eq("organization_id", store.organization_id).eq("active",true).order("name").limit(50);
       return json({ store, directory, listings: listings ?? [], branches: branches ?? [] });
     }
 
