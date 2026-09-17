@@ -8,7 +8,7 @@ type Line={listing:any;quantity:number};
 export default function MarketplacePage(){
   const [data,setData]=useState<any>({stores:[],listings:[]}),[cart,setCart]=useState<Line[]>([]),[buyer,setBuyer]=useState({name:"",phone:"",email:"",note:"",fulfillment_mode:"contact"}),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[message,setMessage]=useState("");
   useEffect(()=>{fetch("/api/stage2?action=marketplace",{cache:"no-store"}).then(async r=>{const d=await r.json();if(!r.ok)throw new Error(d.error||"load_failed");setData(d)}).catch(e=>setMessage(e.message||"تعذر تحميل Marketplace")).finally(()=>setLoading(false))},[]);
-  function add(listing:any){setCart(c=>{const found=c.find(x=>x.listing.id===listing.id);return found?c.map(x=>x.listing.id===listing.id?{...x,quantity:x.quantity+1}:x):[...c,{listing,quantity:1}]})}
+  function add(listing:any){setCart(c=>{if(c.length && c[0].listing.store_id!==listing.store_id){setMessage("السلة مرتبطة بمحل واحد. أرسل الطلب الحالي أولًا ثم اختر محلًا آخر.");return c;}const found=c.find(x=>x.listing.id===listing.id);return found?c.map(x=>x.listing.id===listing.id?{...x,quantity:x.quantity+1}:x):[...c,{listing,quantity:1}]})}
   const total=useMemo(()=>cart.reduce((s,x)=>s+Number(x.listing.price)*x.quantity,0),[cart]);
   async function submit(){
     if(!cart.length)return setMessage("السلة فارغة");
@@ -16,7 +16,7 @@ export default function MarketplacePage(){
     try{
       const r=await fetch("/api/stage2",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({
         action:"marketplace_order",store_id:cart[0].listing.store_id,buyer_name:buyer.name,buyer_phone:buyer.phone,buyer_email:buyer.email,note:buyer.note,
-        fulfillment_mode:buyer.fulfillment_mode,lines:cart.map(x=>({listing_id:x.listing.id,quantity:x.quantity}))
+        fulfillment_mode:buyer.fulfillment_mode,idempotency_key:crypto.randomUUID(),lines:cart.map(x=>({listing_id:x.listing.id,quantity:x.quantity}))
       })});
       const d=await r.json();if(!r.ok)throw new Error(d.error||"order_failed");
       setMessage("تم إرسال طلب التواصل رقم #"+d.order_no+" للمحل. لا يوجد دفع إلكتروني في هذه المرحلة.");
