@@ -41,5 +41,5 @@ export default async function MerchantModulePage({ params }: { params: Promise<{
     timezone: store.timezone ? String(store.timezone) : null,
   }));
 
-  return <main className="wrap section"><div className="eyebrow">MERCHANT MODULE</div><h1>{config.title}</h1><p className="hero-copy">{config.description}</p><ModuleWorkspace module={module} stores={stores}/></main>;
+  return <div className={`dashboard-shell dashboard-module-page module-${module}`}><main className="wrap section"><div className="eyebrow">MERCHANT MODULE</div><h1>{config.title}</h1><p className="hero-copy">{config.description}</p><ModuleWorkspace module={module} stores={stores}/></main></div>;
 }
