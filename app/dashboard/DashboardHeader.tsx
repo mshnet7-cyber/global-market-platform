@@ -29,6 +29,9 @@ export default function DashboardHeader({ organizationName, role, planName }: Da
           <Link href="/dashboard/purchases">المشتريات</Link>
           <Link href="/dashboard/accounting">المحاسبة</Link>
           <Link href="/dashboard/reports">التقارير</Link>
+          <Link href="/dashboard/operations">ERP</Link>
+          <Link href="/directory">المحلات</Link>
+          <Link href="/marketplace">Marketplace</Link>
           <Link href="/display">الشاشات</Link>
         </nav>
         <div className="dashboard-user">
