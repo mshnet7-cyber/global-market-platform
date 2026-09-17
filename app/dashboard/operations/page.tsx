@@ -35,8 +35,8 @@ export default function OperationsPage(){
       if(tab==="directory")setDirectory((await get("/api/stage2?action=directory")).rows||[]);
     }catch(e){setMessage(e instanceof Error?e.message:"تعذر تحميل الوحدة");}
   }
-  useEffect(()=>{void load();},[]);
-  useEffect(()=>{void aux();},[tab]);
+  useEffect(()=>{const id=window.setTimeout(()=>{void load();},0);return()=>window.clearTimeout(id);},[]);
+  useEffect(()=>{const id=window.setTimeout(()=>{void aux();},0);return()=>window.clearTimeout(id);},[tab]);
   const product=useMemo(()=>data?.products?.find(p=>p.id===productId),[data,productId]);
   async function act(payload:any){setBusy(true);setMessage("");try{await post(payload);setMessage("تم حفظ العملية");await load();await aux();}catch(e){setMessage(e instanceof Error?e.message:"حدث خطأ");}finally{setBusy(false);}}
   if(loading)return <main className="stage2-page"><div className="stage2-empty">جارٍ تحميل مركز التشغيل…</div></main>;
