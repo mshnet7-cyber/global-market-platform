@@ -41,7 +41,16 @@ export default async function DashboardPage() {
   const initials = (organization.name?.trim()?.slice(0, 1) || "G").toUpperCase();
 
   return <div className="dashboard-shell">
-    <header className="dashboard-topbar"><div className="container dashboard-nav"><Link href="/dashboard" className="dashboard-brand">GLOBAL <span>MARKET</span></Link><nav className="dashboard-nav-main"><Link href="/dashboard">الرئيسية</Link><Link href="/dashboard/sales">المبيعات</Link><Link href="/dashboard/inventory">المخزون</Link><Link href="/dashboard/purchases">المشتريات</Link><Link href="/dashboard/accounting">المحاسبة</Link></nav><div className="dashboard-user"><div className="dashboard-user-text"><strong>{organization.name}</strong><span>{role === "owner" ? "مالك" : role === "admin" ? "مدير" : "مشاهد"} · {currentPlan?.name ?? "الخطة الحالية"}</span></div><div className="dashboard-user-badge">{initials}</div></div></div></header>
+    <header className="dashboard-topbar">
+      <div className="container dashboard-nav">
+        <Link href="/dashboard" className="dashboard-brand">GLOBAL <span>MARKET</span></Link>
+        <nav className="dashboard-nav-main">
+          <Link href="/dashboard">الرئيسية</Link><Link href="/dashboard/sales">المبيعات</Link><Link href="/dashboard/inventory">المخزون</Link><Link href="/dashboard/purchases">المشتريات</Link><Link href="/dashboard/accounting">المحاسبة</Link><Link href="/dashboard/reports">التقارير</Link>
+        </nav>
+        <div className="dashboard-user"><div className="dashboard-user-text"><strong>{organization.name}</strong><span>{role === "owner" ? "مالك" : role === "admin" ? "مدير" : "مشاهد"} · {currentPlan?.name ?? "الخطة الحالية"}</span></div><div className="dashboard-user-badge">{initials}</div></div>
+      </div>
+    </header>
+
     <main className="container dashboard-main">
       <section className="dashboard-hero"><div><div className="eyebrow">MERCHANT WORKSPACE</div><h1 className="dashboard-title">لوحة المحل</h1><p className="dashboard-subtitle">كل عمليات المحل مرتبة في مساحة تشغيل واحدة، مع وصول سريع للمهام اليومية.</p></div><div className="actions"><Link href="/dashboard/sales" className="btn primary">فتح نقطة البيع</Link><Link href="/display" className="btn ghost">إدارة الشاشات</Link></div></section>
       <section className="dashboard-kpis"><div className="kpi"><div className="kpi-label">الخطة الحالية</div><div className="kpi-value">{currentPlan?.name ?? "—"}</div></div><div className="kpi"><div className="kpi-label">المتاجر والفروع</div><div className="kpi-value">{stores?.length ?? 0}</div></div><div className="kpi"><div className="kpi-label">حالة الاشتراك</div><div className="kpi-value">{subscription?.status ?? "—"}</div></div><div className="kpi"><div className="kpi-label">صلاحية الحساب</div><div className="kpi-value">{role === "owner" ? "مالك" : role === "admin" ? "مدير" : "مشاهد"}</div></div></section>
