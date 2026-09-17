@@ -7,7 +7,7 @@ const plans = [
 ];
 
 export default function PricingPage() {
-  return <div className="page-frame">
+  return <div className="page-frame pricing-page">
     <header className="topbar"><div className="container nav site-nav"><Link href="/" className="brand"><span className="brand-mark">GM</span><span>GLOBAL <b>MARKET</b></span></Link><nav className="nav-links" aria-label="Primary"><Link href="/gold">الذهب</Link><Link href="/silver">الفضة</Link><Link href="/markets">الأسواق</Link><Link href="/news">الأخبار</Link></nav><div className="nav-actions"><Link className="btn btn-ghost" href="/login">تسجيل الدخول</Link><Link className="btn btn-primary" href="/demo">ابدأ الآن</Link></div></div></header>
     <main className="container site-main section-shell">
       <section className="page-hero"><div className="page-hero-grid"><div><div className="eyebrow"><span className="live-dot" />PLANS & TOOLS</div><h1>اختر مستوى التشغيل المناسب لمحلك.</h1><p className="page-lede">ابدأ بالشاشة، ثم وسّع إلى إدارة الأعمال، أو استخدم مساحة التشغيل الكاملة عندما تحتاج المبيعات والمخزون والمحاسبة والامتثال في نظام واحد.</p><div className="actions" style={{marginTop:26}}><Link href="/demo" className="btn btn-primary btn-lg">جرّب المنصة</Link><Link href="/login" className="btn btn-lg">لديك حساب؟ دخول</Link></div></div><aside className="hero-panel"><div className="eyebrow">ADD-ON DISPLAY</div><div className="panel-value">4 ر.ع</div><div className="panel-meta">للشاشة الإضافية · شهريًا</div><div className="plan-periods" style={{marginTop:17}}><span className="plan-period">21 ر.ع · 6 أشهر</span><span className="plan-period">44 ر.ع · سنة</span></div></aside></div></section>
