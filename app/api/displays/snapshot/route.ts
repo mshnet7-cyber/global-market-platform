@@ -102,6 +102,8 @@ export async function POST(request: Request) {
     screen: { id: screen.id, name: screen.name, template: screen.template },
     store: { id: store.id, name: store.name, currency: store.currency, timezone: store.timezone, logo_path: store.logo_path, phone: store.phone, whatsapp: store.whatsapp },
     snapshot,
+    content: contentRows ?? [],
+    ads,
     status: snapshot.status,
     server_time: nowIso,
   }, { headers: noStore });
