@@ -466,7 +466,7 @@ export async function POST(request: Request) {
         dooh_campaign:{table:"gmp_ad_campaigns",statuses:["pending","approved","active","paused","completed","cancelled"]},
         dooh_placement:{table:"gmp_ad_placements",statuses:["scheduled","live","paused","completed","cancelled"]},
         display_content:{table:"gmp_display_content",statuses:[]},
-        repair:{table:"gmp_repair_orders",statuses:["received","in_progress","ready","delivered","cancelled"]},
+        repair:{table:"gmp_repair_orders",statuses:["received","in_repair","ready","delivered","cancelled"]},
       };
       const cfg=map[entity]; if(!cfg || (cfg.statuses.length && !cfg.statuses.includes(status)))return json({error:"invalid_status"},400);
       const query=access.supabase.from(cfg.table).update({status,updated_at:new Date().toISOString()}).eq("id",id);
