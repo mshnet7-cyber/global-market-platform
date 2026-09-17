@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import "./globals.css";
 import "./premium.css";
@@ -8,7 +8,11 @@ export const metadata: Metadata = {
   description: "Global market information for gold, silver, currencies, markets, stocks and news, with professional merchant display tools.",
   keywords: ["gold prices", "silver prices", "global markets", "currencies", "merchant display", "Global Market"],
   robots: { index: true, follow: true },
-  viewport: "width=device-width, initial-scale=1",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
 };
 
 const RTL_LANGUAGES = new Set(["ar", "fa", "he", "ur"]);
