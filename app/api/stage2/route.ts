@@ -97,7 +97,7 @@ export async function GET(request: Request) {
       const admin = createSupabaseAdminClient();
       if (!admin) return json({ error: "not_configured" }, 503);
       const slug = text(url.searchParams.get("slug"), 100);
-      const { data: stores } = await admin.from("gmp_stores").select("id,name,slug,phone,whatsapp,logo_path,country_code,currency,timezone")
+      const { data: stores } = await admin.from("gmp_stores").select("id,organization_id,name,slug,phone,whatsapp,logo_path,country_code,currency,timezone")
         .eq("slug", slug).limit(1);
       const store = stores?.[0];
       if (!store) return json({ error: "store_not_found" }, 404);
@@ -149,10 +149,16 @@ export async function GET(request: Request) {
         access.supabase.from("gmp_journal_entries").select("id,branch_id,reference_type,reference_id,entry_no,description,entry_date,status,created_at").eq("organization_id",access.organization.id).order("created_at",{ascending:false}).limit(150),
         access.supabase.from("gmp_organization_members").select("organization_id,user_id,role,created_at").eq("organization_id",access.organization.id).order("created_at")
       ]);
+      const { data: marketplaceListings } = await access.supabase.from("gmp_marketplace_listings")
+        .select("id,store_id,product_id,listing_type,title,description,category,price,currency,availability,contact_mode,status,updated_at")
+        .eq("organization_id",access.organization.id).order("updated_at",{ascending:false}).limit(300);
+      const { data: marketplaceOrders } = await access.supabase.from("gmp_marketplace_orders")
+        .select("id,order_no,store_id,buyer_name,buyer_phone,buyer_email,note,status,fulfillment_mode,subtotal,currency,created_at,updated_at")
+        .eq("organization_id",access.organization.id).order("created_at",{ascending:false}).limit(200);
       return json({ role:access.role, planCode:access.planCode, stores:stores.data??[], branches:branches.data??[], products:products.data??[],
         customers:customers.data??[], suppliers:suppliers.data??[], sales:sales.data??[], purchases:purchases.data??[],
         expenses:expenses.data??[], repairs:repairs.data??[], goldPurchases:goldPurchases.data??[], accounts:accounts.data??[],
-        journals:journals.data??[], members:members.data??[] });
+        journals:journals.data??[], members:members.data??[], marketplaceListings:marketplaceListings??[], marketplaceOrders:marketplaceOrders??[] });
     }
 
     if (action === "team") {
@@ -259,6 +265,20 @@ export async function POST(request: Request) {
       const {data,error}=await query.select("*").single();
       if(error)return json({error:error.message},400);
       void auditStage2(access,"merchant.marketplace.listing.upsert","marketplace_listing",data?.id ?? null,{store_id:storeId,status:payload.status});
+      return json({success:true,row:data},201);
+    }
+
+
+    if (action === "branch") {
+      const access = await requirePermission("erp.write",["pro","business"]);
+      const name = text(b.name,150);
+      if (!name) return json({error:"branch_name_required"},400);
+      const {data,error}=await access.supabase.from("gmp_branches").insert({
+        organization_id:access.organization.id,name,code:text(b.code,40)||null,city:text(b.city,100)||null,
+        address:text(b.address,300)||null,phone:text(b.phone,60)||null,whatsapp:text(b.whatsapp,60)||null,active:b.active!==false
+      }).select("*").single();
+      if(error)return json({error:error.message},400);
+      void auditStage2(access,"merchant.branch.create","branch",data?.id ?? null);
       return json({success:true,row:data},201);
     }
 
