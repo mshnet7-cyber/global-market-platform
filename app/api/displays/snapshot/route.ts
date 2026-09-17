@@ -90,10 +90,10 @@ export async function POST(request: Request) {
     }, { headers: noStore });
   }
 
-  const now = new Date().toISOString();
+  const nowIso = new Date().toISOString();
   const { error: screenUpdateError } = await admin
     .from("gmp_screens")
-    .update({ last_snapshot_at: snapshot.timestamp ?? now, last_seen_at: now, status: "connected", updated_at: now })
+    .update({ last_snapshot_at: snapshot.timestamp ?? nowIso, last_seen_at: nowIso, status: "connected", updated_at: now })
     .eq("id", screen.id);
   if (screenUpdateError) return NextResponse.json({ ok: false, error: "screen_update_failed" }, { status: 500, headers: noStore });
 
@@ -103,6 +103,6 @@ export async function POST(request: Request) {
     store: { id: store.id, name: store.name, currency: store.currency, timezone: store.timezone, logo_path: store.logo_path, phone: store.phone, whatsapp: store.whatsapp },
     snapshot,
     status: snapshot.status,
-    server_time: now,
+    server_time: nowIso,
   }, { headers: noStore });
 }
