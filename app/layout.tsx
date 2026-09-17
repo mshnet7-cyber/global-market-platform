@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import "./globals.css";
 import "./premium.css";
+import "./ux-overrides.css";
 
 export const metadata: Metadata = {
   title: "Global Market Platform | Global market prices",
