@@ -5,11 +5,11 @@ import Link from "next/link";
 
 type Data = {
   role: string; planCode: string; stores: any[]; branches: any[]; products: any[]; customers: any[]; suppliers: any[];
-  sales: any[]; purchases: any[]; expenses: any[]; repairs: any[]; goldPurchases: any[]; accounts: any[]; journals: any[]; members: any[];
+  sales: any[]; purchases: any[]; expenses: any[]; repairs: any[]; goldPurchases: any[]; accounts: any[]; journals: any[]; members: any[]; marketplaceListings: any[]; marketplaceOrders: any[];
 };
 const tabs = [
   ["overview","Overview"],["pos","POS"],["inventory","Inventory"],["purchases","Purchases"],["contacts","Customers / Suppliers"],
-  ["repairs","Repairs"],["buy-gold","Gold Buy"],["finance","Finance"],["directory","Directory"],["staff","Staff"],
+  ["repairs","Repairs"],["buy-gold","Gold Buy"],["finance","Finance"],["directory","Directory"],["marketplace","Marketplace"],["staff","Staff"],
   ["displays","Displays"],["dooh","DOOH"]
 ] as const;
 const money=(v:any)=>v==null||!Number.isFinite(Number(v))?"—":Number(v).toLocaleString("en-OM",{minimumFractionDigits:3,maximumFractionDigits:3});
@@ -94,6 +94,11 @@ export default function OperationsPage(){
       <Table rows={data.purchases.slice(0,80)} columns={["invoice_no","status","total","purchase_date"]} labels={["الفاتورة","الحالة","الإجمالي","التاريخ"]}/>
     </section>}
 
+    {tab==="branches"&&<section className="stage2-section">
+      <SimpleForm title="Branch" fields={["name","code","city","address","phone","whatsapp"]} submit={async f=>act({action:"branch",name:f.name,code:f.code,city:f.city,address:f.address,phone:f.phone,whatsapp:f.whatsapp})}/>
+      <Table rows={data.branches.slice(0,100)} columns={["code","name","city","phone","active"]} labels={["Code","الفرع","المدينة","الهاتف","Active"]}/>
+    </section>}
+
     {tab==="contacts"&&<section className="stage2-section">
       <div className="stage2-grid two">
         <SimpleForm title="Customer" fields={["name","phone","notes"]} submit={async f=>act({action:"customer",name:f.name,phone:f.phone,notes:f.notes})}/>
@@ -120,6 +125,12 @@ export default function OperationsPage(){
 
     {tab==="directory"&&<section className="stage2-section">
       <div className="stage2-grid two">{data.stores.map(s=>{const d=directory.find(x=>x.store_id===s.id)||{};return <article className="stage2-panel" key={s.id}><h2>{s.name}</h2><label>الحالة<select id={"dir-status-"+s.id} defaultValue={d.status||"draft"}><option>draft</option><option>published</option><option>suspended</option></select></label><label>الفئة<input id={"dir-cat-"+s.id} defaultValue={d.category||""}/></label><label>الوصف<textarea id={"dir-desc-"+s.id} defaultValue={d.description||""}/></label><label>العنوان<input id={"dir-address-"+s.id} defaultValue={d.address||""}/></label><label>المدينة<input id={"dir-city-"+s.id} defaultValue={d.city||""}/></label><label>المنطقة<input id={"dir-region-"+s.id} defaultValue={d.region||""}/></label><label>الخدمات<input id={"dir-services-"+s.id} defaultValue={Array.isArray(d.services)?d.services.join(", "):""}/></label><button className="btn btn-primary" onClick={()=>void act({action:"directory",store_id:s.id,status:submitField("dir-status-"+s.id),category:submitField("dir-cat-"+s.id),description:submitField("dir-desc-"+s.id),address:submitField("dir-address-"+s.id),city:submitField("dir-city-"+s.id),region:submitField("dir-region-"+s.id),services:submitField("dir-services-"+s.id).split(",").map(x=>x.trim()).filter(Boolean)})}>حفظ الملف</button></article>})}</div>
+    </section>}
+
+    {tab==="marketplace"&&<section className="stage2-section">
+      <SimpleForm title="Marketplace listing" fields={["store_id","product_id","title","description","category","price","availability","status"]} submit={async f=>act({action:"listing",store_id:f.store_id,product_id:f.product_id||null,title:f.title,description:f.description,category:f.category,price:num(f.price),availability:f.availability||"in_stock",status:f.status||"draft"})}/>
+      <Table rows={data.marketplaceListings.slice(0,100)} columns={["title","store_id","price","availability","status","updated_at"]} labels={["العرض","Store","السعر","Availability","الحالة","Updated"]}/>
+      <div className="stage2-table-wrap"><table><thead><tr><th>Order</th><th>Buyer</th><th>Total</th><th>Status</th><th>Change</th></tr></thead><tbody>{data.marketplaceOrders.slice(0,100).map((o:any)=><tr key={o.id}><td>#{o.order_no}</td><td>{o.buyer_name}<br/><small>{o.buyer_phone}</small></td><td>{money(o.subtotal)} {o.currency}</td><td>{o.status}</td><td><select value={o.status} onChange={e=>void act({action:"status",entity:"marketplace_order",id:o.id,status:e.target.value})}><option>new</option><option>contacted</option><option>confirmed</option><option>fulfilled</option><option>cancelled</option></select></td></tr>)}</tbody></table></div>
     </section>}
 
     {tab==="staff"&&<section className="stage2-section"><div className="stage2-grid two">{(team?.members||[]).map((m:any)=>{const p=(team?.profiles||[]).find((x:any)=>x.id===m.user_id);const perms=(team?.permissions||[]).find((x:any)=>x.user_id===m.user_id)?.permissions||{};return <article className="stage2-panel" key={m.user_id}><div className="stage2-panel-head"><h2>{p?.display_name||m.user_id.slice(0,8)}</h2><span className="stage2-badge">{m.role}</span></div><div className="permission-grid">{["directory.write","marketplace.write","erp.write","pos.write","inventory.write","staff.write","displays.write","dooh.write"].map(k=><label key={k}><input type="checkbox" id={"perm-"+m.user_id+"-"+k} defaultChecked={perms[k]!==undefined?perms[k]:m.role!=="viewer"}/>{k}</label>)}</div><button className="btn btn-primary" onClick={()=>{const o:Record<string,boolean>={};["directory.write","marketplace.write","erp.write","pos.write","inventory.write","staff.write","displays.write","dooh.write"].forEach(k=>{const el=document.getElementById("perm-"+m.user_id+"-"+k) as HTMLInputElement|null;o[k]=Boolean(el?.checked)});void act({action:"permission",user_id:m.user_id,permissions:o})}}>حفظ</button></article>})}</div></section>}
