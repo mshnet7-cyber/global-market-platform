@@ -61,22 +61,27 @@ export default function MarketTerminal({ language, countryCode, countryName, cur
   const [selected, setSelected] = useState(initial.selectedInstrument);
   const [filter, setFilter] = useState<"all"|"watchlist">("all");
   const [watchlist, setWatchlist] = useState<string[]>([]);
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState<string>(initial.generatedAt);
 
   useEffect(() => {
-    try { setWatchlist(JSON.parse(localStorage.getItem("gmp_market_watchlist") || "[]")); } catch {}
+    const timer = window.setTimeout(() => {
+      try {
+        const stored = JSON.parse(localStorage.getItem("gmp_market_watchlist") || "[]");
+        if (Array.isArray(stored)) setWatchlist(stored.map(String).slice(0, 100));
+      } catch {}
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
-  useEffect(() => {
-    try { localStorage.setItem("gmp_market_watchlist", JSON.stringify(watchlist)); } catch {}
-  }, [watchlist]);
+
   useEffect(() => {
     const refresh = async () => {
       try {
         const url = "/api/market/terminal?country=" + countryCode + "&language=" + language + "&instrument=" + encodeURIComponent(selected) + "&range=" + range;
         const response = await fetch(url, { cache: "no-store" });
         if (!response.ok) return;
-        setData(await response.json());
-        setNow(Date.now());
+        const next = await response.json();
+        setData(next);
+        setNow(String(next.generatedAt ?? new Date().toISOString()));
       } catch {}
     };
     void refresh();
@@ -96,7 +101,11 @@ export default function MarketTerminal({ language, countryCode, countryName, cur
   const rows = allQuotes.filter((q) => filter === "all" || watchlist.includes(q.symbol ?? q.instrument));
 
   function toggleWatch(code: string) {
-    setWatchlist((current) => current.includes(code) ? current.filter((x) => x !== code) : [...current, code]);
+    setWatchlist((current) => {
+      const next = current.includes(code) ? current.filter((x) => x !== code) : [...current, code];
+      try { localStorage.setItem("gmp_market_watchlist", JSON.stringify(next.slice(0, 100))); } catch {}
+      return next;
+    });
   }
 
   return <div className="stage1-shell" dir={rtl ? "rtl" : "ltr"} lang={language}>
@@ -126,7 +135,7 @@ export default function MarketTerminal({ language, countryCode, countryName, cur
           <div className="terminal-primary-metrics"><div><span>PRICE</span><strong>{fmt(currentValue, selectedIsGold ? currency : selectedQuote?.currency ?? "USD")}</strong></div><div><span>CHANGE</span><b className={Number(derivedPercent) > 0 ? "up" : Number(derivedPercent) < 0 ? "down" : ""}>{fmt(derivedChange, selectedIsGold ? currency : selectedQuote?.currency ?? "USD")} · {pct(derivedPercent)}</b></div><div><span>HIGH</span><strong>{fmt(high, selectedIsGold ? currency : selectedQuote?.currency ?? "USD")}</strong></div><div><span>LOW</span><strong>{fmt(low, selectedIsGold ? currency : selectedQuote?.currency ?? "USD")}</strong></div></div>
           <div className="terminal-chart-card"><div className="terminal-card-head"><div><span className="micro-label">HISTORY</span><strong>{data.history.length ? (data.history.length + " observations") : "No history"}</strong></div><div className="terminal-source">{selectedIsGold ? data.gold.provider : selectedQuote?.provider ?? "UNAVAILABLE"} · {selectedIsGold ? data.gold.status : selectedQuote?.status ?? "UNAVAILABLE"}</div></div><Chart points={data.history} currency={selectedIsGold ? currency : selectedQuote?.currency ?? "USD"} /></div>
           <div className="terminal-grid-two">
-            <section className="terminal-card"><div className="terminal-card-head"><div><span className="micro-label">SOURCE TRUST</span><strong>سجل المصدر والحالة</strong></div></div><div className="trust-list"><div><span>المصدر</span><b>{selectedIsGold ? data.gold.provider : selectedQuote?.provider ?? "—"}</b></div><div><span>الحالة</span><b>{selectedIsGold ? data.gold.status : selectedQuote?.status ?? "—"}</b></div><div><span>آخر تحديث</span><b>{selectedIsGold ? (data.gold.timestamp ? new Date(data.gold.timestamp).toLocaleString() : "—") : (selectedQuote?.timestamp ? new Date(selectedQuote.timestamp).toLocaleString() : "—")}</b></div><div><span>آخر فحص</span><b>{new Date(now).toLocaleTimeString()}</b></div></div></section>
+            <section className="terminal-card"><div className="terminal-card-head"><div><span className="micro-label">SOURCE TRUST</span><strong>سجل المصدر والحالة</strong></div></div><div className="trust-list"><div><span>المصدر</span><b>{selectedIsGold ? data.gold.provider : selectedQuote?.provider ?? "—"}</b></div><div><span>الحالة</span><b>{selectedIsGold ? data.gold.status : selectedQuote?.status ?? "—"}</b></div><div><span>آخر تحديث</span><b>{selectedIsGold ? (data.gold.timestamp ? new Date(data.gold.timestamp).toLocaleString() : "—") : (selectedQuote?.timestamp ? new Date(selectedQuote.timestamp).toLocaleString() : "—")}</b></div><div><span>آخر فحص</span><b>{now ? new Date(now).toLocaleString() : "—"}</b></div></div></section>
             <section className="terminal-card"><div className="terminal-card-head"><div><span className="micro-label">COMPARISON</span><strong>مقارنة سريعة</strong></div></div><div className="compare-grid"><div><span>Spot</span><b>{fmt(currentValue, selectedIsGold ? currency : selectedQuote?.currency ?? "USD")}</b></div><div><span>High</span><b>{fmt(high, selectedIsGold ? currency : selectedQuote?.currency ?? "USD")}</b></div><div><span>Low</span><b>{fmt(low, selectedIsGold ? currency : selectedQuote?.currency ?? "USD")}</b></div><div><span>Change</span><b>{pct(derivedPercent)}</b></div></div></section>
           </div>
           <div className="terminal-footnote">Fail-closed: البيانات غير الموثوقة أو القديمة لا تُعرض كـLIVE.</div>

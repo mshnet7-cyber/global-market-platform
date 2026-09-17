@@ -10,7 +10,7 @@ function hashApiKey(key: string) {
 
 export function createApiKeyMaterial() {
   const secret = randomBytes(32).toString("base64url");
-  const key = \`gmp_live_\${secret}\`;
+  const key = "gmp_live_" + secret;
   return {
     key,
     hash: hashApiKey(key),

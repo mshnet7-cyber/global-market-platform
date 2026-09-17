@@ -37,10 +37,10 @@ export async function evaluateMarketAlerts(market: EvaluatedMarket) {
       const last = rule.last_triggered_at ? Date.parse(rule.last_triggered_at) : 0;
       const cooldown = Math.max(1, Number(rule.cooldown_minutes ?? 30)) * 60_000;
       if (last && Date.now() - last < cooldown) continue;
-      const title = \`تنبيه السوق: \${market.instrumentCode}\`;
+      const title = "تنبيه السوق: " + market.instrumentCode;
       const body = rule.rule_type === "source_unavailable"
-        ? \`مصدر البيانات أصبح غير متاح أو غير موثوق: \${market.providerName ?? market.providerCode ?? "unknown"}\`
-        : \`تحقق شرط \${rule.rule_type} عند \${market.value ?? market.changePercent ?? "—"}\`;
+        ? "مصدر البيانات أصبح غير متاح أو غير موثوق: " + (market.providerName ?? market.providerCode ?? "unknown")
+        : "تحقق شرط " + rule.rule_type + " عند " + (market.value ?? market.changePercent ?? "—");
       await admin.from("gmp_notifications").insert({
         user_id: rule.user_id,
         type: "market_alert",
