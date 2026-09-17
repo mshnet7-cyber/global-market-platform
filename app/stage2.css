@@ -1,0 +1,51 @@
+/* Stage 2: enterprise operations, premium commerce, media and control center. */
+.stage2-page,.stage2-public{min-height:100vh;background:#071019;color:#eef3f7;padding:34px max(18px,calc((100vw - 1240px)/2)) 80px}
+.stage2-page-head,.stage2-public-head{display:flex;justify-content:space-between;align-items:flex-end;gap:28px;padding:16px 0 26px}
+.stage2-page-head h1,.stage2-public-head h1{margin:0 0 8px;font-size:clamp(34px,5vw,62px);letter-spacing:-.05em}
+.stage2-page-head p,.stage2-public-head p{margin:0;max-width:760px;color:#85959e;line-height:1.8}
+.stage2-head-actions,.stage2-actions{display:flex;flex-wrap:wrap;gap:8px}
+.stage2-tabs{display:flex;gap:6px;flex-wrap:wrap;overflow:auto;padding:10px 0 16px;border-bottom:1px solid rgba(255,255,255,.08);margin-bottom:18px}
+.stage2-tabs button{border:1px solid #233843;background:#0b171f;color:#8fa0a9;border-radius:10px;padding:9px 12px;font:inherit;font-size:11px;font-weight:800;white-space:nowrap;cursor:pointer}
+.stage2-tabs button.active{background:#d8b56a;border-color:#d8b56a;color:#101820}
+.stage2-alert{margin:10px 0 18px;padding:13px 15px;border:1px solid rgba(216,181,106,.22);border-radius:11px;background:#0e1b24;color:#d8e0e4}
+.stage2-section{display:grid;gap:15px}
+.stage2-section-title,.stage2-panel-head,.stage2-store-card,.stage2-product-top,.stage2-row,.stage2-cart-line,.stage2-cart-total{display:flex;justify-content:space-between;align-items:center;gap:16px}
+.stage2-section-title h2,.stage2-panel h2{margin:0 0 8px;font-size:23px}
+.stage2-section-title p{margin:0;color:#74858f;font-size:12px}
+.stage2-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.stage2-kpis>div{padding:18px;border:1px solid rgba(255,255,255,.075);border-radius:14px;background:linear-gradient(145deg,#101d26,#0b161e)}
+.stage2-kpis span,.stage2-kpis small{display:block;color:#6f8089;font-size:9px;letter-spacing:.12em;text-transform:uppercase}
+.stage2-kpis strong{display:block;margin:8px 0;font-size:27px;line-height:1;font-variant-numeric:tabular-nums}
+.stage2-grid{display:grid;gap:12px}.stage2-grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}.stage2-grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+.stage2-panel{padding:19px;border:1px solid rgba(255,255,255,.08);border-radius:15px;background:#0c1821;box-shadow:0 14px 38px rgba(0,0,0,.16)}
+.stage2-panel p,.stage2-panel small{color:#7f9099;line-height:1.7}
+.stage2-badge,.stage2-panel-head>span{display:inline-flex;align-items:center;padding:5px 8px;border:1px solid rgba(216,181,106,.26);border-radius:999px;color:#d8b56a;font-size:9px;font-weight:900}
+.stage2-mini-list{display:grid;gap:8px}.stage2-mini-list>div{padding:10px;border-radius:10px;background:#09141b;color:#9aa9b1;font-size:11px}
+.stage2-row{padding:10px 0;border-bottom:1px solid rgba(255,255,255,.05)}.stage2-row:last-child{border-bottom:0}
+.stage2-row strong,.stage2-row small{display:block}.stage2-row small{margin-top:3px;color:#6d7d86;font-size:9px}
+.stage2-callout{padding:12px;margin:12px 0;border-radius:10px;background:#0b1820;border:1px dashed rgba(216,181,106,.18);color:#8ea0aa;font-size:11px}
+.stage2-form-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:12px}
+.stage2-form-grid label,.stage2-panel label,.stage2-cart label{display:grid;gap:6px;color:#8d9ea7;font-size:10px;font-weight:800}
+.stage2-form-grid input,.stage2-form-grid select,.stage2-form-grid textarea,.stage2-panel input,.stage2-panel select,.stage2-panel textarea,.stage2-cart input,.stage2-cart select,.stage2-cart textarea,.stage2-search input{width:100%;min-height:42px;padding:10px;border:1px solid #29404b;border-radius:10px;background:#09151d;color:#eef3f7;font:inherit}
+.stage2-panel label{margin:10px 0}
+.stage2-table-wrap{overflow:auto;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:#0a151d}
+.stage2-table-wrap table{width:100%;border-collapse:collapse;min-width:700px;font-size:11px}
+.stage2-table-wrap th,.stage2-table-wrap td{text-align:start;padding:11px 12px;border-bottom:1px solid rgba(255,255,255,.05)}
+.stage2-table-wrap th{color:#75868f;font-size:9px;text-transform:uppercase;letter-spacing:.1em}.stage2-table-wrap td{color:#cdd7dc}
+.stage2-empty{display:grid;place-items:center;min-height:220px;padding:30px;border:1px dashed #29404c;border-radius:15px;color:#7b8b94;text-align:center}
+.stage2-public{padding-top:25px}.stage2-search{margin:10px 0 20px}.stage2-search input{min-height:50px;background:#0c1821}
+.stage2-public-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.stage2-store-card{align-items:flex-start;padding:20px;border:1px solid rgba(255,255,255,.08);border-radius:15px;background:linear-gradient(145deg,#0f1d27,#0b161e)}
+.stage2-store-mark{width:44px;height:44px;display:grid;place-items:center;flex:0 0 auto;border-radius:12px;background:#152630;color:#d8b56a;font-weight:900}
+.stage2-store-main{flex:1;min-width:0}.stage2-store-main h2{margin:0;font-size:20px}.stage2-store-main p{margin:9px 0;color:#82929a;line-height:1.7;font-size:12px}
+.stage2-meta-line{color:#6f8089;font-size:10px}.stage2-tags{display:flex;flex-wrap:wrap;gap:5px;margin:10px 0}.stage2-tags span{padding:5px 7px;border-radius:999px;background:#09141b;color:#92a2aa;font-size:9px}
+.stage2-drawer{position:fixed;inset:0;z-index:100;background:rgba(2,7,11,.72);backdrop-filter:blur(8px);display:grid;place-items:end center;padding:14px}
+.stage2-drawer-panel{position:relative;width:min(760px,100%);max-height:92vh;overflow:auto;padding:26px;border:1px solid rgba(216,181,106,.22);border-radius:18px;background:#0b171f}
+.stage2-close{position:absolute;top:12px;inset-inline-end:12px;border:0;background:transparent;color:#9aa8af;font-size:28px;cursor:pointer}
+.stage2-detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:18px 0}.stage2-detail-grid div{padding:12px;background:#09141b;border-radius:10px}.stage2-detail-grid span{display:block;color:#6d7d85;font-size:9px}.stage2-detail-grid strong{display:block;margin-top:5px;font-size:12px}
+.stage2-commerce-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.stage2-product-card{padding:17px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:#0c1821}.stage2-product-card h3{margin:12px 0 6px;font-size:17px}.stage2-product-card p{min-height:46px;color:#788892;font-size:11px;line-height:1.6}.stage2-product-card>strong{display:block;font-size:20px;margin:10px 0}.stage2-product-card small{display:block;color:#697982;margin-bottom:12px}.stage2-product-top span{color:#8fa0a9;font-size:10px}.stage2-product-top b{color:#7fcf99;font-size:9px}
+.stage2-market-layout{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:15px}.stage2-cart{position:sticky;top:92px;height:max-content;padding:18px;border:1px solid rgba(255,255,255,.08);border-radius:15px;background:#0c1821}.stage2-cart-line{padding:10px 0;border-bottom:1px solid rgba(255,255,255,.05)}.stage2-cart-line strong,.stage2-cart-line small{display:block}.stage2-cart-line small{color:#768790;margin-top:4px}.stage2-cart-total{padding:14px 0;margin-bottom:8px;border-bottom:1px solid rgba(255,255,255,.07)}.stage2-cart-total strong{font-size:19px}
+.permission-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin:12px 0}.permission-grid label{display:flex;align-items:center;gap:7px;padding:8px;border-radius:9px;background:#09141b;font-size:9px;color:#87979f}.permission-grid input{width:auto;min-height:auto}
+@media(max-width:980px){.stage2-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.stage2-grid.three,.stage2-commerce-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.stage2-market-layout{grid-template-columns:1fr}.stage2-cart{position:static}}
+@media(max-width:720px){.stage2-page,.stage2-public{padding-inline:12px}.stage2-page-head,.stage2-public-head{flex-direction:column;align-items:flex-start}.stage2-grid.two,.stage2-grid.three,.stage2-public-grid,.stage2-commerce-grid,.stage2-form-grid,.stage2-detail-grid{grid-template-columns:1fr}.stage2-kpis{grid-template-columns:1fr 1fr}.stage2-store-card{flex-direction:column}.stage2-store-mark{width:38px;height:38px}.stage2-tabs{flex-wrap:nowrap}.stage2-head-actions{width:100%}.stage2-head-actions .btn{flex:1}}
+@media(max-width:440px){.stage2-kpis{grid-template-columns:1fr}.stage2-head-actions{display:grid;grid-template-columns:1fr 1fr}.stage2-page-head h1,.stage2-public-head h1{font-size:37px}}
