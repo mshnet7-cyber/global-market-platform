@@ -48,6 +48,36 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "subscription_required" }, { status: 402, headers: noStore });
   }
 
+  const now = new Date();
+  const weekday = now.getUTCDay();
+  const { data: schedules } = await admin.from("gmp_display_schedules")
+    .select("id,content_id,starts_at,ends_at,days_of_week,enabled")
+    .eq("screen_id", screen.id).eq("store_id", store.id).eq("enabled", true)
+    .or("starts_at.is.null,starts_at.lte." + now.toISOString())
+    .or("ends_at.is.null,ends_at.gte." + now.toISOString())
+    .order("starts_at", { ascending: true }).limit(100);
+  const activeSchedules = (schedules ?? []).filter((s:any) => !Array.isArray(s.days_of_week) || !s.days_of_week.length || s.days_of_week.includes(weekday));
+  const contentIds = activeSchedules.map((s:any) => s.content_id);
+  const { data: contentRows } = contentIds.length ? await admin.from("gmp_display_content")
+    .select("id,content_type,title,body,media_path,payload,priority,active")
+    .in("id", contentIds).eq("store_id", store.id).eq("active", true).order("priority", { ascending: false })
+    : { data: [] as any[] };
+  const { data: placements } = await admin.from("gmp_ad_placements")
+    .select("id,campaign_id,creative_id,status,starts_at,ends_at,weight")
+    .eq("screen_id", screen.id).in("status", ["live","scheduled"])
+    .or("starts_at.is.null,starts_at.lte." + now.toISOString())
+    .or("ends_at.is.null,ends_at.gte." + now.toISOString()).limit(100);
+  const campaignIds = (placements ?? []).map((p:any)=>p.campaign_id);
+  const creativeIds = (placements ?? []).map((p:any)=>p.creative_id).filter(Boolean);
+  const { data: campaigns } = campaignIds.length ? await admin.from("gmp_ad_campaigns")
+    .select("id,title,body,image_path,target_url,advertiser_name,status,placement").in("id",campaignIds).in("status",["approved","active"]) : { data: [] as any[] };
+  const { data: creatives } = creativeIds.length ? await admin.from("gmp_ad_creatives")
+    .select("id,name,creative_type,asset_path,target_url,status").in("id",creativeIds).eq("status","approved") : { data: [] as any[] };
+  const campaignMap = new Map((campaigns ?? []).map((x:any)=>[x.id,x]));
+  const creativeMap = new Map((creatives ?? []).map((x:any)=>[x.id,x]));
+  const ads = (placements ?? []).map((p:any)=>({ placement:p, campaign:campaignMap.get(p.campaign_id)||null, creative:creativeMap.get(p.creative_id)||null }))
+    .filter((x:any)=>x.campaign || x.creative);
+
   const snapshot = await getFreeMetal(store.currency || "USD", "XAU", "gold");
   if (!snapshot) {
     return NextResponse.json({
