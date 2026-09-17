@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getMerchantContext } from "../../../lib/merchant-access";
 import SalesForm from "./SalesForm";
+import DashboardHeader from "../DashboardHeader";
 
 export default async function SalesPage() {
   const context = await getMerchantContext();
@@ -15,10 +16,14 @@ export default async function SalesPage() {
     ? await supabase.from("gmp_products").select("id,name,sku,barcode,karat,weight_grams,price,making_charge,currency,current_quantity,current_weight_grams,store_id").in("store_id", storeIds).eq("active", true).order("name").limit(500)
     : { data: [] };
 
-  return <main className="wrap section">
-    <div className="eyebrow">POS</div>
-    <h1>بيع سريع</h1>
-    <p className="hero-copy">اختَر المحل والصنف، وأكمل العملية. عند الاعتماد يُخصم المخزون ويُنشأ القيد المحاسبي ذريًا.</p>
-    <SalesForm stores={stores ?? []} products={products ?? []} />
-  </main>;
+  return <div className="dashboard-shell">
+    <DashboardHeader organizationName={organization.name} role={role} planName={planCode === "business" ? "الكاملة" : "الأعمال"} />
+    <main className="wrap section dashboard-module-page pos-page">
+      <div className="eyebrow">POS · SALES</div>
+      <h1>بيع سريع</h1>
+      <p className="hero-copy">اختَر المحل والصنف، وأكمل العملية. عند الاعتماد يُخصم المخزون ويُنشأ القيد المحاسبي ذريًا.</p>
+      <div className="module-context"><span>{stores?.length ?? 0} متجر</span><span>{products?.length ?? 0} صنف نشط</span><span>الترحيل الذري مفعّل</span></div>
+      <SalesForm stores={stores ?? []} products={products ?? []} />
+    </main>
+  </div>;
 }
