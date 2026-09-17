@@ -115,43 +115,45 @@ export default function ScreenPage() {
   const statusLabel = connected && snapshot ? (snapshot.status === "LIVE" ? "LIVE" : snapshot.status) : snapshot ? "LAST UPDATE" : "UNAVAILABLE";
 
   return (
-    <main className="wrap section" style={{ minHeight: "100vh", display: "grid", alignItems: "center" }}>
-      <section className="card" style={{ width: "100%", margin: "0 auto", maxWidth: 1100, textAlign: "center" }}>
-        <div className="eyebrow">DIGITAL DISPLAY</div>
-        {!session ? (
-          <>
-            <h1>اقتران شاشة الأسعار</h1>
-            <p className="hero-copy">أدخل رمز الاقتران المؤقت من لوحة إدارة الشاشات.</p>
-            <div className="section" style={{ maxWidth: 420, margin: "0 auto" }}>
-              <input className="select" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" maxLength={6} placeholder="000000" autoComplete="one-time-code" aria-label="رمز الاقتران" />
-              <button className="btn primary" style={{ marginTop: 14 }} type="button" onClick={pair}>اقتران الشاشة</button>
-              {error ? <div className="notice" role="alert" style={{ marginTop: 14 }}>{error}</div> : null}
-            </div>
-          </>
-        ) : (
-          <>
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 20, alignItems: "center", flexWrap: "wrap" }}>
-              <div style={{ textAlign: "right" }}><div className="eyebrow">{payload?.store.name ?? "Global Market"}</div><h1 style={{ marginBottom: 4 }}>{payload?.screen.name ?? "شاشة الأسعار"}</h1></div>
-              <div className="notice" style={{ margin: 0 }}><strong>{statusLabel}</strong><div style={{ fontSize: 12, marginTop: 4 }}>{payload?.snapshot?.timestamp ? new Date(payload.snapshot.timestamp).toLocaleString() : "—"}</div></div>
-            </div>
-            <div className="gold-card" style={{ marginTop: 24 }}>
-              <div style={{ fontSize: 14, opacity: 0.75 }}>24K GOLD / GRAM · {payload?.store.currency ?? "OMR"}</div>
-              <div style={{ fontSize: "clamp(3rem, 9vw, 7rem)", fontWeight: 900, lineHeight: 1.05, marginTop: 8 }}>{formatNumber(snapshot?.perGram24k ?? null, 3)}</div>
-              <div className="grid three-col" style={{ marginTop: 22 }}>
-                <div className="card"><div>Spot / Ounce</div><strong>{formatNumber(snapshot?.spot ?? null, 3)}</strong></div>
-                <div className="card"><div>Bid</div><strong>{formatNumber(snapshot?.bid ?? null, 3)}</strong></div>
-                <div className="card"><div>Ask</div><strong>{formatNumber(snapshot?.ask ?? null, 3)}</strong></div>
+    <main className="screen-page">
+      <div className="screen-shell">
+        <section className="screen-card">
+          <div className="eyebrow">DIGITAL DISPLAY</div>
+          {!session ? (
+            <div className="screen-connect-view">
+              <h1>اقتران شاشة الأسعار</h1>
+              <p className="screen-copy">أدخل رمز الاقتران المؤقت من لوحة إدارة الشاشات.</p>
+              <div className="screen-connect">
+                <input className="select screen-code" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" maxLength={6} placeholder="000000" autoComplete="one-time-code" aria-label="رمز الاقتران" />
+                <button className="btn primary" type="button" onClick={pair}>اقتران الشاشة</button>
+                {error ? <div className="notice" role="alert">{error}</div> : null}
               </div>
             </div>
-            <div className="grid five" style={{ marginTop: 18 }}>
-              {["22K", "21K", "18K", "14K"].map((k) => <div className="card" key={k}><div>{k}</div><strong>{formatNumber(snapshot?.purities?.[k] ?? null, 3)}</strong></div>)}
+          ) : (
+            <div className="screen-connected-view">
+              <div className="screen-header">
+                <div><div className="eyebrow">{payload?.store.name ?? "Global Market"}</div><h1>{payload?.screen.name ?? "شاشة الأسعار"}</h1></div>
+                <div className="notice"><strong>{statusLabel}</strong><div className="screen-status-meta">{payload?.snapshot?.timestamp ? new Date(payload.snapshot.timestamp).toLocaleString() : "—"}</div></div>
+              </div>
+              <div className="gold-card screen-gold">
+                <div className="screen-price-caption">24K GOLD / GRAM · {payload?.store.currency ?? "OMR"}</div>
+                <div className="screen-gold-price">{formatNumber(snapshot?.perGram24k ?? null, 3)}</div>
+                <div className="screen-meta-grid">
+                  <div className="card"><div>Spot / Ounce</div><strong>{formatNumber(snapshot?.spot ?? null, 3)}</strong></div>
+                  <div className="card"><div>Bid</div><strong>{formatNumber(snapshot?.bid ?? null, 3)}</strong></div>
+                  <div className="card"><div>Ask</div><strong>{formatNumber(snapshot?.ask ?? null, 3)}</strong></div>
+                </div>
+              </div>
+              <div className="screen-purity-grid">
+                {["22K", "21K", "18K", "14K"].map((k) => <div className="card" key={k}><div>{k}</div><strong>{formatNumber(snapshot?.purities?.[k] ?? null, 3)}</strong></div>)}
+              </div>
+              {error ? <div className="notice screen-error" role="status">{error}</div> : null}
+              <div className="actions screen-actions"><button className="btn ghost" type="button" onClick={unpair}>إلغاء الاقتران محليًا</button></div>
             </div>
-            {error ? <div className="notice" role="status" style={{ marginTop: 16 }}>{error}</div> : null}
-            <div className="actions" style={{ justifyContent: "center", marginTop: 18 }}><button className="btn ghost" type="button" onClick={unpair}>إلغاء الاقتران محليًا</button></div>
-          </>
-        )}
-        <div className="section" style={{ marginTop: 22 }}><small>الأسعار مرجعية للسوق وليست أسعار شراء أو بيع خاصة بالمحل.</small></div>
-      </section>
+          )}
+          <small className="screen-foot">الأسعار مرجعية للسوق وليست أسعار شراء أو بيع خاصة بالمحل.</small>
+        </section>
+      </div>
     </main>
   );
 }
