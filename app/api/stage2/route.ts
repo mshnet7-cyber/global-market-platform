@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import crypto from "node:crypto";
-import { createSupabaseServerClient } from "../../../lib/supabase/server";
 import { createSupabaseAdminClient } from "../../../lib/supabase/admin";
 import { requireStage2Permission, type Stage2Permission } from "../../../lib/stage2-access";
 
@@ -335,7 +334,7 @@ export async function POST(request: Request) {
     if (action === "repair") {
       const access=await requirePermission("erp.write",["pro","business"]);
       const id=text(b.id,80); const status=text(b.status,30)||"received";
-      const allowed=["received","in_progress","ready","delivered","cancelled"];
+      const allowed=["received","in_repair","ready","delivered","cancelled"];
       if(!allowed.includes(status))return json({error:"invalid_repair_status"},400);
       const base={branch_id:isUuid(text(b.branch_id,80))?text(b.branch_id,80):null,customer_id:isUuid(text(b.customer_id,80))?text(b.customer_id,80):null,
         item_description:text(b.item_description,500),metal:text(b.metal,30)||null,karat:text(b.karat,20)||null,
@@ -351,7 +350,7 @@ export async function POST(request: Request) {
         const {data,error}=await access.supabase.from("gmp_repair_orders").update(base).eq("id",id).eq("organization_id",access.organization.id).select("*").single();
         if(error)return json({error:error.message},400);return json({success:true,row:data});
       }
-      const {data,error}=await access.supabase.from("gmp_repair_orders").insert({...base,organization_id:access.organization.id,repair_no:0,created_by:access.user.id}).select("*").single();
+      const {data,error}=await access.supabase.from("gmp_repair_orders").insert({...base,organization_id:access.organization.id,created_by:access.user.id}).select("*").single();
       if(error)return json({error:error.message},400);return json({success:true,row:data},201);
     }
 
@@ -456,16 +455,17 @@ export async function POST(request: Request) {
     if (action === "status") {
       const entity=text(b.entity,40), id=text(b.id,80), status=text(b.status,40);
       if(!isUuid(id))return json({error:"id_required"},400);
-      const access=await requirePermission(entity==="marketplace_order"?"marketplace.write":entity==="dooh_campaign"?"dooh.write":entity==="display_content"?"displays.write":"erp.write");
+      const access=await requirePermission(entity==="marketplace_order"?"marketplace.write":entity==="dooh_campaign"||entity==="dooh_placement"?"dooh.write":entity==="display_content"?"displays.write":"erp.write");
       const map:any={
         marketplace_order:{table:"gmp_marketplace_orders",statuses:["new","contacted","confirmed","fulfilled","cancelled"]},
         dooh_campaign:{table:"gmp_ad_campaigns",statuses:["pending","approved","active","paused","completed","cancelled"]},
+        dooh_placement:{table:"gmp_ad_placements",statuses:["scheduled","live","paused","completed","cancelled"]},
         display_content:{table:"gmp_display_content",statuses:[]},
         repair:{table:"gmp_repair_orders",statuses:["received","in_progress","ready","delivered","cancelled"]},
       };
       const cfg=map[entity]; if(!cfg || (cfg.statuses.length && !cfg.statuses.includes(status)))return json({error:"invalid_status"},400);
       const query=access.supabase.from(cfg.table).update({status,updated_at:new Date().toISOString()}).eq("id",id);
-      if(entity==="dooh_campaign")query.eq("organization_id",access.organization.id);
+      if(entity==="dooh_campaign" || entity==="dooh_placement")query.eq("organization_id",access.organization.id);
       if(entity==="marketplace_order")query.eq("organization_id",access.organization.id);
       if(entity==="repair")query.eq("organization_id",access.organization.id);
       const {data,error}=await query.select("*").single();
