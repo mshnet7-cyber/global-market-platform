@@ -4,6 +4,7 @@ import "./globals.css";
 import "./premium.css";
 import "./ux-overrides.css";
 import "./launch-refinement.css";
+import "./stage1-core.css";
 
 export const metadata: Metadata = {
   title: "Global Market Platform | Global market prices",
@@ -18,9 +19,7 @@ export const viewport: Viewport = {
 };
 
 const RTL_LANGUAGES = new Set(["ar", "fa", "he", "ur"]);
-
 const CSS_PAINT_GATE = `html[data-css-paint-gate="true"] body{visibility:hidden}html[data-css-paint-gate="true"] body:before{content:"";position:fixed;inset:0;background:#061017;z-index:2147483647;pointer-events:none}html[data-css-paint-gate="true"] body:after{content:"";position:fixed;inset:0;background:#061017;z-index:2147483646;pointer-events:none}`;
-
 const CSS_PAINT_SCRIPT = `(()=>{const ready=()=>document.documentElement.removeAttribute("data-css-paint-gate");if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",ready,{once:true});else ready();window.setTimeout(ready,1600);})();`;
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
@@ -28,7 +27,6 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   const rawLanguage = headerStore.get("x-gmp-language")?.toLowerCase() ?? "ar";
   const language = /^[a-z]{2,3}$/.test(rawLanguage) ? rawLanguage : "ar";
   const dir = RTL_LANGUAGES.has(language) ? "rtl" : "ltr";
-
   return (
     <html lang={language} dir={dir} data-css-paint-gate="true">
       <head>

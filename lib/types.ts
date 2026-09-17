@@ -1,4 +1,4 @@
-export type DataStatus = "LIVE" | "DELAYED" | "STALE" | "UNAVAILABLE" | "DEMO";
+export type DataStatus = "LIVE" | "DELAYED" | "STALE" | "ESTIMATED" | "UNAVAILABLE" | "DEMO";
 export type Metal = "gold" | "silver";
 
 export type Quote = {
