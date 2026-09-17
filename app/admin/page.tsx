@@ -7,7 +7,7 @@ export default function AdminPage(){
  const [data,setData]=useState<any>(null),[tab,setTab]=useState("overview"),[message,setMessage]=useState("");
  async function load(){try{const r=await fetch("/api/admin/overview",{cache:"no-store"});const d=await r.json();if(!r.ok)throw new Error(d.error||"forbidden");setData(d)}catch(e){setMessage(e instanceof Error?e.message:"تعذر تحميل مركز الإدارة")}}
  async function update(action:string,id:string,status:string){try{const r=await fetch("/api/admin/overview",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action,id,status})});const d=await r.json();if(!r.ok)throw new Error(d.error||"update_failed");setMessage("تم التحديث");await load()}catch(e){setMessage(e instanceof Error?e.message:"تعذر التحديث")}}
- useEffect(()=>{void load()},[]);
+ useEffect(()=>{const id=window.setTimeout(()=>{void load()},0);return()=>window.clearTimeout(id)},[]);
  if(!data)return <main className="stage2-page"><div className="stage2-empty"><h1>Platform Control Center</h1><p>{message||"جارٍ التحقق من صلاحيات المنصة…"}</p><Link href="/" className="btn">الرئيسية</Link></div></main>;
  const tabs=[["overview","Overview"],["tenants","Tenants"],["screens","Screens"],["media","DOOH"],["providers","Sources"],["alerts","Alerts"],["audit","Audit"]];
  return <main className="stage2-page">
