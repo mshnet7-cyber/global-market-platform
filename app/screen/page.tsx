@@ -11,6 +11,8 @@ type DisplayPayload = {
   snapshot: { perGram24k: number | null; purities: Record<string, number | null>; currency: string; spot: number | null; bid: number | null; ask: number | null; timestamp: string | null; provider: string; status: string } | null;
   status: string;
   server_time: string;
+  content?: Array<{id:string;content_type:string;title:string;body?:string|null;media_path?:string|null;payload?:Record<string,unknown>;priority:number}>;
+  ads?: Array<{placement:{id:string;weight:number};campaign?:{title:string;body?:string|null;image_path?:string|null;target_url?:string|null;advertiser_name?:string|null};creative?:{name:string;creative_type:string;asset_path?:string|null;target_url?:string|null}}>;
 };
 
 function formatNumber(value: number | null, digits = 3) {
@@ -147,6 +149,18 @@ export default function ScreenPage() {
               <div className="screen-purity-grid">
                 {["22K", "21K", "18K", "14K"].map((k) => <div className="card" key={k}><div>{k}</div><strong>{formatNumber(snapshot?.purities?.[k] ?? null, 3)}</strong></div>)}
               </div>
+              {(payload?.content?.length || payload?.ads?.length) ? <section className="screen-content-area">
+                {(payload.content || []).map((item) => <article className="card screen-content-card" key={item.id}>
+                  <div className="eyebrow">{item.content_type}</div><h2>{item.title}</h2>{item.body ? <p>{item.body}</p> : null}
+                  {item.media_path ? <img src={item.media_path} alt="" style={{width:"100%",borderRadius:12,maxHeight:360,objectFit:"cover"}} /> : null}
+                </article>)}
+                {(payload.ads || []).map((ad) => <article className="card screen-ad-card" key={ad.placement.id}>
+                  <div className="eyebrow">ADVERTISING</div><h2>{ad.campaign?.title || ad.creative?.name || "Sponsored"}</h2>
+                  {ad.campaign?.body ? <p>{ad.campaign.body}</p> : null}
+                  {ad.campaign?.image_path ? <img src={ad.campaign.image_path} alt="" style={{width:"100%",borderRadius:12,maxHeight:360,objectFit:"cover"}} /> : null}
+                  {ad.campaign?.advertiser_name ? <small>{ad.campaign.advertiser_name}</small> : null}
+                </article>)}
+              </section> : null}
               {error ? <div className="notice screen-error" role="status">{error}</div> : null}
               <div className="actions screen-actions"><button className="btn ghost" type="button" onClick={unpair}>إلغاء الاقتران محليًا</button></div>
             </div>
