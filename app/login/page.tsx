@@ -9,7 +9,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   const params = await searchParams;
   const next = safeNext(params.next);
 
-  return <div className="page-frame">
+  return <div className="page-frame login-page">
     <header className="topbar"><div className="container nav site-nav"><Link href="/" className="brand"><span className="brand-mark">GM</span><span>GLOBAL <b>MARKET</b></span></Link><div className="nav-actions" style={{marginInlineStart:"auto"}}><Link className="btn btn-ghost" href="/">الأسواق</Link><Link className="btn btn-primary" href="/pricing">الباقات</Link></div></div></header>
     <main className="container login-layout">
       <section className="login-story"><div className="eyebrow"><span className="live-dot" />MERCHANT WORKSPACE</div><h1>مساحتك التشغيلية تبدأ من هنا.</h1><p>سجّل الدخول لإدارة المحل، المبيعات، المخزون، التقارير والشاشات من واجهة واحدة مصممة للعمل اليومي.</p><div className="login-highlights"><div className="login-highlight"><strong>POS</strong><span>مبيعات وتشغيل سريع</span></div><div className="login-highlight"><strong>Inventory</strong><span>مخزون وحركة الأصناف</span></div><div className="login-highlight"><strong>Control</strong><span>إدارة وامتثال وتقارير</span></div></div></section>
