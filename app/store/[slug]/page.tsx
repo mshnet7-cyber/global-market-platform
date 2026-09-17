@@ -39,7 +39,7 @@ export default async function StorePage({ params, searchParams }: { params: Prom
   const gold = snapshot.gold;
   const title = store?.name ?? slug.replace(/[-_]+/g, " ");
 
-  return <main className="wrap section" dir={isRtlLanguage(language) ? "rtl" : "ltr"} lang={language}>
+  return <div className="store-page-shell dashboard-shell"><main className="wrap section" dir={isRtlLanguage(language) ? "rtl" : "ltr"} lang={language}>
     <div className="eyebrow">STORE REFERENCE PAGE</div>
     <h1>{title}</h1>
     <p className="hero-copy">{messages.referenceOnly}</p>
@@ -50,5 +50,5 @@ export default async function StorePage({ params, searchParams }: { params: Prom
       <div className="mini-grid"><div><span>Spot</span><b>{formatMoney(gold.spot, locale, currency, 2)}</b></div><div><span>Bid</span><b>{formatMoney(gold.bid, locale, currency, 2)}</b></div><div><span>Ask</span><b>{formatMoney(gold.ask, locale, currency, 2)}</b></div></div>
     </section>
     <div className="actions" style={{marginTop:20}}><Link href="/demo" className="btn primary">{messages.createDisplay}</Link><Link href="/" className="btn ghost">{language === "ar" ? "الرئيسية" : "Home"}</Link></div>
-  </main>;
+  </main></div>;
 }
