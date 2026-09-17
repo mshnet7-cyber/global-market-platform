@@ -39,7 +39,7 @@ export default async function StorePage({ params, searchParams }: { params: Prom
   const gold = snapshot.gold;
   const title = store?.name ?? slug.replace(/[-_]+/g, " ");
 
-  return <div className="store-page-shell dashboard-shell"><main className="wrap section" dir={isRtlLanguage(language) ? "rtl" : "ltr"} lang={language}>
+  return <div className="store-page-shell dashboard-shell"><main className="store-page wrap section" dir={isRtlLanguage(language) ? "rtl" : "ltr"} lang={language}>
     <div className="eyebrow">STORE REFERENCE PAGE</div>
     <h1>{title}</h1>
     <p className="hero-copy">{messages.referenceOnly}</p>
