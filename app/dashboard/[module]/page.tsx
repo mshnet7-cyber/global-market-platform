@@ -1,6 +1,7 @@
 import { redirect, notFound } from "next/navigation";
 import { getMerchantContext } from "../../../lib/merchant-access";
 import ModuleWorkspace from "./ModuleWorkspace";
+import DashboardHeader from "../DashboardHeader";
 
 type StoreOption = { id: string; name: string; branch_id: string | null; currency: string | null; timezone: string | null };
 
@@ -13,6 +14,8 @@ const modules: Record<string, { title: string; description: string; plan: "pro" 
   accounting: { title: "المحاسبة", description: "الحسابات والقيود والسجل المالي.", plan: "pro" },
   tax: { title: "الضرائب", description: "ملخصات ضريبية داخلية قابلة للمراجعة.", plan: "business" },
 };
+
+const roleName = (role: string | null) => role === "owner" ? "مالك" : role === "admin" ? "مدير" : role === "viewer" ? "مشاهد" : role ?? "حساب";
 
 export default async function MerchantModulePage({ params }: { params: Promise<{ module: string }> }) {
   const { module } = await params;
@@ -41,5 +44,8 @@ export default async function MerchantModulePage({ params }: { params: Promise<{
     timezone: store.timezone ? String(store.timezone) : null,
   }));
 
-  return <div className={`dashboard-shell dashboard-module-page module-${module}`}><main className="wrap section"><div className="eyebrow">MERCHANT MODULE</div><h1>{config.title}</h1><p className="hero-copy">{config.description}</p><ModuleWorkspace module={module} stores={stores}/></main></div>;
+  return <div className={`dashboard-shell dashboard-module-page module-${module}`}>
+    <DashboardHeader organizationName={organization.name} role={role} planName={planCode} />
+    <main className="wrap section"><div className="eyebrow">MERCHANT MODULE</div><h1>{config.title}</h1><p className="hero-copy">{config.description}</p><div className="module-context"><span>{roleName(role)}</span><span>{planCode === "business" ? "الخطة الكاملة" : "الخطة الاحترافية"}</span><span>مساحة تشغيل آمنة</span></div><ModuleWorkspace module={module} stores={stores}/></main>
+  </div>;
 }
