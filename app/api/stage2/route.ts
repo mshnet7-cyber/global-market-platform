@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import crypto from "node:crypto";
 import { createSupabaseAdminClient } from "../../../lib/supabase/admin";
 import { requireStage2Permission, type Stage2Permission } from "../../../lib/stage2-access";
+import { recordAuditEvent } from "../../../lib/provider-observability";
 
 const json = (data: unknown, status = 200) => NextResponse.json(data, {
   status,
@@ -38,6 +39,8 @@ async function orgBranch(supabase: any, organizationId: string, branchId: string
     .eq("id", branchId).eq("organization_id", organizationId).maybeSingle();
   return data ?? null;
 }
+
+async function auditStage2(access:any, action:string, entityType:string, entityId:string|null, metadata?:Record<string,unknown>) { void recordAuditEvent({ action, organizationId:access.organization?.id, userId:access.user?.id, entityType, entityId, metadata }); }
 
 async function requirePermission(permission: Stage2Permission, plans: ("starter"|"pro"|"business")[] = ["starter","pro","business"]) {
   return requireStage2Permission(permission, plans);
@@ -229,6 +232,7 @@ export async function POST(request: Request) {
       if ((row.latitude != null && !Number.isFinite(row.latitude)) || (row.longitude != null && !Number.isFinite(row.longitude))) return json({error:"invalid_coordinates"},400);
       const {data,error}=await access.supabase.from("gmp_store_directory").upsert(row,{onConflict:"store_id"}).select("*").single();
       if(error)return json({error:error.message},400);
+      void auditStage2(access,"merchant.directory.upsert","store_directory",storeId,{status});
       return json({success:true,row},201);
     }
 
@@ -254,6 +258,7 @@ export async function POST(request: Request) {
         access.supabase.from("gmp_marketplace_listings").insert(payload);
       const {data,error}=await query.select("*").single();
       if(error)return json({error:error.message},400);
+      void auditStage2(access,"merchant.marketplace.listing.upsert","marketplace_listing",data?.id ?? null,{store_id:storeId,status:payload.status});
       return json({success:true,row:data},201);
     }
 
@@ -265,7 +270,7 @@ export async function POST(request: Request) {
         organization_id:access.organization.id,branch_id:branchId||null,name:text(b.name,150),phone:text(b.phone,60)||null,
         phone_normalized:text(b.phone_normalized,60)||null,language:text(b.language,10)||"ar",country_code:text(b.country_code,3).toUpperCase()||null,notes:text(b.notes,1000)||null
       }).select("*").single();
-      if(error)return json({error:error.message},400); return json({success:true,row:data},201);
+      if(error)return json({error:error.message},400); void auditStage2(access,"merchant.customer.create","customer",data?.id ?? null); return json({success:true,row:data},201);
     }
 
     if (action === "supplier") {
@@ -274,7 +279,7 @@ export async function POST(request: Request) {
         organization_id:access.organization.id,name:text(b.name,150),phone:text(b.phone,60)||null,whatsapp:text(b.whatsapp,60)||null,
         language:text(b.language,10)||"ar",tax_number:text(b.tax_number,100)||null,notes:text(b.notes,1000)||null
       }).select("*").single();
-      if(error)return json({error:error.message},400); return json({success:true,row:data},201);
+      if(error)return json({error:error.message},400); void auditStage2(access,"merchant.supplier.create","supplier",data?.id ?? null); return json({success:true,row:data},201);
     }
 
     if (action === "product") {
@@ -286,7 +291,7 @@ export async function POST(request: Request) {
         p_cost_price:positive(b.cost_price),p_making_charge:positive(b.making_charge),
         p_initial_quantity:positive(b.initial_quantity),p_initial_weight:positive(b.initial_weight)
       });
-      if(error)return json({error:error.message},400);return json(data,201);
+      if(error)return json({error:error.message},400); void auditStage2(access,"merchant.inventory.product.create","product",data?.product_id ?? null); return json(data,201);
     }
 
     if (action === "sale") {
@@ -297,7 +302,7 @@ export async function POST(request: Request) {
         p_store_id:text(b.store_id,80),p_customer_id:isUuid(text(b.customer_id,80))?text(b.customer_id,80):null,
         p_payment_method:text(b.payment_method,20)||"cash",p_notes:text(b.notes,1500)||null,p_lines:lines
       });
-      if(error)return json({error:error.message},400);return json(data,201);
+      if(error)return json({error:error.message},400); void auditStage2(access,"merchant.pos.sale.post","sale",data?.sale_id ?? null,{invoice_no:data?.invoice_no}); return json(data,201);
     }
 
     if (action === "purchase") {
@@ -307,7 +312,7 @@ export async function POST(request: Request) {
         p_store_id:text(b.store_id,80),p_supplier_id:isUuid(text(b.supplier_id,80))?text(b.supplier_id,80):null,
         p_invoice_no:text(b.invoice_no,100),p_lines:Array.isArray(b.lines)?b.lines:[]
       });
-      if(error)return json({error:error.message},400);return json(data,201);
+      if(error)return json({error:error.message},400); void auditStage2(access,"merchant.purchase.create","purchase",data?.purchase_id ?? null); return json(data,201);
     }
 
     if (action === "expense") {
@@ -318,7 +323,7 @@ export async function POST(request: Request) {
         p_vat_amount:positive(b.vat_amount),p_expense_date:text(b.expense_date,20)||new Date().toISOString().slice(0,10),
         p_expense_account_id:text(b.expense_account_id,80),p_payment_account_id:text(b.payment_account_id,80)
       });
-      if(error)return json({error:error.message},400);return json(data,201);
+      if(error)return json({error:error.message},400); void auditStage2(access,"merchant.expense.post","expense",data?.expense_id ?? null); return json(data,201);
     }
 
     if (action === "journal") {
@@ -328,7 +333,7 @@ export async function POST(request: Request) {
         p_description:text(b.description,500),p_entry_date:text(b.entry_date,20)||new Date().toISOString().slice(0,10),
         p_lines:Array.isArray(b.lines)?b.lines:[]
       });
-      if(error)return json({error:error.message},400);return json(data,201);
+      if(error)return json({error:error.message},400); void auditStage2(access,"merchant.journal.post","journal_entry",data?.entry_id ?? null); return json(data,201);
     }
 
     if (action === "repair") {
@@ -348,10 +353,10 @@ export async function POST(request: Request) {
       if(!base.item_description || base.weight_received_grams<=0)return json({error:"repair_item_and_weight_required"},400);
       if(id && isUuid(id)){
         const {data,error}=await access.supabase.from("gmp_repair_orders").update(base).eq("id",id).eq("organization_id",access.organization.id).select("*").single();
-        if(error)return json({error:error.message},400);return json({success:true,row:data});
+        if(error)return json({error:error.message},400); void auditStage2(access,"merchant.repair.update","repair_order",data?.id ?? null,{status}); return json({success:true,row:data});
       }
       const {data,error}=await access.supabase.from("gmp_repair_orders").insert({...base,organization_id:access.organization.id,created_by:access.user.id}).select("*").single();
-      if(error)return json({error:error.message},400);return json({success:true,row:data},201);
+      if(error)return json({error:error.message},400); void auditStage2(access,"merchant.repair.create","repair_order",data?.id ?? null,{status}); return json({success:true,row:data},201);
     }
 
     if (action === "gold_purchase") {
@@ -369,7 +374,7 @@ export async function POST(request: Request) {
         status:"pending_review",risk_level:risk,risk_reasons:Array.isArray(b.risk_reasons)?b.risk_reasons.slice(0,20):[],
         ai_extracted_data:{},ai_confidence:null,created_by:access.user.id
       }).select("*").single();
-      if(error)return json({error:error.message},400);return json({success:true,row:data},201);
+      if(error)return json({error:error.message},400); void auditStage2(access,"merchant.gold_purchase.create","gold_purchase",data?.id ?? null,{risk_level:risk}); return json({success:true,row:data},201);
     }
 
     if (action === "permission") {
@@ -381,7 +386,7 @@ export async function POST(request: Request) {
       const allowed=["directory.read","directory.write","marketplace.read","marketplace.write","erp.read","erp.write","pos.write","inventory.write","staff.read","staff.write","displays.read","displays.write","dooh.read","dooh.write"];
       for(const key of allowed) if(typeof input[key]==="boolean") safe[key]=input[key] as boolean;
       const {data,error}=await access.supabase.from("gmp_member_permissions").upsert({organization_id:access.organization.id,user_id:userId,permissions:safe,created_by:access.user.id},{onConflict:"organization_id,user_id"}).select("*").single();
-      if(error)return json({error:error.message},400);return json({success:true,row:data});
+      if(error)return json({error:error.message},400); void auditStage2(access,"merchant.permission.update","member_permission",userId,{permissions:safe}); return json({success:true,row:data});
     }
 
     if (action === "display_content") {
@@ -394,7 +399,7 @@ export async function POST(request: Request) {
         active:b.active!==false,priority:Math.max(-1000,Math.min(1000,Math.floor(Number(b.priority)||0))),created_by:access.user.id};
       if(!payload.title)return json({error:"title_required"},400);
       const {data,error}=await access.supabase.from("gmp_display_content").insert(payload).select("*").single();
-      if(error)return json({error:error.message},400);return json({success:true,row:data},201);
+      if(error)return json({error:error.message},400); void auditStage2(access,"display.content.create","display_content",data?.id ?? null,{screen_id:screenId}); return json({success:true,row:data},201);
     }
 
     if (action === "display_schedule") {
@@ -407,7 +412,7 @@ export async function POST(request: Request) {
       const days=Array.isArray(b.days_of_week)?b.days_of_week.map(Number).filter((n:number)=>Number.isInteger(n)&&n>=0&&n<=6):[];
       const {data,error}=await access.supabase.from("gmp_display_schedules").insert({organization_id:access.organization.id,store_id:storeId,screen_id:screenId,content_id:contentId,
         starts_at:b.starts_at?new Date(String(b.starts_at)).toISOString():null,ends_at:b.ends_at?new Date(String(b.ends_at)).toISOString():null,days_of_week:days,enabled:b.enabled!==false,created_by:access.user.id}).select("*").single();
-      if(error)return json({error:error.message},400);return json({success:true,row:data},201);
+      if(error)return json({error:error.message},400); void auditStage2(access,"display.schedule.create","display_schedule",data?.id ?? null,{screen_id:screenId}); return json({success:true,row:data},201);
     }
 
     if (action === "dooh_campaign") {
@@ -420,7 +425,7 @@ export async function POST(request: Request) {
         status:"pending",starts_at:b.starts_at?new Date(String(b.starts_at)).toISOString():null,ends_at:b.ends_at?new Date(String(b.ends_at)).toISOString():null,
         budget:b.budget==null?null:positive(b.budget),created_by:access.user.id
       }).select("*").single();
-      if(error)return json({error:error.message},400);return json({success:true,row:data},201);
+      if(error)return json({error:error.message},400); void auditStage2(access,"dooh.campaign.create","ad_campaign",data?.id ?? null); return json({success:true,row:data},201);
     }
 
     if (action === "dooh_creative") {
@@ -431,7 +436,7 @@ export async function POST(request: Request) {
       const {data,error}=await access.supabase.from("gmp_ad_creatives").insert({organization_id:access.organization.id,campaign_id:campaignId,name:text(b.name,180),
         creative_type:["image","video","html","text","url"].includes(text(b.creative_type,20))?text(b.creative_type,20):"image",
         asset_path:text(b.asset_path,500)||null,target_url:text(b.target_url,500)||null,metadata:asObject(b.metadata),status:"draft",created_by:access.user.id}).select("*").single();
-      if(error)return json({error:error.message},400);return json({success:true,row:data},201);
+      if(error)return json({error:error.message},400); void auditStage2(access,"dooh.creative.create","ad_creative",data?.id ?? null); return json({success:true,row:data},201);
     }
 
     if (action === "dooh_placement") {
@@ -449,7 +454,7 @@ export async function POST(request: Request) {
       const status=["scheduled","live","paused","completed","cancelled"].includes(text(b.status,20))?text(b.status,20):"scheduled";
       const {data,error}=await access.supabase.from("gmp_ad_placements").insert({organization_id:access.organization.id,campaign_id:campaignId,creative_id:creativeId||null,screen_id:isUuid(screenId)?screenId:null,store_id:isUuid(storeId)?storeId:null,status,
         starts_at:b.starts_at?new Date(String(b.starts_at)).toISOString():null,ends_at:b.ends_at?new Date(String(b.ends_at)).toISOString():null,weight:Math.max(1,Math.min(100,Math.floor(Number(b.weight)||1))),created_by:access.user.id}).select("*").single();
-      if(error)return json({error:error.message},400);return json({success:true,row:data},201);
+      if(error)return json({error:error.message},400); void auditStage2(access,"dooh.placement.create","ad_placement",data?.id ?? null); return json({success:true,row:data},201);
     }
 
     if (action === "status") {
