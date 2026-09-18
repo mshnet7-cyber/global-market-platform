@@ -1,3 +1,9 @@
+.dashboard-mobile-menu{display:none;position:relative}
+.dashboard-mobile-menu summary{list-style:none;display:grid;place-items:center;width:40px;height:40px;border:1px solid var(--launch-line);border-radius:10px;background:#09151c;color:var(--launch-gold-hi);cursor:pointer;font-size:18px}
+.dashboard-mobile-menu summary::-webkit-details-marker{display:none}
+.dashboard-mobile-menu nav{position:absolute;top:48px;inset-inline-end:0;width:min(300px,calc(100vw - 28px));display:grid;gap:4px;padding:10px;border:1px solid var(--launch-line);border-radius:14px;background:#0b171e;box-shadow:0 20px 45px rgba(0,0,0,.28);z-index:90}
+.dashboard-mobile-menu nav a{padding:10px 11px;border-radius:9px;color:#a6b2b8;text-decoration:none;font-size:11px}
+.dashboard-mobile-menu nav a:hover,.dashboard-mobile-menu nav a:focus-visible{background:#13222b;color:#f6f2e8;outline:none}
 :root{
   --launch-bg:#061017;
   --launch-surface:#0b171e;
@@ -73,6 +79,7 @@ input,select,textarea{accent-color:var(--launch-gold)}
   .container,.wrap{width:calc(100% - 26px)!important}
   .nav,.dashboard-nav{min-height:64px}
   .site-nav{flex-wrap:wrap;row-gap:7px;padding-block:8px}
+  .dashboard-mobile-menu{display:block}
   .brand{font-size:12px}
   .brand-mark{width:34px;height:34px}
   .site-nav>.nav-actions .btn{min-height:38px;padding:8px 10px;font-size:10px}
