@@ -24,14 +24,23 @@ test("Stage 2 API keeps tenant boundaries and uses existing pricing/transaction 
   assert.match(src,/gmp_marketplace_listings/);
 });
 
+test("Stage 2 permissions support explicit delegated grants",()=>{
+  const src=read("lib/stage2-access.ts");
+  assert.match(src,/enabled === true.*permissions\.add/s);
+  assert.match(src,/enabled === false.*permissions\.delete/s);
+});
+
 test("Stage 2 database foundation has RLS and idempotency",()=>{
   const src=read("supabase/migrations/20260917233033_gmp_merchant_marketplace_stage2_core.sql");
   assert.match(src,/enable row level security/);
   assert.match(src,/gmp_store_directory_public_read/);
   assert.match(src,/gmp_marketplace_listings_public_read/);
   assert.match(src,/gmp_member_permissions_admin_all/);
-  const id=read("supabase/migrations/20260918011000_gmp_stage2_order_idempotency.sql");
+  const id=read("supabase/migrations/20260917233748_gmp_stage2_order_idempotency.sql");
   assert.match(id,/create unique index/i);
+  const scope=read("supabase/migrations/20260918011943_gmp_stage2_scope_hardening.sql");
+  assert.match(scope,/gmp_stage2_validate_reference_scope/);
+  assert.match(scope,/gmp_stage2_scope_ad_placements/);
 });
 
 test("Display runtime consumes Stage 2 content and advertising",()=>{
