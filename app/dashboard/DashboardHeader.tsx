@@ -22,6 +22,7 @@ const navItems = [
   ["/dashboard/reports", "التقارير"],
   ["/dashboard/operations", "ERP"],
   ["/dashboard/integrations", "التكاملات"],
+  ["/dashboard/notifications", "الإشعارات"],
   ["/dashboard/api-keys", "API Keys"],
   ["/developers", "API"],
   ["/directory", "المحلات"],
