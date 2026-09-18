@@ -4,6 +4,7 @@ import { appConfig, countries, isValidLanguage } from "../../../../lib/config";
 import { getSnapshot } from "../../../../lib/providers";
 import { assessQuote } from "../../../../lib/market-trust";
 import { randomUUID } from "crypto";
+import { recordApiUsage } from "../../../../lib/stage3/developer-api";
 
 function errorResponse(error: unknown) {
   const message=error instanceof Error?error.message:"api_error";
@@ -15,7 +16,7 @@ export async function OPTIONS(){return new NextResponse(null,{status:204,headers
 
 export async function GET(request:Request){
   try{
-    await authenticateApiKey(request,"market:read");
+    const key=await authenticateApiKey(request,"market:read");
     const url=new URL(request.url);
     const lang=url.searchParams.get("language")?.toLowerCase()??appConfig.defaultLanguage;
     const language=isValidLanguage(lang)?lang:appConfig.defaultLanguage;
@@ -25,6 +26,6 @@ export async function GET(request:Request){
     if(!/^[A-Z]{3}$/.test(currency)) return NextResponse.json({error:"invalid_currency",request_id:randomUUID()},{status:400,headers:apiCorsHeaders()});
     const snapshot=await getSnapshot(currency,language,false,false);
     const trust=assessQuote(snapshot.gold);
-    return NextResponse.json({api_version:"1",request_id:randomUUID(),generated_at:snapshot.generatedAt,data:snapshot.gold,trust:{status:trust.status,trusted:trust.trusted,reason:trust.reason,age_ms:trust.ageMs},source:{provider:snapshot.gold.provider,timestamp:snapshot.gold.timestamp}}, {headers:apiCorsHeaders()});
+    const requestId=randomUUID(); await recordApiUsage({apiKeyId:key.id,organizationId:key.organizationId,requestId,route:"/api/v1/gold",method:"GET",statusCode:200,latencyMs:0}); return NextResponse.json({api_version:"1",request_id:requestId,generated_at:snapshot.generatedAt,data:snapshot.gold,trust:{status:trust.status,trusted:trust.trusted,reason:trust.reason,age_ms:trust.ageMs},source:{provider:snapshot.gold.provider,timestamp:snapshot.gold.timestamp}}, {headers:apiCorsHeaders()});
   }catch(error){return errorResponse(error);}
 }
