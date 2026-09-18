@@ -18,6 +18,47 @@ export function getWhatsAppStatus() {
   return { state, provider: c.provider, reason: state === "live" ? undefined : "provider_credentials_or_commercial_approval_not_configured" };
 }
 
+export type WhatsAppMessageInput = {
+  to: string;
+  messageType: "template" | "document" | "text";
+  templateName?: string;
+  languageCode?: string;
+  parameters?: Array<string | number>;
+  documentUrl?: string;
+  fileName?: string;
+  caption?: string;
+  text?: string;
+  clientReference?: string | null;
+};
+
+export async function sendWhatsAppMessage(input: WhatsAppMessageInput) {
+  const c = cfg();
+  if (!c.messagesUrl || !c.accessToken || !c.senderId || !c.approved) throw new Error("whatsapp_not_configured");
+  if (input.messageType === "template" && !input.templateName) throw new Error("whatsapp_template_required");
+  if (input.messageType === "document" && !input.documentUrl) throw new Error("whatsapp_document_required");
+  if (input.messageType === "text" && !input.text) throw new Error("whatsapp_text_required");
+  const body: Record<string, unknown> = {
+    sender_id: c.senderId,
+    recipient: input.to,
+    type: input.messageType,
+    client_reference: input.clientReference ?? null,
+  };
+  if (input.messageType === "template") body.template = { name: input.templateName, language: input.languageCode ?? "ar", parameters: input.parameters ?? [] };
+  if (input.messageType === "document") body.document = { url: input.documentUrl, filename: input.fileName ?? "invoice.pdf", caption: input.caption ?? "" };
+  if (input.messageType === "text") body.text = input.text;
+  const response = await fetch(c.messagesUrl, {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${c.accessToken}` },
+    body: JSON.stringify(body),
+    cache: "no-store",
+  });
+  const raw = await response.text();
+  let data: Record<string, unknown> = {};
+  try { data = JSON.parse(raw) as Record<string, unknown>; } catch { data = { raw: raw.slice(0, 2000) }; }
+  if (!response.ok) throw new Error(`whatsapp_provider_http_${response.status}`);
+  return data;
+}
+
 export type WhatsAppTemplateMessage = {
   to: string;
   templateName: string;
@@ -27,25 +68,14 @@ export type WhatsAppTemplateMessage = {
 };
 
 export async function sendWhatsAppTemplate(input: WhatsAppTemplateMessage) {
-  const c = cfg();
-  if (!c.messagesUrl || !c.accessToken || !c.senderId || !c.approved) throw new Error("whatsapp_not_configured");
-  const response = await fetch(c.messagesUrl, {
-    method: "POST",
-    headers: { "content-type": "application/json", authorization: `Bearer ${c.accessToken}` },
-    body: JSON.stringify({
-      sender_id: c.senderId,
-      recipient: input.to,
-      type: "template",
-      template: { name: input.templateName, language: input.languageCode ?? "ar", parameters: input.parameters ?? [] },
-      client_reference: input.clientReference ?? null,
-    }),
-    cache: "no-store",
+  return sendWhatsAppMessage({
+    to: input.to,
+    messageType: "template",
+    templateName: input.templateName,
+    languageCode: input.languageCode,
+    parameters: input.parameters,
+    clientReference: input.clientReference,
   });
-  const raw = await response.text();
-  let data: Record<string, unknown> = {};
-  try { data = JSON.parse(raw) as Record<string, unknown>; } catch { data = { raw: raw.slice(0, 2000) }; }
-  if (!response.ok) throw new Error(`whatsapp_provider_http_${response.status}`);
-  return data;
 }
 
 export function verifyWhatsAppWebhook(body: string, signature: string | null) {
