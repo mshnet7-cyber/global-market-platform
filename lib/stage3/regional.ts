@@ -1,4 +1,4 @@
-export import { formatMoneyDisplay } from "../currency-display";
+import { formatMoneyDisplay } from "../currency-display";
 
 export type RegionalProfile = {
   countryCode: string;
