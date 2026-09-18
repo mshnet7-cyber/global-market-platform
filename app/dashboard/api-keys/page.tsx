@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getMerchantContext } from "../../../lib/merchant-access";
 import DashboardHeader from "../DashboardHeader";
 import ApiKeysWorkspace from "./ApiKeysWorkspace";
+import WebhooksWorkspace from "./WebhooksWorkspace";
 
 export default async function ApiKeysPage() {
   const { supabase, user, organization, role, planCode } = await getMerchantContext();
@@ -23,6 +24,7 @@ export default async function ApiKeysPage() {
         <p className="hero-copy">أنشئ مفاتيح للوصول إلى API v1/v2. المفتاح الخام يظهر مرة واحدة فقط؛ النظام يحتفظ بالـhash.</p>
         <div className="module-context"><span>الخطة: {planCode}</span><span>صلاحية: {role === "owner" ? "مالك" : "مدير"}</span><span>Rate limit: 120/min</span></div>
         <ApiKeysWorkspace initialKeys={data ?? []} />
+        <div style={{ marginTop: 18 }}><WebhooksWorkspace /></div>
       </main>
     </div>
   );
