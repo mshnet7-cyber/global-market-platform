@@ -1,4 +1,50 @@
-import{NextResponse}from"next/server";import{requireMerchantPlan}from"../../../../lib/merchant-access";import{buildInvoicePayload,getEInvoiceStatus,submitInvoice,validateInvoicePayload}from"../../../../lib/stage3/einvoice";import{createSupabaseAdminClient}from"../../../../lib/supabase/admin";import{recordAuditEvent}from"../../../../lib/provider-observability";
-const json=(d:unknown,s=200)=>NextResponse.json(d,{status:s,headers:{"cache-control":"no-store"}});
-export async function GET(){try{await requireMerchantPlan(["business"]);return json(getEInvoiceStatus())}catch(e){return json({error:e instanceof Error?e.message:"unauthorized"},401)}}
-export async function POST(request:Request){try{const{supabase,organization,user}=await requireMerchantPlan(["business"]);const b=await request.json().catch(()=>null) as Record<string,unknown>|null;if(!b)return json({error:"invalid_json"},400);const action=String(b.action||"validate"),saleId=String(b.sale_id||"");if(action!=="validate"&&!saleId)return json({error:"sale_id_required"},400);const common={countryCode:String(b.country_code||"OM").toUpperCase().slice(0,2),invoiceNumber:String(b.invoice_number||("SALE-"+(saleId||"PREVIEW"))),currency:String(b.currency||"OMR"),supplier:(b.supplier&&typeof b.supplier==="object"?b.supplier:{} ) as Record<string,unknown>,customer:(b.customer&&typeof b.customer==="object"?b.customer:{} ) as Record<string,unknown>,lines:Array.isArray(b.lines)?b.lines as Array<Record<string,unknown>>:[],totals:(b.totals&&typeof b.totals==="object"?b.totals:{} ) as Record<string,unknown>};if(action==="validate"){const payload=buildInvoicePayload(common);validateInvoicePayload(payload);return json({valid:true,integration:getEInvoiceStatus(),payload})}const{data:sale}=await supabase.from("gmp_sales").select("id,invoice_no,total,subtotal,vat_amount,store_id").eq("id",saleId).eq("organization_id",organization.id).maybeSingle();if(!sale)return json({error:"sale_not_found"},404);if(getEInvoiceStatus().state!=="live")return json({error:"einvoice_not_configured",integration_state:"integration_ready"},503);const{data:lines}=await supabase.from("gmp_sale_lines").select("product_id,quantity,weight_grams,unit_price,making_charge,discount_amount,vat_amount,line_total").eq("sale_id",sale.id);const payload=buildInvoicePayload({countryCode:common.countryCode,invoiceNumber:String(sale.invoice_no||sale.id),currency:common.currency,supplier:common.supplier,customer:common.customer,lines:(lines||[]) as Array<Record<string,unknown>>,totals:{subtotal:sale.subtotal,vat_amount:sale.vat_amount,total:sale.total}});validateInvoicePayload(payload);const admin=createSupabaseAdminClient();if(!admin)return json({error:"service_not_configured"},503);const key="sale:"+sale.id+":"+payload.country_code;let{data:submission}=await admin.from("gmp_einvoice_submissions").select("id,status").eq("organization_id",organization.id).eq("idempotency_key",key).maybeSingle();if(submission&&["submitted","accepted"].includes(String(submission.status)))return json({success:true,idempotent:true,submission_id:submission.id,status:submission.status});if(submission){await admin.from("gmp_einvoice_submissions").update({status:"sending",error_code:null,error_message:null,updated_at:new Date().toISOString()}).eq("id",submission.id)}else{const r=await admin.from("gmp_einvoice_submissions").insert({organization_id:organization.id,store_id:sale.store_id,sale_id:sale.id,country_code:String(payload.country_code),status:"sending",idempotency_key:key,created_by:user.id,updated_at:new Date().toISOString()}).select("id,status").single();if(r.error)return json({error:r.error.message},400);submission=r.data}const{data:lastAttempt}=await admin.from("gmp_einvoice_attempts").select("attempt_no").eq("submission_id",submission.id).order("attempt_no",{ascending:false}).limit(1).maybeSingle();const attemptNo=Number(lastAttempt?.attempt_no||0)+1;try{const result=await submitInvoice(payload);await admin.from("gmp_einvoice_submissions").update({status:"submitted",request_hash:result.requestHash,submitted_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq("id",submission.id);await admin.from("gmp_einvoice_attempts").insert({submission_id:submission.id,attempt_no:attemptNo,status:"submitted",request_hash:result.requestHash});await recordAuditEvent({action:"stage3.einvoice.submitted",organizationId:organization.id,userId:user.id,entityType:"einvoice_submission",entityId:submission.id,metadata:{sale_id:sale.id,attempt_no:attemptNo}});return json({success:true,submission_id:submission.id,provider:result.data,attempt_no:attemptNo})}catch(e){const message=e instanceof Error?e.message.slice(0,500):"provider_error";await admin.from("gmp_einvoice_submissions").update({status:"failed",error_code:"provider_error",error_message:message,updated_at:new Date().toISOString()}).eq("id",submission.id);await admin.from("gmp_einvoice_attempts").insert({submission_id:submission.id,attempt_no:attemptNo,status:"failed",error_code:"provider_error",error_message:message});return json({error:"einvoice_provider_failed",submission_id:submission.id,retryable:true,attempt_no:attemptNo},502)}}catch(e){const m=e instanceof Error?e.message:"unexpected_error";return json({error:m},m==="merchant_plan_required"?403:500)}}
+import { NextResponse } from "next/server";
+import { requireMerchantPlan } from "../../../../lib/merchant-access";
+import { buildInvoicePayload, getEInvoiceStatus, validateInvoicePayload } from "../../../../lib/stage3/einvoice";
+
+const json=(data:unknown,status=200)=>NextResponse.json(data,{status,headers:{"cache-control":"no-store","x-gmp-einvoice-canonical":"merchant-invoicing"}});
+
+export async function GET(){
+  try{await requireMerchantPlan(["business"]);return json({capability:"einvoice",canonical_endpoint:"/api/merchant/invoicing",...getEInvoiceStatus()})}
+  catch(e){return json({error:e instanceof Error?e.message:"unauthorized"},401)}
+}
+
+export async function POST(request:Request){
+  try{
+    const { organization }=await requireMerchantPlan(["business"]);
+    const body=await request.json().catch(()=>null) as Record<string,unknown>|null;
+    if(!body)return json({error:"invalid_json"},400);
+    const action=String(body.action??"validate");
+    if(action==="validate"){
+      const payload=buildInvoicePayload({
+        countryCode:String(body.country_code??"OM").toUpperCase().slice(0,2),
+        invoiceNumber:String(body.invoice_number??("SALE-"+String(body.sale_id??"PREVIEW"))),
+        currency:String(body.currency??"OMR"),
+        supplier:(body.supplier&&typeof body.supplier==="object"?body.supplier:{} ) as Record<string,unknown>,
+        customer:(body.customer&&typeof body.customer==="object"?body.customer:{} ) as Record<string,unknown>,
+        lines:Array.isArray(body.lines)?body.lines as Array<Record<string,unknown>>:[],
+        totals:(body.totals&&typeof body.totals==="object"?body.totals:{} ) as Record<string,unknown>
+      });
+      validateInvoicePayload(payload);
+      return json({valid:true,integration:getEInvoiceStatus(),payload});
+    }
+    const saleId=String(body.sale_id??"");
+    if(!saleId)return json({error:"sale_id_required"},400);
+    const canonicalUrl=new URL("/api/merchant/invoicing",request.url);
+    const headers=new Headers({"content-type":"application/json"});
+    const cookie=request.headers.get("cookie");if(cookie)headers.set("cookie",cookie);
+    const queueBody={...body,action:"queue",idempotency_key:String(body.idempotency_key??("stage3:"+organization.id+":"+saleId+":"+String(body.country_code??"OM").toUpperCase()))};
+    const queued=await fetch(canonicalUrl,{method:"POST",headers,body:JSON.stringify(queueBody),cache:"no-store"});
+    const queuedData=await queued.json().catch(()=>({error:"canonical_invoice_api_invalid_response"}));
+    if(!queued.ok)return json({...queuedData,canonical_endpoint:"/api/merchant/invoicing"},queued.status);
+    if(action==="queue")return json({...queuedData,canonical_endpoint:"/api/merchant/invoicing"},queued.status);
+    const submissionId=String(queuedData.row?.id??queuedData.submission_id??"");
+    if(!submissionId)return json({error:"canonical_submission_missing"},502);
+    const sent=await fetch(canonicalUrl,{method:"POST",headers,body:JSON.stringify({action:"send",submission_id:submissionId}),cache:"no-store"});
+    const sentData=await sent.json().catch(()=>({error:"canonical_invoice_send_invalid_response"}));
+    return json({...sentData,submission_id:submissionId,canonical_endpoint:"/api/merchant/invoicing"},sent.status);
+  }catch(e){
+    const m=e instanceof Error?e.message:"unexpected_error";
+    return json({error:m},m==="merchant_plan_required"?403:500);
+  }
+}
