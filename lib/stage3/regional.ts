@@ -1,3 +1,5 @@
+export import { formatMoneyDisplay } from "../currency-display";
+
 export type RegionalProfile = {
   countryCode: string;
   locale: string;
@@ -34,7 +36,7 @@ export function getRegionalProfile(countryCode: string): RegionalProfile {
 }
 
 export function formatRegionalMoney(value: number, profile: RegionalProfile) {
-  return new Intl.NumberFormat(profile.locale, { style:"currency", currency:profile.currency, maximumFractionDigits: 3 }).format(value);
+  return formatMoneyDisplay(value, profile.currency, profile.locale, 3);
 }
 
 export function formatRegionalDate(value: Date | string | number, profile: RegionalProfile) {
