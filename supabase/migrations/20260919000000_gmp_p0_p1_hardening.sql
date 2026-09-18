@@ -78,3 +78,4 @@ begin
 end $$;
 revoke all on function public.gmp_document_review(uuid,text,uuid) from public,anon,authenticated;
 grant execute on function public.gmp_document_review(uuid,text,uuid) to service_role;
+\n-- Public order RPC is server-only; the public route uses the service role after rate limiting.\ncreate policy gmp_public_order_rate_limits_deny on public.gmp_public_order_rate_limits for all to anon,authenticated using(false) with check(false);\ncreate policy gmp_webhook_events_deny on public.gmp_webhook_events for all to anon,authenticated using(false) with check(false);\n
