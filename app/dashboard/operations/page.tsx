@@ -5,7 +5,7 @@ import Link from "next/link";
 
 type Data = {
   role: string; planCode: string; stores: any[]; branches: any[]; products: any[]; customers: any[]; suppliers: any[];
-  sales: any[]; purchases: any[]; expenses: any[]; repairs: any[]; goldPurchases: any[]; accounts: any[]; journals: any[]; members: any[]; marketplaceListings: any[]; marketplaceالطلبs: any[];
+  sales: any[]; purchases: any[]; expenses: any[]; repairs: any[]; goldPurchases: any[]; accounts: any[]; journals: any[]; members: any[]; marketplaceListings: any[]; marketplaceOrders: any[];
 };
 const tabs = [
   ["overview","نظرة عامة"],["pos","نقطة البيع"],["inventory","المخزون"],["purchases","المشتريات"],["branches","الفروع"],["contacts","العملاء والموردون"],
@@ -18,7 +18,7 @@ const num=(v:any)=>Number.isFinite(Number(v))?Number(v):0;
 export default function OperationsPage(){
   const [tab,setTab]=useState("overview"),[data,setData]=useState<Data|null>(null),[loading,setLoading]=useState(true),[message,setMessage]=useState(""),[busy,setBusy]=useState(false);
   const [displayData,setDisplayData]=useState<any>(null),[team,setTeam]=useState<any>(null),[dooh,setDooh]=useState<any>(null),[directory,setDirectory]=useState<any[]>([]);
-  const [storeId,setStoreId]=useState(""),[productId,setProductId]=useState(""),[qty,setQty]=useState("1"),[weight,setWeight]=useState("0"),[price,setPrice]=useState("0"),[payment,setPayment]=useState("نقدًا");
+  const [storeId,setStoreId]=useState(""),[productId,setProductId]=useState(""),[qty,setQty]=useState("1"),[weight,setWeight]=useState("0"),[price,setPrice]=useState("0"),[payment,setPayment]=useState("cash");
   async function get(url:string){const r=await fetch(url,{cache:"no-store"});const d=await r.json().catch(()=>null);if(!r.ok)throw new Error(d?.error||"request_failed");return d;}
   async function post(payload:any){const r=await fetch("/api/stage2",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload)});const d=await r.json().catch(()=>null);if(!r.ok)throw new Error(d?.error||"request_failed");return d;}
   async function load(){
@@ -68,11 +68,11 @@ export default function OperationsPage(){
     {tab==="pos"&&<section className="stage2-section">
       <div className="stage2-section-title"><div><div className="eyebrow">نقطة البيع</div><h2>بيع سريع</h2><p>المسار الحالي يعتمد على gmp_create_and_post_sale.</p></div></div>
       <div className="stage2-form-grid">
-        <label>المحل<select value={storeId} onالتغيير={e=>setStoreId(e.target.value)}>{data.stores.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
-        <label>الصنف<select value={productId} onالتغيير={e=>{setProductId(e.target.value);const p=data.products.find(x=>x.id===e.target.value);setPrice(String(p?.price||0));}}>{data.products.map(p=><option key={p.id} value={p.id}>{p.name} {p.karat||""}</option>)}</select></label>
-        <label>الكمية<input value={qty} onالتغيير={e=>setQty(e.target.value)} inputMode="decimal"/></label><label>الوزن<input value={weight} onالتغيير={e=>setWeight(e.target.value)} inputMode="decimal"/></label>
-        <label>سعر الوحدة<input value={price} onالتغيير={e=>setPrice(e.target.value)} inputMode="decimal"/></label>
-        <label>الدفع<select value={payment} onالتغيير={e=>setPayment(e.target.value)}><option>نقدًا</option><option>بنكي</option><option>بطاقة</option><option>محفظة</option><option>أخرى</option></select></label>
+        <label>المحل<select value={storeId} onChange={e=>setStoreId(e.target.value)}>{data.stores.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
+        <label>الصنف<select value={productId} onChange={e=>{setProductId(e.target.value);const p=data.products.find(x=>x.id===e.target.value);setPrice(String(p?.price||0));}}>{data.products.map(p=><option key={p.id} value={p.id}>{p.name} {p.karat||""}</option>)}</select></label>
+        <label>الكمية<input value={qty} onChange={e=>setQty(e.target.value)} inputMode="decimal"/></label><label>الوزن<input value={weight} onChange={e=>setWeight(e.target.value)} inputMode="decimal"/></label>
+        <label>سعر الوحدة<input value={price} onChange={e=>setPrice(e.target.value)} inputMode="decimal"/></label>
+        <label>الدفع<select value={payment} onChange={e=>setPayment(e.target.value)}><option value="cash">نقدًا</option><option value="bank">بنكي</option><option value="card">بطاقة</option><option value="wallet">محفظة</option><option value="other">أخرى</option></select></label>
       </div>
       <div className="stage2-callout">المتاح: {money(product?.current_quantity)} وحدة · {money(product?.current_weight_grams)} غ</div>
       <button className="btn btn-primary" disabled={busy||!storeId||!productId} onClick={()=>void act({action:"sale",store_id:storeId,branch_id:data.stores.find(s=>s.id===storeId)?.branch_id,payment_method:payment,lines:[{product_id:productId,quantity:num(qty),weight_grams:num(weight),unit_price:num(price),making_charge:num(product?.making_charge),discount_amount:0,vat_amount:0}]})}>اعتماد البيع</button>
@@ -114,7 +114,7 @@ export default function OperationsPage(){
     </section>}
 
     {tab==="buy-gold"&&<section className="stage2-section">
-      <SimpleForm title="شراء الذهب من الأفراد" fields={["seller_name","seller_phone","identity_document_path","item_description","karat","weight_grams","market_reference_price","purchase_price","payment_method","risk_level"]} submit={async f=>act({action:"gold_purchase",seller_name:f.seller_name,seller_phone:f.seller_phone,identity_document_path:f.identity_document_path,item_description:f.item_description,karat:f.karat,weight_grams:num(f.weight_grams),market_reference_price:num(f.market_reference_price),purchase_price:num(f.purchase_price),payment_method:f.payment_method||"نقدًا",risk_level:f.risk_level||"normal"})}/>
+      <SimpleForm title="شراء الذهب من الأفراد" fields={["seller_name","seller_phone","identity_document_path","item_description","karat","weight_grams","market_reference_price","purchase_price","payment_method","risk_level"]} submit={async f=>act({action:"gold_purchase",seller_name:f.seller_name,seller_phone:f.seller_phone,identity_document_path:f.identity_document_path,item_description:f.item_description,karat:f.karat,weight_grams:num(f.weight_grams),market_reference_price:num(f.market_reference_price),purchase_price:num(f.purchase_price),payment_method:f.payment_method||"cash",risk_level:f.risk_level||"normal"})}/>
       <Table rows={data.goldPurchases.slice(0,80)} columns={["transaction_no","seller_name","weight_grams","karat","purchase_price","risk_level"]} labels={["#","البائع","الوزن","العيار","السعر","المخاطر"]}/>
     </section>}
 
@@ -130,7 +130,7 @@ export default function OperationsPage(){
     {tab==="marketplace"&&<section className="stage2-section">
       <SimpleForm title="عرض جديد في السوق" fields={["store_id","product_id","title","description","category","price","availability","status"]} submit={async f=>act({action:"listing",store_id:f.store_id,product_id:f.product_id||null,title:f.title,description:f.description,category:f.category,price:num(f.price),availability:f.availability||"in_stock",status:f.status||"draft"})}/>
       <Table rows={data.marketplaceListings.slice(0,100)} columns={["title","store_id","price","availability","status","updated_at"]} labels={["العرض","المتجر","السعر","التوفر","الحالة","التحديث"]}/>
-      <div className="stage2-table-wrap"><table><thead><tr><th>الطلب</th><th>المشتري</th><th>الإجمالي</th><th>الحالة</th><th>التغيير</th></tr></thead><tbody>{data.marketplaceالطلبs.slice(0,100).map((o:any)=><tr key={o.id}><td>#{o.order_no}</td><td>{o.buyer_name}<br/><small>{o.buyer_phone}</small></td><td>{money(o.subtotal)} {o.currency}</td><td>{o.status}</td><td><select value={o.status} onالتغيير={e=>void act({action:"status",entity:"marketplace_order",id:o.id,status:e.target.value})}><option>new</option><option>contacted</option><option>confirmed</option><option>fulfilled</option><option>cancelled</option></select></td></tr>)}</tbody></table></div>
+      <div className="stage2-table-wrap"><table><thead><tr><th>الطلب</th><th>المشتري</th><th>الإجمالي</th><th>الحالة</th><th>التغيير</th></tr></thead><tbody>{data.marketplaceOrders.slice(0,100).map((o:any)=><tr key={o.id}><td>#{o.order_no}</td><td>{o.buyer_name}<br/><small>{o.buyer_phone}</small></td><td>{money(o.subtotal)} {o.currency}</td><td>{o.status}</td><td><select value={o.status} onChange={e=>void act({action:"status",entity:"marketplace_order",id:o.id,status:e.target.value})}><option>new</option><option>contacted</option><option>confirmed</option><option>fulfilled</option><option>cancelled</option></select></td></tr>)}</tbody></table></div>
     </section>}
 
     {tab==="staff"&&<section className="stage2-section"><div className="stage2-grid two">{(team?.members||[]).map((m:any)=>{const p=(team?.profiles||[]).find((x:any)=>x.id===m.user_id);const perms=(team?.permissions||[]).find((x:any)=>x.user_id===m.user_id)?.permissions||{};return <article className="stage2-panel" key={m.user_id}><div className="stage2-panel-head"><h2>{p?.display_name||m.user_id.slice(0,8)}</h2><span className="stage2-badge">{m.role}</span></div><div className="permission-grid">{["directory.write","marketplace.write","erp.write","pos.write","inventory.write","staff.write","displays.write","dooh.write"].map(k=><label key={k}><input type="checkbox" id={"perm-"+m.user_id+"-"+k} defaultChecked={perms[k]!==undefined?perms[k]:m.role!=="viewer"}/>{k}</label>)}</div><button className="btn btn-primary" onClick={()=>{const o:Record<string,boolean>={};["directory.write","marketplace.write","erp.write","pos.write","inventory.write","staff.write","displays.write","dooh.write"].forEach(k=>{const el=document.getElementById("perm-"+m.user_id+"-"+k) as HTMLInputElement|null;o[k]=Boolean(el?.checked)});void act({action:"permission",user_id:m.user_id,permissions:o})}}>حفظ</button></article>})}</div></section>}
