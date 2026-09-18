@@ -172,25 +172,27 @@ export async function GET(request: Request) {
 
     if (action === "displays") {
       const access = await requirePermission("displays.read");
-      const [stores,screens,content,schedules] = await Promise.all([
-        access.supabase.from("gmp_stores").select("id,name,slug").eq("organization_id",access.organization.id).order("name"),
-        access.supabase.from("gmp_screens").select("id,store_id,name,status,template,last_seen_at,last_snapshot_at").order("created_at"),
+      const { data: stores } = await access.supabase.from("gmp_stores").select("id,name,slug").eq("organization_id",access.organization.id).order("name");
+      const storeIds = (stores ?? []).map((s:any)=>s.id);
+      const [screens,content,schedules] = await Promise.all([
+        storeIds.length ? access.supabase.from("gmp_screens").select("id,store_id,name,status,template,last_seen_at,last_snapshot_at").in("store_id",storeIds).order("created_at") : Promise.resolve({data:[],error:null} as any),
         access.supabase.from("gmp_display_content").select("id,store_id,screen_id,content_type,title,body,media_path,payload,active,priority,created_at,updated_at").eq("organization_id",access.organization.id).order("priority",{ascending:false}),
         access.supabase.from("gmp_display_schedules").select("id,store_id,screen_id,content_id,starts_at,ends_at,days_of_week,enabled").eq("organization_id",access.organization.id).order("starts_at")
       ]);
-      return json({stores:stores.data??[],screens:screens.data??[],content:content.data??[],schedules:schedules.data??[]});
+      return json({stores:stores??[],screens:screens.data??[],content:content.data??[],schedules:schedules.data??[]});
     }
 
     if (action === "dooh") {
       const access = await requirePermission("dooh.read");
-      const [campaigns,creatives,placements,screens,stores] = await Promise.all([
+      const { data: stores } = await access.supabase.from("gmp_stores").select("id,name,slug").eq("organization_id",access.organization.id).order("name");
+      const storeIds = (stores ?? []).map((s:any)=>s.id);
+      const [campaigns,creatives,placements,screens] = await Promise.all([
         access.supabase.from("gmp_ad_campaigns").select("id,store_id,organization_id,advertiser_name,advertiser_phone,advertiser_email,title,body,image_path,target_url,country_code,city,placement,status,starts_at,ends_at,impressions,clicks,budget,created_at,updated_at").eq("organization_id",access.organization.id).order("created_at",{ascending:false}).limit(200),
         access.supabase.from("gmp_ad_creatives").select("id,campaign_id,name,creative_type,asset_path,target_url,status,metadata,created_at,updated_at").eq("organization_id",access.organization.id).order("created_at",{ascending:false}).limit(300),
         access.supabase.from("gmp_ad_placements").select("id,campaign_id,creative_id,screen_id,store_id,status,starts_at,ends_at,weight,created_at,updated_at").eq("organization_id",access.organization.id).order("created_at",{ascending:false}).limit(300),
-        access.supabase.from("gmp_screens").select("id,store_id,name,status,template,last_seen_at,last_snapshot_at").order("created_at"),
-        access.supabase.from("gmp_stores").select("id,name,slug").eq("organization_id",access.organization.id).order("name")
+        storeIds.length ? access.supabase.from("gmp_screens").select("id,store_id,name,status,template,last_seen_at,last_snapshot_at").in("store_id",storeIds).order("created_at") : Promise.resolve({data:[],error:null} as any)
       ]);
-      return json({campaigns:campaigns.data??[],creatives:creatives.data??[],placements:placements.data??[],screens:screens.data??[],stores:stores.data??[]});
+      return json({campaigns:campaigns.data??[],creatives:creatives.data??[],placements:placements.data??[],screens:screens.data??[],stores:stores??[]});
     }
 
     return json({error:"unsupported_action"},400);
@@ -413,6 +415,11 @@ export async function POST(request: Request) {
       const access=await requirePermission("displays.write");
       const storeId=text(b.store_id,80), screenId=text(b.screen_id,80);
       if(!await orgStore(access.supabase,access.organization.id,storeId))return json({error:"store_not_found"},404);
+      if(screenId){
+        if(!isUuid(screenId))return json({error:"screen_id_invalid"},400);
+        const {data:screen}=await access.supabase.from("gmp_screens").select("id,store_id").eq("id",screenId).eq("store_id",storeId).maybeSingle();
+        if(!screen)return json({error:"screen_not_in_store"},404);
+      }
       const payload={organization_id:access.organization.id,store_id:storeId,screen_id:isUuid(screenId)?screenId:null,
         content_type:["text","market","gold","ad","listing"].includes(text(b.content_type,20))?text(b.content_type,20):"text",
         title:text(b.title,180),body:text(b.body,2000)||null,media_path:text(b.media_path,500)||null,payload:asObject(b.payload),
@@ -437,8 +444,10 @@ export async function POST(request: Request) {
 
     if (action === "dooh_campaign") {
       const access=await requirePermission("dooh.write");
+      const campaignStoreId=isUuid(text(b.store_id,80))?text(b.store_id,80):null;
+      if(campaignStoreId && !await orgStore(access.supabase,access.organization.id,campaignStoreId))return json({error:"store_not_found"},404);
       const {data,error}=await access.supabase.from("gmp_ad_campaigns").insert({
-        organization_id:access.organization.id,store_id:isUuid(text(b.store_id,80))?text(b.store_id,80):null,
+        organization_id:access.organization.id,store_id:campaignStoreId,
         advertiser_name:text(b.advertiser_name,180),advertiser_phone:text(b.advertiser_phone,60)||null,advertiser_email:text(b.advertiser_email,160)||null,
         title:text(b.title,180),body:text(b.body,2000)||null,image_path:text(b.image_path,500)||null,target_url:text(b.target_url,500)||null,whatsapp:text(b.whatsapp,60)||null,
         country_code:text(b.country_code,3).toUpperCase()||null,city:text(b.city,100)||null,placement:text(b.placement,30)||"screen",
@@ -469,6 +478,8 @@ export async function POST(request: Request) {
       if(isUuid(screenId)){
         const {data:s}=await access.supabase.from("gmp_screens").select("id,store_id").eq("id",screenId).maybeSingle();
         if(!s)return json({error:"screen_not_found"},404);
+        const screenStore=await orgStore(access.supabase,access.organization.id,s.store_id);
+        if(!screenStore || (isUuid(storeId) && s.store_id!==storeId))return json({error:"screen_out_of_scope"},404);
       }
       if(creativeId){const {data:cr}=await access.supabase.from("gmp_ad_creatives").select("id").eq("id",creativeId).eq("campaign_id",campaignId).eq("organization_id",access.organization.id).maybeSingle();if(!cr)return json({error:"creative_not_found"},404);}
       const status=["scheduled","live","paused","completed","cancelled"].includes(text(b.status,20))?text(b.status,20):"scheduled";
