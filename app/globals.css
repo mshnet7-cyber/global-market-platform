@@ -12,3 +12,6 @@
 .dashboard-logout{min-height:35px;padding:7px 10px;font-size:10px}
 @media(max-width:1050px){.dashboard-mobile-menu{display:block}.dashboard-user form{display:block}.dashboard-nav{gap:10px}.dashboard-user{margin-inline-start:auto}}
 @media(max-width:720px){.dashboard-logout{display:none}.dashboard-mobile-menu[open] nav{inset-inline-end:0;inset-inline-start:auto}.dashboard-nav{min-height:66px}.dashboard-brand{font-size:14px}}
+
+.plan-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}.plan-actions .btn{width:100%}
+@media(max-width:560px){.plan-actions{grid-template-columns:1fr}}
