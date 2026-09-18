@@ -8,13 +8,14 @@ function cfg() {
     accessToken: process.env.GMP_WHATSAPP_ACCESS_TOKEN?.trim() || null,
     senderId: process.env.GMP_WHATSAPP_SENDER_ID?.trim() || null,
     webhookSecret: process.env.GMP_WHATSAPP_WEBHOOK_SECRET?.trim() || null,
+    approved: process.env.GMP_WHATSAPP_APPROVED === "true",
   };
 }
 
 export function getWhatsAppStatus() {
   const c = cfg();
-  const state: IntegrationState = c.messagesUrl && c.accessToken && c.senderId ? "live" : "integration_ready";
-  return { state, provider: c.provider, reason: state === "live" ? undefined : "provider_credentials_not_configured" };
+  const state: IntegrationState = c.messagesUrl && c.accessToken && c.senderId && c.approved ? "live" : "integration_ready";
+  return { state, provider: c.provider, reason: state === "live" ? undefined : "provider_credentials_or_commercial_approval_not_configured" };
 }
 
 export type WhatsAppTemplateMessage = {
@@ -27,22 +28,15 @@ export type WhatsAppTemplateMessage = {
 
 export async function sendWhatsAppTemplate(input: WhatsAppTemplateMessage) {
   const c = cfg();
-  if (!c.messagesUrl || !c.accessToken || !c.senderId) throw new Error("whatsapp_not_configured");
+  if (!c.messagesUrl || !c.accessToken || !c.senderId || !c.approved) throw new Error("whatsapp_not_configured");
   const response = await fetch(c.messagesUrl, {
     method: "POST",
-    headers: {
-      "content-type": "application/json",
-      authorization: `Bearer ${c.accessToken}`,
-    },
+    headers: { "content-type": "application/json", authorization: `Bearer ${c.accessToken}` },
     body: JSON.stringify({
       sender_id: c.senderId,
       recipient: input.to,
       type: "template",
-      template: {
-        name: input.templateName,
-        language: input.languageCode ?? "ar",
-        parameters: input.parameters ?? [],
-      },
+      template: { name: input.templateName, language: input.languageCode ?? "ar", parameters: input.parameters ?? [] },
       client_reference: input.clientReference ?? null,
     }),
     cache: "no-store",

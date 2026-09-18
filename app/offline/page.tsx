@@ -1,14 +1,2 @@
 import Link from "next/link";
-
-export default function OfflinePage() {
-  return (
-    <main className="stage3-page stage3-offline">
-      <div className="stage3-shell">
-        <div className="stage3-eyebrow">GLOBAL MARKET · OFFLINE</div>
-        <h1>أنت غير متصل حاليًا.</h1>
-        <p>البيانات الحساسة والمعاملات لن تُنفّذ دون اتصال. جرّب مرة أخرى عند عودة الشبكة.</p>
-        <Link href="/" className="stage3-btn stage3-btn-primary">العودة</Link>
-      </div>
-    </main>
-  );
-}
+export default function OfflinePage(){return <main className="stage3-page stage3-offline"><div className="stage3-shell"><div className="stage3-eyebrow">GLOBAL MARKET · OFFLINE</div><h1>أنت غير متصل حاليًا.</h1><p>البيانات الحساسة والمعاملات لن تُنفّذ دون اتصال. جرّب مرة أخرى عند عودة الشبكة.</p><Link href="/" className="stage3-btn stage3-btn-primary">العودة</Link></div></main>}

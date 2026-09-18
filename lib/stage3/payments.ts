@@ -15,14 +15,9 @@ const transitions: Record<BillingStatus, readonly BillingStatus[]> = {
   canceled: ["active"],
 };
 
-export function canTransition(from: BillingStatus, to: BillingStatus) {
-  return from === to || transitions[from]?.includes(to) === true;
-}
-
+export function canTransition(from: BillingStatus, to: BillingStatus) { return from === to || transitions[from]?.includes(to) === true; }
 export function assertTransition(from: string, to: string): asserts to is BillingStatus {
-  if (!BILLING_STATUSES.includes(from as BillingStatus) || !BILLING_STATUSES.includes(to as BillingStatus) || !canTransition(from as BillingStatus, to as BillingStatus)) {
-    throw new Error("invalid_subscription_transition");
-  }
+  if (!BILLING_STATUSES.includes(from as BillingStatus) || !BILLING_STATUSES.includes(to as BillingStatus) || !canTransition(from as BillingStatus, to as BillingStatus)) throw new Error("invalid_subscription_transition");
 }
 
 function cfg() {
@@ -31,38 +26,23 @@ function cfg() {
     checkoutUrl: process.env.GMP_PAYMENT_CHECKOUT_URL?.trim().replace(/\/$/, "") || null,
     apiKey: process.env.GMP_PAYMENT_API_KEY?.trim() || null,
     webhookSecret: process.env.GMP_PAYMENT_WEBHOOK_SECRET?.trim() || null,
+    approved: process.env.GMP_PAYMENT_APPROVED === "true",
   };
 }
 
 export function getPaymentStatus() {
   const c = cfg();
-  const state: IntegrationState = c.checkoutUrl && c.apiKey ? "live" : "integration_ready";
-  return { state, provider: c.provider, reason: state === "live" ? undefined : "provider_credentials_not_configured" };
+  const state: IntegrationState = c.checkoutUrl && c.apiKey && c.approved ? "live" : "integration_ready";
+  return { state, provider: c.provider, reason: state === "live" ? undefined : "provider_credentials_or_commercial_approval_not_configured" };
 }
 
-export async function createHostedCheckout(input: {
-  planCode: string;
-  billingPeriod: string;
-  amount: number;
-  currency: string;
-  successUrl: string;
-  cancelUrl: string;
-  customerReference: string;
-}) {
+export async function createHostedCheckout(input: { planCode:string; billingPeriod:string; amount:number; currency:string; successUrl:string; cancelUrl:string; customerReference:string; }) {
   const c = cfg();
-  if (!c.checkoutUrl || !c.apiKey) throw new Error("payments_not_configured");
+  if (!c.checkoutUrl || !c.apiKey || !c.approved) throw new Error("payments_not_configured");
   const response = await fetch(c.checkoutUrl, {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${c.apiKey}` },
-    body: JSON.stringify({
-      plan_code: input.planCode,
-      billing_period: input.billingPeriod,
-      amount: input.amount,
-      currency: input.currency,
-      success_url: input.successUrl,
-      cancel_url: input.cancelUrl,
-      customer_reference: input.customerReference,
-    }),
+    body: JSON.stringify(input),
     cache: "no-store",
   });
   const raw = await response.text();
