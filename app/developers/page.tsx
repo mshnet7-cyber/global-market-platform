@@ -1,0 +1,28 @@
+import Link from "next/link";
+
+const endpoints = [
+  ["GET", "/api/v2/market/gold", "Gold market reference data", "market:read"],
+  ["GET", "/api/v2/market/markets", "Market reference data", "market:read"],
+];
+
+export default function DevelopersPage() {
+  return (
+    <main className="stage3-page">
+      <div className="stage3-shell">
+        <header className="stage3-header">
+          <div><div className="stage3-eyebrow">DEVELOPER PLATFORM · API V2</div><h1>واجهة بيانات عامة قابلة للتكامل.</h1><p>إصدار API واضح، API-key authentication، rate limiting، request IDs، usage tracking، واستجابات ثابتة دون كشف بيانات مؤسسات خاصة.</p></div>
+          <Link href="/" className="stage3-btn">الرئيسية</Link>
+        </header>
+        <section className="stage3-table-wrap">
+          <table className="stage3-table"><thead><tr><th>Method</th><th>Route</th><th>Purpose</th><th>Scope</th></tr></thead>
+          <tbody>{endpoints.map(row=><tr key={row[1]}>{row.map(cell=><td key={cell}>{cell}</td>)}</tr>)}</tbody></table>
+        </section>
+        <section className="stage3-grid">
+          <article className="stage3-card"><h2>Authentication</h2><p>استخدم x-gmp-api-key أو Authorization: Bearer. لا يتم تخزين المفتاح الخام؛ النظام يحتفظ بالـhash فقط.</p></article>
+          <article className="stage3-card"><h2>Errors</h2><p>كل رد خطأ يحتوي error وrequest_id، مع 401/403/429/503 وفق الحالة.</p></article>
+          <article className="stage3-card"><h2>Webhooks</h2><p>الطبقة الحالية تستخدم توقيعات HMAC مع event IDs لمنع التكرار، وStage 3 يعيد استخدام abstraction الموجودة.</p></article>
+        </section>
+      </div>
+    </main>
+  );
+}
