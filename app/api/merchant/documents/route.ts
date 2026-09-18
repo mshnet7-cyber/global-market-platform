@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { requireMerchantPlan } from "../../../../lib/merchant-access";
 import { createSupabaseAdminClient } from "../../../../lib/supabase/admin";
 import { extractDocumentFields, getAiStatus } from "../../../../lib/stage3/ai";
@@ -37,7 +37,7 @@ export async function POST(request:Request){
       const bytes=new Uint8Array(await file.arrayBuffer());
       const hash=createHash("sha256").update(bytes).digest("hex");
       const ext=(file.name.split(".").pop()||"bin").toLowerCase().replace(/[^a-z0-9]/g,"");
-      const path=`${organization.id}/${new Date().toISOString().slice(0,10)}/${crypto.randomUUID()}.${ext||"bin"}`;
+      const path=`${organization.id}/${new Date().toISOString().slice(0,10)}/${randomUUID()}.${ext||"bin"}`;
       const up=await admin.storage.from(BUCKET).upload(path,bytes,{contentType:file.type,upsert:false});
       if(up.error)return json({error:"storage_upload_failed",detail:up.error.message},502);
       const {data:doc,error}=await supabase.from("gmp_documents").insert({organization_id:organization.id,branch_id:branchId,document_type:documentType,storage_path:path,file_hash:hash,content_type:file.type,language:String(form.get("language")??"ar").slice(0,10),created_by:user.id}).select("id,document_type,content_type,review_status,created_at").single();
