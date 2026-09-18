@@ -45,12 +45,13 @@ function Chart({ points, currency }: { points: PublicPricePoint[]; currency: str
   </div>;
 }
 
-export default function MarketTerminal({ language, countryCode, countryName, currency, initial }: {
+export default function MarketTerminal({ language, countryCode, countryName, currency, initial, focus = "all" }: {
   language: string;
   countryCode: string;
   countryName: string;
   currency: string;
   initial: TerminalData;
+  focus?: "all" | "stocks" | "markets";
 }) {
   const rtl = ["ar", "fa", "he", "ur"].includes(language);
   const [data, setData] = useState(initial);
@@ -87,7 +88,8 @@ export default function MarketTerminal({ language, countryCode, countryName, cur
   }, [countryCode, language, selected, range]);
 
   const allQuotes = useMemo(() => [...data.markets, ...data.stocks], [data.markets, data.stocks]);
-  const selectedQuote = allQuotes.find((q) => q.symbol === selected || q.instrument === selected) ?? null;
+  const focusQuotes = useMemo(() => focus === "stocks" ? data.stocks : focus === "markets" ? data.markets : allQuotes, [focus, data.markets, data.stocks, allQuotes]);
+  const selectedQuote = focusQuotes.find((q) => q.symbol === selected || q.instrument === selected) ?? null;
   const selectedIsGold = selected === ("XAU" + currency) || selected === "XAUOMR" || selected === "XAUUSD";
   const selectedIsSilver = selected === ("XAG" + currency) || selected === "XAGOMR" || selected === "XAGUSD";
   const selectedCurrency = selectedIsGold || selectedIsSilver ? currency : selectedQuote?.currency ?? "USD";
@@ -97,7 +99,7 @@ export default function MarketTerminal({ language, countryCode, countryName, cur
   const low = historyValues.length ? Math.min(...historyValues) : null;
   const derivedChange = historyValues.length >= 2 ? historyValues[historyValues.length - 1] - historyValues[0] : selectedIsGold ? data.gold.change ?? null : selectedIsSilver ? data.silver.change ?? null : selectedQuote?.change ?? null;
   const derivedPercent = historyValues.length >= 2 && historyValues[0] ? (derivedChange! / historyValues[0]) * 100 : selectedIsGold ? data.gold.changePercent ?? null : selectedIsSilver ? data.silver.changePercent ?? null : selectedQuote?.changePercent ?? null;
-  const rows = allQuotes.filter((q) => filter === "all" || watchlist.includes(q.symbol ?? q.instrument));
+  const rows = focusQuotes.filter((q) => filter === "all" || watchlist.includes(q.symbol ?? q.instrument));
 
   function toggleWatch(code: string) {
     setWatchlist((current) => {
