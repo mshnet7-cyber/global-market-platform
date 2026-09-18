@@ -58,7 +58,7 @@ export default async function CurrenciesPage({
         <section className="page-hero">
           <div className="section-header">
             <div>
-              <div className="eyebrow"><span className="live-dot" />FX REFERENCE · {countryName}</div>
+              <div className="eyebrow"><span className="live-dot" />مرجع العملات · {countryName}</div>
               <h1>{messages.currencies}</h1>
             </div>
             <div className="meta-block">
@@ -71,7 +71,7 @@ export default async function CurrenciesPage({
 
         <section className="hero-panel currency-hero-panel">
           <div>
-            <div className="micro-label">{language === "ar" ? "العملة المستهدفة" : "TARGET CURRENCY"}</div>
+            <div className="micro-label">{language === "ar" ? "العملة المستهدفة" : "العملة المستهدفة"}</div>
             <div className="panel-value">{country.currency}</div>
             <div className="panel-meta">{countryName}</div>
           </div>
@@ -85,7 +85,7 @@ export default async function CurrenciesPage({
         <section className="section">
           <div className="section-head">
             <div>
-              <div className="eyebrow">REFERENCE TABLE</div>
+              <div className="eyebrow">جدول مرجعي</div>
               <h2>{language === "ar" ? "العملات الأساسية" : "Base currencies"}</h2>
             </div>
             <span className="meta">{BASES.length} {language === "ar" ? "عملات" : "currencies"}</span>
@@ -95,7 +95,7 @@ export default async function CurrenciesPage({
               <article className="card" key={base}>
                 <div className="card-top">
                   <div className="card-title">{base}</div>
-                  <span className="status">{rate == null ? messages.statusUnavailable : "REF"}</span>
+                  <span className="status">{rate == null ? messages.statusUnavailable : "مرجعي"}</span>
                 </div>
                 <div className="metric">{formatRate(rate, locale)}</div>
                 <div className="meta">1 {base} → {country.currency}</div>
