@@ -9,8 +9,10 @@ function slugify(value: string) {
 
 function safeNext(value: unknown) { const next = String(value ?? "").trim(); return next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard"; }
 
-function redirectWithError(request: Request, code: string) {
-  return NextResponse.redirect(new URL(`/signup?error=${encodeURIComponent(code)}`, request.url));
+function redirectWithError(request: Request, code: string, next = "/dashboard", plan = "") {
+  const params = new URLSearchParams({ error: code, next });
+  if (plan) params.set("plan", plan);
+  return NextResponse.redirect(new URL(`/signup?${params.toString()}`, request.url));
 }
 
 export async function POST(request: Request) {
@@ -19,7 +21,8 @@ export async function POST(request: Request) {
   const email = String(form.get("email") ?? "").trim().toLowerCase();
   const password = String(form.get("password") ?? "");
   const next = safeNext(form.get("next"));
-  if (!name || !email || password.length < 10) return redirectWithError(request, "invalid");
+  const plan = String(form.get("plan") ?? "").trim().slice(0, 30);
+  if (!name || !email || password.length < 10) return redirectWithError(request, "invalid", next, plan);
 
   const supabase = await createSupabaseServerClient();
   const admin = createSupabaseAdminClient();
@@ -30,8 +33,8 @@ export async function POST(request: Request) {
     password,
     options: { data: { display_name: name } },
   });
-  if (error) return redirectWithError(request, "signup");
-  if (!data.user) return NextResponse.redirect(new URL("/login?created=1", request.url));
+  if (error) return redirectWithError(request, "signup", next, plan);
+  if (!data.user) return NextResponse.redirect(new URL("/login?created=1&next=" + encodeURIComponent(next), request.url));
 
   const country = countries.find((c) => c.code === appConfig.defaultCountry) ?? countries[0];
   const orgSlug = `${slugify(name)}-${data.user.id.slice(0, 8)}`;
@@ -49,7 +52,7 @@ export async function POST(request: Request) {
 
   if (bootstrapError) {
     await admin.auth.admin.deleteUser(data.user.id);
-    return redirectWithError(request, "account_setup");
+    return redirectWithError(request, "account_setup", next, plan);
   }
 
   return data.session
