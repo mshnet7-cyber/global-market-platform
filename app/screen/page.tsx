@@ -49,7 +49,7 @@ export default function ScreenPage() {
       try { window.localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(data)); } catch {}
     } catch {
       setConnected(false);
-      setError("لا يوجد اتصال حاليًا. يتم عرض آخر لقطة صالح وليس مباشر.");
+      setError("لا يوجد اتصال حاليًا. يتم عرض آخر لقطة صالحة وليست مباشرة.");
     }
   }, []);
 
@@ -114,7 +114,7 @@ export default function ScreenPage() {
   }
 
   const snapshot = payload?.snapshot ?? null;
-  const statusLabel = connected && snapshot ? (snapshot.status === "مباشر" ? "مباشر" : snapshot.status) : snapshot ? "آخر تحديث" : "غير متاح";
+  const statusLabel = connected && snapshot ? (snapshot.status === "LIVE" ? "مباشر" : snapshot.status) : snapshot ? "آخر تحديث" : "غير متاح";
 
   return (
     <main className="screen-page">
