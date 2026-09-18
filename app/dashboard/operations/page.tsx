@@ -8,9 +8,9 @@ type Data = {
   sales: any[]; purchases: any[]; expenses: any[]; repairs: any[]; goldPurchases: any[]; accounts: any[]; journals: any[]; members: any[]; marketplaceListings: any[]; marketplaceOrders: any[];
 };
 const tabs = [
-  ["overview","Overview"],["pos","POS"],["inventory","Inventory"],["purchases","Purchases"],["branches","Branches"],["contacts","Customers / Suppliers"],
-  ["repairs","Repairs"],["buy-gold","Gold Buy"],["finance","Finance"],["directory","Directory"],["marketplace","Marketplace"],["staff","Staff"],
-  ["displays","Displays"],["dooh","DOOH"]
+  ["overview","نظرة عامة"],["pos","نقطة البيع"],["inventory","المخزون"],["purchases","المشتريات"],["branches","الفروع"],["contacts","العملاء والموردون"],
+  ["repairs","الإصلاحات"],["buy-gold","شراء الذهب"],["finance","المالية"],["directory","دليل المحلات"],["marketplace","السوق"],["staff","الموظفون"],
+  ["displays","الشاشات"],["dooh","الإعلانات الرقمية"]
 ] as const;
 const money=(v:any)=>v==null||!Number.isFinite(Number(v))?"—":Number(v).toLocaleString("en-OM",{minimumFractionDigits:3,maximumFractionDigits:3});
 const num=(v:any)=>Number.isFinite(Number(v))?Number(v):0;
@@ -54,10 +54,10 @@ export default function OperationsPage(){
 
     {tab==="overview"&&<section className="stage2-section">
       <div className="stage2-kpis">
-        <div><span>Stores</span><strong>{data.stores.length}</strong><small>{data.branches.length} branches</small></div>
-        <div><span>Inventory</span><strong>{data.products.length}</strong><small>{money(data.products.reduce((s,p)=>s+num(p.current_weight_grams),0))} g</small></div>
-        <div><span>Sales</span><strong>{data.sales.length}</strong><small>{money(data.sales.slice(0,30).reduce((s,p)=>s+num(p.total),0))}</small></div>
-        <div><span>Gold Bought</span><strong>{data.goldPurchases.length}</strong><small>{money(data.goldPurchases.slice(0,30).reduce((s,p)=>s+num(p.weight_grams),0))} g</small></div>
+        <div><span>المتاجر</span><strong>{data.stores.length}</strong><small>{data.branches.length} فرع</small></div>
+        <div><span>المخزون</span><strong>{data.products.length}</strong><small>{money(data.products.reduce((s,p)=>s+num(p.current_weight_grams),0))} غ</small></div>
+        <div><span>المبيعات</span><strong>{data.sales.length}</strong><small>{money(data.sales.slice(0,30).reduce((s,p)=>s+num(p.total),0))}</small></div>
+        <div><span>الذهب المشترى</span><strong>{data.goldPurchases.length}</strong><small>{money(data.goldPurchases.slice(0,30).reduce((s,p)=>s+num(p.weight_grams),0))} غ</small></div>
       </div>
       <div className="stage2-grid two">
         <article className="stage2-panel"><div className="stage2-panel-head"><h2>Stage 1 integration</h2><span className="stage2-badge">{data.planCode}</span></div><p>التسعير المرجعي بقي في lib/gold-pricing.ts، والسوق في طبقة Stage 1. البيع هنا يستدعي مسار الترحيل الذري الموجود.</p><div className="stage2-mini-list"><div>POS → inventory → COGS → journal</div><div>Gold buy → identity / risk / review</div><div>Repairs → lifecycle → audit foundation</div><div>Marketplace → contact/request, no paid checkout</div></div></article>
@@ -95,31 +95,31 @@ export default function OperationsPage(){
     </section>}
 
     {tab==="branches"&&<section className="stage2-section">
-      <SimpleForm title="Branch" fields={["name","code","city","address","phone","whatsapp"]} submit={async f=>act({action:"branch",name:f.name,code:f.code,city:f.city,address:f.address,phone:f.phone,whatsapp:f.whatsapp})}/>
-      <Table rows={data.branches.slice(0,100)} columns={["code","name","city","phone","active"]} labels={["Code","الفرع","المدينة","الهاتف","Active"]}/>
+      <SimpleForm title="فرع جديد" fields={["name","code","city","address","phone","whatsapp"]} submit={async f=>act({action:"branch",name:f.name,code:f.code,city:f.city,address:f.address,phone:f.phone,whatsapp:f.whatsapp})}/>
+      <Table rows={data.branches.slice(0,100)} columns={["code","name","city","phone","active"]} labels={["الرمز","الفرع","المدينة","الهاتف","الحالة"]}/>
     </section>}
 
     {tab==="contacts"&&<section className="stage2-section">
       <div className="stage2-grid two">
-        <SimpleForm title="Customer" fields={["name","phone","notes"]} submit={async f=>act({action:"customer",name:f.name,phone:f.phone,notes:f.notes})}/>
-        <SimpleForm title="Supplier" fields={["name","phone","whatsapp","tax_number","notes"]} submit={async f=>act({action:"supplier",name:f.name,phone:f.phone,whatsapp:f.whatsapp,tax_number:f.tax_number,notes:f.notes})}/>
+        <SimpleForm title="عميل جديد" fields={["name","phone","notes"]} submit={async f=>act({action:"customer",name:f.name,phone:f.phone,notes:f.notes})}/>
+        <SimpleForm title="مورد جديد" fields={["name","phone","whatsapp","tax_number","notes"]} submit={async f=>act({action:"supplier",name:f.name,phone:f.phone,whatsapp:f.whatsapp,tax_number:f.tax_number,notes:f.notes})}/>
       </div>
       <Table rows={data.customers.slice(0,60)} columns={["name","phone","created_at"]} labels={["العميل","الهاتف","التاريخ"]}/>
       <Table rows={data.suppliers.slice(0,60)} columns={["name","phone","tax_number","created_at"]} labels={["المورد","الهاتف","الضريبة","التاريخ"]}/>
     </section>}
 
     {tab==="repairs"&&<section className="stage2-section">
-      <SimpleForm title="Repair intake" fields={["item_description","metal","karat","weight_received_grams","repair_type","amount","notes"]} submit={async f=>act({action:"repair",item_description:f.item_description,metal:f.metal,karat:f.karat,weight_received_grams:num(f.weight_received_grams),repair_type:f.repair_type,amount:num(f.amount),notes:f.notes})}/>
+      <SimpleForm title="استلام إصلاح" fields={["item_description","metal","karat","weight_received_grams","repair_type","amount","notes"]} submit={async f=>act({action:"repair",item_description:f.item_description,metal:f.metal,karat:f.karat,weight_received_grams:num(f.weight_received_grams),repair_type:f.repair_type,amount:num(f.amount),notes:f.notes})}/>
       <Table rows={data.repairs.slice(0,80)} columns={["repair_no","item_description","weight_received_grams","status","amount"]} labels={["#","القطعة","الوزن","الحالة","المبلغ"]}/>
     </section>}
 
     {tab==="buy-gold"&&<section className="stage2-section">
-      <SimpleForm title="Gold purchased from customers" fields={["seller_name","seller_phone","identity_document_path","item_description","karat","weight_grams","market_reference_price","purchase_price","payment_method","risk_level"]} submit={async f=>act({action:"gold_purchase",seller_name:f.seller_name,seller_phone:f.seller_phone,identity_document_path:f.identity_document_path,item_description:f.item_description,karat:f.karat,weight_grams:num(f.weight_grams),market_reference_price:num(f.market_reference_price),purchase_price:num(f.purchase_price),payment_method:f.payment_method||"cash",risk_level:f.risk_level||"normal"})}/>
+      <SimpleForm title="شراء الذهب من الأفراد" fields={["seller_name","seller_phone","identity_document_path","item_description","karat","weight_grams","market_reference_price","purchase_price","payment_method","risk_level"]} submit={async f=>act({action:"gold_purchase",seller_name:f.seller_name,seller_phone:f.seller_phone,identity_document_path:f.identity_document_path,item_description:f.item_description,karat:f.karat,weight_grams:num(f.weight_grams),market_reference_price:num(f.market_reference_price),purchase_price:num(f.purchase_price),payment_method:f.payment_method||"cash",risk_level:f.risk_level||"normal"})}/>
       <Table rows={data.goldPurchases.slice(0,80)} columns={["transaction_no","seller_name","weight_grams","karat","purchase_price","risk_level"]} labels={["#","البائع","الوزن","العيار","السعر","المخاطر"]}/>
     </section>}
 
     {tab==="finance"&&<section className="stage2-section">
-      <SimpleForm title="Expense" fields={["category","description","amount","vat_amount","expense_account_id","payment_account_id"]} submit={async f=>act({action:"expense",category:f.category,description:f.description,amount:num(f.amount),vat_amount:num(f.vat_amount),expense_account_id:f.expense_account_id,payment_account_id:f.payment_account_id})}/>
+      <SimpleForm title="مصروف جديد" fields={["category","description","amount","vat_amount","expense_account_id","payment_account_id"]} submit={async f=>act({action:"expense",category:f.category,description:f.description,amount:num(f.amount),vat_amount:num(f.vat_amount),expense_account_id:f.expense_account_id,payment_account_id:f.payment_account_id})}/>
       <Table rows={data.journals.slice(0,80)} columns={["entry_no","reference_type","description","status","entry_date"]} labels={["القيد","المرجع","الوصف","الحالة","التاريخ"]}/>
     </section>}
 
@@ -128,8 +128,8 @@ export default function OperationsPage(){
     </section>}
 
     {tab==="marketplace"&&<section className="stage2-section">
-      <SimpleForm title="Marketplace listing" fields={["store_id","product_id","title","description","category","price","availability","status"]} submit={async f=>act({action:"listing",store_id:f.store_id,product_id:f.product_id||null,title:f.title,description:f.description,category:f.category,price:num(f.price),availability:f.availability||"in_stock",status:f.status||"draft"})}/>
-      <Table rows={data.marketplaceListings.slice(0,100)} columns={["title","store_id","price","availability","status","updated_at"]} labels={["العرض","Store","السعر","Availability","الحالة","Updated"]}/>
+      <SimpleForm title="عرض جديد في السوق" fields={["store_id","product_id","title","description","category","price","availability","status"]} submit={async f=>act({action:"listing",store_id:f.store_id,product_id:f.product_id||null,title:f.title,description:f.description,category:f.category,price:num(f.price),availability:f.availability||"in_stock",status:f.status||"draft"})}/>
+      <Table rows={data.marketplaceListings.slice(0,100)} columns={["title","store_id","price","availability","status","updated_at"]} labels={["العرض","المتجر","السعر","التوفر","الحالة","التحديث"]}/>
       <div className="stage2-table-wrap"><table><thead><tr><th>Order</th><th>Buyer</th><th>Total</th><th>Status</th><th>Change</th></tr></thead><tbody>{data.marketplaceOrders.slice(0,100).map((o:any)=><tr key={o.id}><td>#{o.order_no}</td><td>{o.buyer_name}<br/><small>{o.buyer_phone}</small></td><td>{money(o.subtotal)} {o.currency}</td><td>{o.status}</td><td><select value={o.status} onChange={e=>void act({action:"status",entity:"marketplace_order",id:o.id,status:e.target.value})}><option>new</option><option>contacted</option><option>confirmed</option><option>fulfilled</option><option>cancelled</option></select></td></tr>)}</tbody></table></div>
     </section>}
 
@@ -137,16 +137,16 @@ export default function OperationsPage(){
 
     {tab==="displays"&&<section className="stage2-section">
       <div className="stage2-grid two">{(displayData?.screens||[]).map((s:any)=><article className="stage2-panel" key={s.id}><div className="stage2-panel-head"><h2>{s.name}</h2><span className="stage2-badge">{s.status}</span></div><p>{displayData?.stores?.find((x:any)=>x.id===s.store_id)?.name}</p><small>Last seen: {s.last_seen_at?new Date(s.last_seen_at).toLocaleString("ar-OM"):"—"} · Snapshot: {s.last_snapshot_at?new Date(s.last_snapshot_at).toLocaleString("ar-OM"):"—"}</small></article>)}</div>
-      <SimpleForm title="Display content" fields={["store_id","screen_id","content_type","title","body","priority"]} submit={async f=>act({action:"display_content",store_id:f.store_id,screen_id:f.screen_id,content_type:f.content_type||"text",title:f.title,body:f.body,priority:num(f.priority)})}/>
+      <SimpleForm title="محتوى الشاشة" fields={["store_id","screen_id","content_type","title","body","priority"]} submit={async f=>act({action:"display_content",store_id:f.store_id,screen_id:f.screen_id,content_type:f.content_type||"text",title:f.title,body:f.body,priority:num(f.priority)})}/>
       <Table rows={displayData?.content||[]} columns={["title","content_type","active","priority"]} labels={["العنوان","النوع","Active","Priority"]}/>
     </section>}
 
     {tab==="dooh"&&<section className="stage2-section">
       <div className="stage2-kpis"><div><span>Campaigns</span><strong>{dooh?.campaigns?.length||0}</strong></div><div><span>Creatives</span><strong>{dooh?.creatives?.length||0}</strong></div><div><span>Placements</span><strong>{dooh?.placements?.length||0}</strong></div><div><span>Live</span><strong>{(dooh?.placements||[]).filter((x:any)=>x.status==="live").length}</strong></div></div>
       <div className="stage2-grid three">
-        <SimpleForm title="Campaign" fields={["advertiser_name","title","body","country_code","city"]} submit={async f=>act({action:"dooh_campaign",advertiser_name:f.advertiser_name,title:f.title,body:f.body,country_code:f.country_code,city:f.city})}/>
-        <SimpleForm title="Creative" fields={["campaign_id","name","creative_type","asset_path","target_url"]} submit={async f=>act({action:"dooh_creative",campaign_id:f.campaign_id,name:f.name,creative_type:f.creative_type||"image",asset_path:f.asset_path,target_url:f.target_url})}/>
-        <SimpleForm title="Placement" fields={["campaign_id","creative_id","screen_id","store_id","weight"]} submit={async f=>act({action:"dooh_placement",campaign_id:f.campaign_id,creative_id:f.creative_id,screen_id:f.screen_id,store_id:f.store_id,weight:num(f.weight)||1})}/>
+        <SimpleForm title="حملة إعلانية" fields={["advertiser_name","title","body","country_code","city"]} submit={async f=>act({action:"dooh_campaign",advertiser_name:f.advertiser_name,title:f.title,body:f.body,country_code:f.country_code,city:f.city})}/>
+        <SimpleForm title="مادة إعلانية" fields={["campaign_id","name","creative_type","asset_path","target_url"]} submit={async f=>act({action:"dooh_creative",campaign_id:f.campaign_id,name:f.name,creative_type:f.creative_type||"image",asset_path:f.asset_path,target_url:f.target_url})}/>
+        <SimpleForm title="موضع عرض" fields={["campaign_id","creative_id","screen_id","store_id","weight"]} submit={async f=>act({action:"dooh_placement",campaign_id:f.campaign_id,creative_id:f.creative_id,screen_id:f.screen_id,store_id:f.store_id,weight:num(f.weight)||1})}/>
       </div>
       <Table rows={dooh?.campaigns||[]} columns={["title","advertiser_name","status","impressions","clicks"]} labels={["الحملة","المعلن","الحالة","Impressions","Clicks"]}/>
     </section>}
@@ -156,6 +156,24 @@ export default function OperationsPage(){
 function Table({rows,columns,labels}:{rows:any[];columns:string[];labels:string[]}){
   return <div className="stage2-table-wrap"><table><thead><tr>{labels.map(l=><th key={l}>{l}</th>)}</tr></thead><tbody>{rows.map((r:any,i:number)=><tr key={r.id||i}>{columns.map(c=><td key={c}>{c.endsWith("_at")&&r[c]?new Date(r[c]).toLocaleString("ar-OM"):String(r[c]??"—")}</td>)}</tr>)}</tbody></table></div>;
 }
+const FIELD_LABELS: Record<string,string> = {
+  name:"الاسم", code:"الرمز", city:"المدينة", address:"العنوان", phone:"الهاتف", whatsapp:"واتساب", notes:"ملاحظات",
+  item_description:"وصف القطعة", metal:"المعدن", karat:"العيار", weight_received_grams:"الوزن المستلم (غ)", repair_type:"نوع الإصلاح",
+  amount:"المبلغ", seller_name:"اسم البائع", seller_phone:"هاتف البائع", identity_document_path:"مرجع وثيقة الهوية",
+  weight_grams:"الوزن (غ)", market_reference_price:"سعر السوق المرجعي", purchase_price:"سعر الشراء", payment_method:"طريقة الدفع",
+  category:"الفئة", description:"الوصف", vat_amount:"ضريبة القيمة المضافة", expense_account_id:"حساب المصروف", payment_account_id:"حساب الدفع",
+  store_id:"المتجر", product_id:"الصنف", title:"العنوان", price:"السعر", availability:"التوفر", status:"الحالة",
+  campaign_id:"الحملة", creative_id:"المادة الإعلانية", creative_type:"نوع المادة", asset_path:"مسار الملف", target_url:"الرابط",
+  advertiser_name:"اسم المعلن", country_code:"رمز الدولة", screen_id:"الشاشة", content_type:"نوع المحتوى", body:"النص",
+  priority:"الأولوية", weight:"الوزن", supplier_id:"المورد", invoice_no:"رقم الفاتورة", raw_description:"وصف الصنف",
+  quantity:"الكمية", unit_cost:"تكلفة الوحدة", making_charge:"المصنعية", risk_level:"مستوى المخاطر",
+};
+
 function SimpleForm({title,fields,submit}:{title:string;fields:string[];submit:(f:any)=>Promise<void>|void}){
-  return <form className="stage2-panel" onSubmit={e=>{e.preventDefault();const f=new FormData(e.currentTarget);const o:any={};fields.forEach(k=>o[k]=String(f.get(k)||""));void submit(o)}}><h2>{title}</h2>{fields.map(k=><label key={k}>{k}<input name={k} required={["name","title","advertiser_name","seller_name","seller_phone","identity_document_path","item_description","weight_received_grams","purchase_price","category","amount"].includes(k)}/></label>)}<button className="btn btn-primary">حفظ</button></form>;
+  const requiredFields = new Set(["name","title","advertiser_name","seller_name","seller_phone","identity_document_path","item_description","weight_received_grams","purchase_price","category","amount"]);
+  return <form className="stage2-panel" onSubmit={e=>{e.preventDefault();const f=new FormData(e.currentTarget);const o:any={};fields.forEach(k=>o[k]=String(f.get(k)||""));void submit(o)}}>
+    <h2>{title}</h2>
+    {fields.map(k=><label key={k}>{FIELD_LABELS[k] ?? k}<input name={k} required={requiredFields.has(k)} /></label>)}
+    <button className="btn btn-primary" type="submit">حفظ</button>
+  </form>;
 }
