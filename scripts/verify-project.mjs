@@ -21,6 +21,9 @@ ok("merchant invoicing API exists", existsSync(join(root,"app/api/merchant/invoi
 ok("camera dashboard exists", existsSync(join(root,"app/dashboard/cameras/page.tsx")));
 ok("compliance dashboard exists", existsSync(join(root,"app/dashboard/compliance/page.tsx")));
 ok("invoicing dashboard exists", existsSync(join(root,"app/dashboard/invoicing/page.tsx")));
+ok("document intelligence API exists", existsSync(join(root,"app/api/merchant/documents/route.ts")));
+ok("document intelligence dashboard exists", existsSync(join(root,"app/dashboard/documents/page.tsx")));
+ok("webhook retry endpoint exists", existsSync(join(root,"app/api/cron/webhooks/route.ts")));
 const migrationFiles = execFileSync("git",["ls-files","supabase/migrations"],{encoding:"utf8"}).split("\n").filter(Boolean);
 ok("operational workflow migration tracked", migrationFiles.some(x=>x.includes("gmp_full_plan_operational_workflows_v1")));
 ok("camera endpoint migration tracked", migrationFiles.some(x=>x.includes("gmp_camera_endpoint_hardening_v1")));
@@ -39,4 +42,7 @@ const ci=text(".github/workflows/ci.yml");
 ok("CI runs tests", ci.includes("npm test"));
 ok("CI runs lint", ci.includes("npm run lint"));
 ok("CI runs build", ci.includes("npm run build"));
+const hardening=text("supabase/migrations/20260919000000_gmp_p0_p1_hardening.sql");
+ok("marketplace abuse protection tracked", hardening.includes("gmp_public_order_rate_limits") && hardening.includes("gmp_allow_public_marketplace_order"));
+ok("webhook retry hardening tracked", hardening.includes("gmp_claim_due_webhook_deliveries") && hardening.includes("dead_lettered"));
 console.log(`verify-project: ${checks.length} checks passed`);
