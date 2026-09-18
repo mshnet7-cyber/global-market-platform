@@ -6,7 +6,7 @@ import Link from "next/link";
 type Line={listing:any;quantity:number};
 
 export default function MarketplacePage(){
-  const [data,setData]=useState<any>({stores:[],listings:[]}),[search,setSearch]=useState(""),[cart,setCart=useState<Line[]>([]),[buyer,setBuyer]=useState({name:"",phone:"",email:"",note:"",fulfillment_mode:"contact"}),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[message,setMessage]=useState("");
+  const [data,setData]=useState<any>({stores:[],listings:[]}),[search,setSearch]=useState(""),[cart,setCart]=useState<Line[]>([]),[buyer,setBuyer]=useState({name:"",phone:"",email:"",note:"",fulfillment_mode:"contact"}),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[message,setMessage]=useState("");
   useEffect(()=>{fetch("/api/stage2?action=marketplace",{cache:"no-store"}).then(async r=>{const d=await r.json();if(!r.ok)throw new Error(d.error||"load_failed");setData(d)}).catch(e=>setMessage(e.message||"تعذر تحميل Marketplace")).finally(()=>setLoading(false))},[]);
   function add(listing:any){setCart(c=>{if(c.length && c[0].listing.store_id!==listing.store_id){setMessage("السلة مرتبطة بمحل واحد. أرسل الطلب الحالي أولًا ثم اختر محلًا آخر.");return c;}const found=c.find(x=>x.listing.id===listing.id);return found?c.map(x=>x.listing.id===listing.id?{...x,quantity:x.quantity+1}:x):[...c,{listing,quantity:1}]})}
   const filteredListings=useMemo(()=>{const q=search.trim().toLowerCase();if(!q)return data.listings??[];return (data.listings??[]).filter((l:any)=>[l.title,l.description,l.store?.name].some((v:any)=>String(v??"").toLowerCase().includes(q)))},[data.listings,search]);
