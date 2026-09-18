@@ -46,7 +46,7 @@ export default async function NewsPage({
         <section className="page-hero">
           <div className="section-header">
             <div>
-              <div className="eyebrow"><span className="live-dot" />NEWSROOM · {countryName}</div>
+              <div className="eyebrow"><span className="live-dot" />غرفة الأخبار · {countryName}</div>
               <h1>{messages.news}</h1>
             </div>
             <div className="meta-block">
