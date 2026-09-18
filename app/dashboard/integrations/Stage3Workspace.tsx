@@ -30,6 +30,8 @@ type BillingState = {
 const planNames: Record<string, string> = { starter: "الشاشة", pro: "الأعمال", business: "الكاملة" };
 const periods = [["monthly", "شهري"], ["six_month", "6 أشهر"], ["yearly", "سنوي"]] as const;
 
+function statusLabel(value: string) { return value === "live" ? "LIVE" : value === "integration_ready" ? "INTEGRATION-READY" : value.replaceAll("_", " ").toUpperCase(); }
+
 function printable(value: unknown) {
   if (typeof value === "string") return value;
   try { return JSON.stringify(value, null, 2); } catch { return String(value); }
