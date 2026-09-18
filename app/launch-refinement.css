@@ -303,3 +303,20 @@ input,select,textarea{accent-color:var(--launch-gold)}
   .demo-screen-grid{grid-template-columns:1fr 1fr}
 }
 @media(max-width:480px){.demo-screen-grid{grid-template-columns:1fr}.demo-screen-primary{padding:34px 0 28px}}
+
+
+/* Intelligence headers: keep public visual language consistent across Gold, Silver and Market Terminal. */
+.stage1-shell{background:var(--launch-bg)!important;color:var(--launch-text)}
+.stage1-nav{min-height:74px!important;gap:18px!important}
+.stage1-nav-title{margin-inline:auto;min-width:0}
+.stage1-nav-title .eyebrow{margin-bottom:0}
+.stage1-nav-title strong{color:var(--launch-text)}
+.stage1-shell .terminal-hero,.stage1-shell .gold-intro{padding-top:58px}
+.stage1-shell .terminal-hero-gold,.stage1-shell .gold-live-card{background:var(--launch-surface-2);border-color:rgba(216,181,106,.20);box-shadow:var(--launch-shadow)}
+.stage1-shell .terminal-sidebar,.stage1-shell .terminal-card,.stage1-shell .terminal-chart-card,.stage1-shell .gold-history-card,.stage1-shell .gold-spot,.stage1-shell .gold-purity-card{background:var(--launch-surface);border-color:var(--launch-line)}
+@media(max-width:760px){
+  .stage1-nav{min-height:64px!important;flex-wrap:wrap;padding-block:8px}
+  .stage1-nav-title{order:3;flex:0 0 100%;padding-top:2px}
+  .stage1-nav-title .eyebrow{font-size:8px}
+  .stage1-nav .nav-actions{margin-inline-start:auto}
+}
