@@ -34,9 +34,9 @@ export async function evaluateMarketAlerts(market: EvaluatedMarket) {
     let fired = 0;
     for (const rule of rules) {
       if (!triggered(rule, market)) continue;
-      const last = rule.last_triggered_at ? Date.parse(rule.last_triggered_at) : 0;
-      const cooldown = Math.max(1, Number(rule.cooldown_minutes ?? 30)) * 60_000;
-      if (last && Date.now() - last < cooldown) continue;
+      const cooldownMinutes = Math.max(1, Number(rule.cooldown_minutes ?? 30));
+      const { data: claimed, error: claimError } = await admin.rpc("gmp_claim_market_alert", { p_rule_id: rule.id, p_cooldown_minutes: cooldownMinutes, p_now: new Date().toISOString() });
+      if (claimError || claimed !== true) continue;
       const title = "تنبيه السوق: " + market.instrumentCode;
       const body = rule.rule_type === "source_unavailable"
         ? "مصدر البيانات أصبح غير متاح أو غير موثوق: " + (market.providerName ?? market.providerCode ?? "unknown")
@@ -47,7 +47,6 @@ export async function evaluateMarketAlerts(market: EvaluatedMarket) {
         title,
         body,
       });
-      await admin.from("gmp_market_alert_rules").update({ last_triggered_at: new Date().toISOString() }).eq("id", rule.id);
       await recordAuditEvent({
         action: "market.alert.triggered",
         organizationId: rule.organization_id,
