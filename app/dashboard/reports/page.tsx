@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import DashboardHeader from "../DashboardHeader";
+import { getMerchantContext } from "../../../lib/merchant-access";
 
 const reports = [
   ["/dashboard/sales", "تقرير المبيعات", "مراجعة عمليات البيع والفواتير ونقطة البيع."],
@@ -10,9 +12,12 @@ const reports = [
   ["/dashboard/repairs", "تقرير الإصلاحات", "متابعة القطع المستلمة والإصلاح والتسليم."],
 ];
 
-export default function ReportsPage() {
+export default async function ReportsPage() {
+  const { supabase, user, organization, role, planCode } = await getMerchantContext();
+  if (!supabase || !user) redirect("/login?next=/dashboard/reports");
+  if (!organization || !planCode || role === "viewer") redirect("/dashboard");
   return <div className="dashboard-shell">
-    <DashboardHeader />
+    <DashboardHeader organizationName={organization.name} role={role} planName={planCode} />
     <main className="container dashboard-main reports-page">
       <section className="dashboard-hero">
         <div><div className="eyebrow">REPORTING</div><h1 className="dashboard-title">التقارير</h1><p className="dashboard-subtitle">مركز واحد للوصول إلى تقارير التشغيل والمال والمخزون.</p></div>
