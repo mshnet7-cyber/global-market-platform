@@ -47,7 +47,7 @@ export default function Stage3Workspace({ documents, initialCountry }: { documen
   const [waResult, setWaResult] = useState("");
   const [waBusy, setWaBusy] = useState(false);
   const [billing, setBilling] = useState<BillingState>({});
-  const [selectedPlan, setSelectedPlan] = useState("starter");
+  const [selectedPlan, setSelectedPlan] = useState(() => { if (typeof window === "undefined") return "starter"; const plan = new URLSearchParams(window.location.search).get("plan"); return plan && planNames[plan] ? plan : "starter"; });
   const [period, setPeriod] = useState("monthly");
   const [billingBusy, setBillingBusy] = useState(false);
   const [billingResult, setBillingResult] = useState("");
@@ -57,10 +57,6 @@ export default function Stage3Workspace({ documents, initialCountry }: { documen
 
   const selectedDocument = useMemo(() => documents.find((item) => item.id === documentId) ?? null, [documents, documentId]);
 
-  useEffect(() => {
-    const plan = new URLSearchParams(window.location.search).get("plan");
-    if (plan && planNames[plan]) setSelectedPlan(plan);
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -212,7 +208,7 @@ export default function Stage3Workspace({ documents, initialCountry }: { documen
 
       {tab === "einvoice" && <section className="stage3-card"><div className="stage3-card-head"><h2>الفوترة الإلكترونية</h2><span className="stage3-status">Integration-ready</span></div><p>ملفات الدولة والطابور وحالات الفشل موجودة في مساحة الفوترة، مع فصل واضح بين المهيأ والموصل الرسمي المفعّل.</p><div className="actions"><Link className="stage3-btn stage3-btn-primary" href="/dashboard/invoicing">فتح مساحة الفوترة</Link></div></section>}
 
-      {tab === "regional" && <section className="stage3-grid"><article className="stage3-card"><div className="stage3-card-head"><h2>Regional profile</h2><span className="stage3-status">{regionBusy ? "Loading" : "Ready"}</span></div><label className="stage3-field">الدولة<select value={country} onChange={(event) => setCountry(event.target.value)}><option value="OM">عُمان</option><option value="SA">السعودية</option><option value="AE">الإمارات</option></select></label>{region ? <div className="stage3-kv"><div><span>Locale</span><b>{region.locale || "—"}</b></div><div><span>Currency</span><b>{region.currency || "—"}</b></div><div><span>Timezone</span><b>{region.timezone || "—"}</b></div><div><span>Tax</span><b>{region.taxModel || "—"}</b></div><div><span>Direction</span><b>{region.direction || "—"}</b></div></div> : <div className="stage3-empty">تعذر تحميل الملف الإقليمي.</div>}</article><article className="stage3-card"><h2>Developer Platform</h2><p>التوثيق العام منفصل عن إدارة مفاتيح API. المفتاح الخام لا يُخزن.</p><div className="actions"><Link className="stage3-btn stage3-btn-primary" href="/dashboard/api-keys">إدارة المفاتيح</Link><Link className="stage3-btn" href="/developers">الوثائق</Link></div></article></section>}
+      {tab === "regional" && <section className="stage3-grid"><article className="stage3-card"><div className="stage3-card-head"><h2>Regional profile</h2><span className="stage3-status">{regionBusy ? "Loading" : "Ready"}</span></div><label className="stage3-field">الدولة<select value={country} onChange={(event) => { setRegionBusy(true); setCountry(event.target.value); }}><option value="OM">عُمان</option><option value="SA">السعودية</option><option value="AE">الإمارات</option></select></label>{region ? <div className="stage3-kv"><div><span>Locale</span><b>{region.locale || "—"}</b></div><div><span>Currency</span><b>{region.currency || "—"}</b></div><div><span>Timezone</span><b>{region.timezone || "—"}</b></div><div><span>Tax</span><b>{region.taxModel || "—"}</b></div><div><span>Direction</span><b>{region.direction || "—"}</b></div></div> : <div className="stage3-empty">تعذر تحميل الملف الإقليمي.</div>}</article><article className="stage3-card"><h2>Developer Platform</h2><p>التوثيق العام منفصل عن إدارة مفاتيح API. المفتاح الخام لا يُخزن.</p><div className="actions"><Link className="stage3-btn stage3-btn-primary" href="/dashboard/api-keys">إدارة المفاتيح</Link><Link className="stage3-btn" href="/developers">الوثائق</Link></div></article></section>}
 
       {tab === "pwa" && <section className="stage3-grid"><PwaInstallPrompt/><PwaNotificationPrompt/><article className="stage3-card"><div className="stage3-card-head"><h2>Offline safety</h2><span className="stage3-status live">Protected</span></div><p>الـService Worker يخزن shell/assets فقط، ولا يخزن مسارات API أو عمليات الدفع والبيع.</p></article></section>}
     </>
