@@ -7,6 +7,8 @@ function slugify(value: string) {
   return value.toLowerCase().trim().replace(/[^a-z0-9\u0600-\u06ff]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "account";
 }
 
+function safeNext(value: unknown) { const next = String(value ?? "").trim(); return next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard"; }
+
 function redirectWithError(request: Request, code: string) {
   return NextResponse.redirect(new URL(`/signup?error=${encodeURIComponent(code)}`, request.url));
 }
@@ -16,6 +18,7 @@ export async function POST(request: Request) {
   const name = String(form.get("name") ?? "").trim().slice(0, 120);
   const email = String(form.get("email") ?? "").trim().toLowerCase();
   const password = String(form.get("password") ?? "");
+  const next = safeNext(form.get("next"));
   if (!name || !email || password.length < 10) return redirectWithError(request, "invalid");
 
   const supabase = await createSupabaseServerClient();
@@ -50,6 +53,6 @@ export async function POST(request: Request) {
   }
 
   return data.session
-    ? NextResponse.redirect(new URL("/dashboard", request.url))
-    : NextResponse.redirect(new URL("/login?created=1", request.url));
+    ? NextResponse.redirect(new URL(next, request.url))
+    : NextResponse.redirect(new URL("/login?created=1&next=" + encodeURIComponent(next), request.url));
 }
