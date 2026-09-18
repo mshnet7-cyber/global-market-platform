@@ -23,7 +23,6 @@ export async function POST(request: Request) {
   const next = safeNext(form.get("next"));
   const requestedPlan = String(form.get("plan") ?? "").trim();
   const plan = ["starter", "pro", "business"].includes(requestedPlan) ? requestedPlan : "";
-  const plan = String(form.get("plan") ?? "").trim().slice(0, 30);
   if (!name || !email || password.length < 10) return redirectWithError(request, "invalid", next, plan);
 
   const supabase = await createSupabaseServerClient();
