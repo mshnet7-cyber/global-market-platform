@@ -3,14 +3,11 @@ import { getSnapshot } from "../lib/providers";
 import { getPublicAds } from "../lib/public-ads";
 import { appConfig, countries, isValidLanguage, languages } from "../lib/config";
 import { getDisplayName, getMessages, isRtlLanguage } from "../lib/i18n";
+import { formatMoneyDisplay } from "../lib/currency-display";
 
 const supportedLanguageCodes = ["ar", "en", "tr", "de"] as const;
 
-function formatMoney(value: number | null, locale: string, currency: string, maximumFractionDigits = 3) {
-  if (value == null || !Number.isFinite(value)) return "—";
-  try { return new Intl.NumberFormat(locale, { style: "currency", currency, maximumFractionDigits }).format(value); }
-  catch { return `${value.toLocaleString(locale, { maximumFractionDigits })} ${currency}`; }
-}
+function formatMoney(value: number | null, locale: string, currency: string, maximumFractionDigits = 3) { return formatMoneyDisplay(value, currency, locale, maximumFractionDigits); }
 
 export default async function Home({ searchParams }: { searchParams?: Promise<{ country?: string; language?: string }> }) {
   const params = await searchParams;
