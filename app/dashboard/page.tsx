@@ -11,6 +11,18 @@ const plans = [
   { code: "business", name: "الكاملة", monthly: 46, sixMonth: 247, yearly: 450, discount: "8%" },
 ];
 
+function statusLabel(status?: string | null) {
+  const labels: Record<string, string> = {
+    active: "نشط",
+    trialing: "تجريبي",
+    past_due: "متأخر السداد",
+    canceled: "ملغى",
+    unpaid: "غير مدفوع",
+    paused: "متوقف",
+  };
+  return status ? (labels[status.toLowerCase()] ?? status) : "—";
+}
+
 const modules = [
   ["/dashboard/sales", "المبيعات وPOS", "بيع سريع، فواتير، دفع، وجرد تلقائي"],
   ["/dashboard/purchases", "المشتريات", "موردون وفواتير واستلام وتدقيق"],
@@ -49,7 +61,7 @@ export default async function DashboardPage() {
 
     <main className="container dashboard-main">
       <section className="dashboard-hero"><div><div className="eyebrow">MERCHANT WORKSPACE</div><h1 className="dashboard-title">لوحة المحل</h1><p className="dashboard-subtitle">كل عمليات المحل مرتبة في مساحة تشغيل واحدة، مع وصول سريع للمهام اليومية.</p></div><div className="actions"><Link href="/dashboard/sales" className="btn primary">فتح نقطة البيع</Link><Link href="/display" className="btn ghost">إدارة الشاشات</Link></div></section>
-      <section className="dashboard-kpis"><div className="kpi"><div className="kpi-label">الخطة الحالية</div><div className="kpi-value">{currentPlan?.name ?? "—"}</div></div><div className="kpi"><div className="kpi-label">المتاجر والفروع</div><div className="kpi-value">{stores?.length ?? 0}</div></div><div className="kpi"><div className="kpi-label">حالة الاشتراك</div><div className="kpi-value">{subscription?.status ?? "—"}</div></div><div className="kpi"><div className="kpi-label">صلاحية الحساب</div><div className="kpi-value">{role === "owner" ? "مالك" : role === "admin" ? "مدير" : "مشاهد"}</div></div></section>
+      <section className="dashboard-kpis"><div className="kpi"><div className="kpi-label">الخطة الحالية</div><div className="kpi-value">{currentPlan?.name ?? "—"}</div></div><div className="kpi"><div className="kpi-label">المتاجر والفروع</div><div className="kpi-value">{stores?.length ?? 0}</div></div><div className="kpi"><div className="kpi-label">حالة الاشتراك</div><div className="kpi-value">{statusLabel(subscription?.status)}</div></div><div className="kpi"><div className="kpi-label">صلاحية الحساب</div><div className="kpi-value">{role === "owner" ? "مالك" : role === "admin" ? "مدير" : "مشاهد"}</div></div></section>
       <section className="section"><div className="section-head"><div><div className="eyebrow">WORKSPACE</div><h2>الوحدات الأساسية</h2></div><span className="meta">اختر العملية التي تريد تنفيذها</span></div><div className="grid grid-4">{modules.map(([href,title,description], index) => <Link href={href} className="card module-card" key={href}><div className="module-icon">{String(index + 1).padStart(2, "0")}</div><strong>{title}</strong><div className="meta">{description}</div><span className="module-arrow">←</span></Link>)}</div></section>
       <section className="section"><div className="section-head"><div><div className="eyebrow">CONTROL CENTER</div><h2>الخدمات والإدارة</h2></div></div><div className="grid four">{quickLinks.map(([href,title,description,icon]) => <Link href={href === "/dashboard/api-keys" && !["pro","business"].includes(planCode || "") ? "/pricing" : (["/dashboard/invoicing","/dashboard/cameras","/dashboard/compliance"].includes(href) && !business ? "/pricing" : href)} className="card module-card" key={href}><div className="module-icon">{icon}</div><strong>{title}</strong><div className="meta">{((href === "/dashboard/api-keys" && !["pro","business"].includes(planCode || "")) || (["/dashboard/invoicing","/dashboard/cameras","/dashboard/compliance"].includes(href) && !business)) ? "متاح بحسب الباقة والصلاحيات." : description}</div><span className="module-arrow">←</span></Link>)}</div></section>
       <section className="card subscription-panel"><div className="section-head"><div><div className="eyebrow">SUBSCRIPTION</div><h2>اشتراكك الحالي</h2></div><span className="status">{currentPlan?.name ?? "غير محدد"}</span></div><div className="plan-strip"><div className="plan-tile highlight"><div className="meta">الباقة الحالية</div><div className="plan-price">{currentPlan?.name ?? "—"}</div><div className="meta">{subscription?.current_period_end ? `تنتهي ${new Date(subscription.current_period_end).toLocaleDateString("ar-OM")}` : "لا يوجد تاريخ انتهاء مسجل"}</div></div>{plans.map((plan) => <div className="plan-tile" key={plan.code}><div className="meta">{plan.name}</div><div className="plan-price">{formatMoneyDisplay(plan.monthly, "OMR", "ar-OM", 0)}</div><div className="meta">شهريًا · خصم الفروع {plan.discount}</div></div>)}</div><div className="actions" style={{marginTop:16}}><Link href="/pricing" className="btn primary">عرض الباقات</Link><span className="meta">الشاشة الإضافية: ⃄ 4 شهريًا · ⃄ 21 لـ6 أشهر · ⃄ 44 سنويًا.</span></div></section>
