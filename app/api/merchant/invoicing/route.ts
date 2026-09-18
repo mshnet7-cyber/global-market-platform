@@ -93,7 +93,7 @@ export async function POST(request: Request) {
       if (getEInvoiceStatus().state !== "live") return NextResponse.json({ error: "einvoice_not_configured", integration_state: "integration_ready" }, { status: 503 });
       const payload = buildInvoicePayload({countryCode:submission.country_code,invoiceNumber:String(sale.invoice_no||sale.id),currency:"OMR",supplier:{},customer:{},lines:(lines??[]) as Array<Record<string,unknown>>,totals:{subtotal:sale.subtotal,vat_amount:sale.vat_amount,total:sale.total,...(submission.payload??{})}});
       validateInvoicePayload(payload);
-      const { data: admin } = { data: createSupabaseAdminClient() };
+      const admin = createSupabaseAdminClient();
       if (!admin) return NextResponse.json({ error: "service_not_configured" }, { status: 503 });
       await admin.from("gmp_einvoice_submissions").update({status:"sending",error_code:null,error_message:null,updated_at:new Date().toISOString()}).eq("id",submission.id);
       const { data: lastAttempt } = await admin.from("gmp_einvoice_attempts").select("attempt_no").eq("submission_id",submission.id).order("attempt_no",{ascending:false}).limit(1).maybeSingle();
