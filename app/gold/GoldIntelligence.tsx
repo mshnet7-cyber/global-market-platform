@@ -5,11 +5,9 @@ import Link from "next/link";
 import type { MetalSnapshot } from "../../lib/types";
 import type { PublicPricePoint } from "../../lib/market-history";
 import { calculateGoldPrice, GOLD_KARATS } from "../../lib/gold-pricing";
+import { formatMoneyDisplay } from "../../lib/currency-display";
 
-function money(value: number | null | undefined, currency: string, digits = 3) {
-  if (value == null || !Number.isFinite(value)) return "—";
-  try { return new Intl.NumberFormat("en-US", { style: "currency", currency, maximumFractionDigits: digits }).format(value); } catch { return value.toFixed(digits) + " " + currency; }
-}
+function money(value: number | null | undefined, currency: string, digits = 3) { return formatMoneyDisplay(value, currency, "en-US", digits); }
 
 function MiniChart({ points, currency }: { points: PublicPricePoint[]; currency: string }) {
   const values = points.map((p) => p.value).filter((v): v is number => typeof v === "number" && Number.isFinite(v));
