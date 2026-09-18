@@ -35,7 +35,7 @@ function printable(value: unknown) {
   try { return JSON.stringify(value, null, 2); } catch { return String(value); }
 }
 
-export default function Stage3Workspace({ documents, initialCountry }: { documents: DocumentRow[]; initialCountry: string }) {
+export default function Stage3Workspace({ documents, initialCountry, initialPlan, aiState, whatsappState, paymentState, einvoiceState }: { documents: DocumentRow[]; initialCountry: string; initialPlan?: string; aiState: string; whatsappState: string; paymentState: string; einvoiceState: string }) {
   const [tab, setTab] = useState("ai");
   const [aiQuestion, setAiQuestion] = useState("");
   const [aiResult, setAiResult] = useState("");
@@ -47,7 +47,7 @@ export default function Stage3Workspace({ documents, initialCountry }: { documen
   const [waResult, setWaResult] = useState("");
   const [waBusy, setWaBusy] = useState(false);
   const [billing, setBilling] = useState<BillingState>({});
-  const [selectedPlan, setSelectedPlan] = useState(() => { if (typeof window === "undefined") return "starter"; const plan = new URLSearchParams(window.location.search).get("plan"); return plan && planNames[plan] ? plan : "starter"; });
+  const [selectedPlan, setSelectedPlan] = useState(initialPlan && planNames[initialPlan] ? initialPlan : "starter");
   const [period, setPeriod] = useState("monthly");
   const [billingBusy, setBillingBusy] = useState(false);
   const [billingResult, setBillingResult] = useState("");
@@ -159,7 +159,7 @@ export default function Stage3Workspace({ documents, initialCountry }: { documen
 
       {tab === "ai" && <section className="stage3-grid">
         <article className="stage3-card">
-          <div className="stage3-card-head"><h2>AI Copilot</h2><span className="stage3-status">Business</span></div>
+          <div className="stage3-card-head"><h2>AI Copilot</h2><span className="stage3-status">{aiState}</span></div>
           <p>اسأل عن حالة تشغيل مؤسستك. البيانات تمر عبر سياق المؤسسة المرتبط بالحساب.</p>
           <textarea value={aiQuestion} onChange={(event) => setAiQuestion(event.target.value)} rows={4} placeholder="مثال: كم عدد عمليات البيع المسجلة؟" />
           <div className="actions"><button type="button" className="stage3-btn stage3-btn-primary" disabled={aiBusy} onClick={() => void runCopilot()}>{aiBusy ? "جارٍ التحليل…" : "اسأل Copilot"}</button></div>
@@ -175,7 +175,7 @@ export default function Stage3Workspace({ documents, initialCountry }: { documen
       </section>}
 
       {tab === "whatsapp" && <section className="stage3-card">
-        <div className="stage3-card-head"><h2>WhatsApp</h2><span className="stage3-status">Business</span></div>
+        <div className="stage3-card-head"><h2>WhatsApp</h2><span className="stage3-status">{whatsappState}</span></div>
         <div className="stage3-form-grid">
           <label className="stage3-field">النوع<select value={wa.type} onChange={(event) => setWa({ ...wa, type: event.target.value })}><option value="template">Template</option><option value="text">Text</option><option value="document">Document</option></select></label>
           <label className="stage3-field">المستلم<input value={wa.to} onChange={(event) => setWa({ ...wa, to: event.target.value })} placeholder="+968..." /></label>
@@ -195,7 +195,7 @@ export default function Stage3Workspace({ documents, initialCountry }: { documen
           {billing.subscription ? <div className="stage3-kv"><div><span>Provider</span><b>{billing.subscription.provider || "—"}</b></div><div><span>ينتهي</span><b>{billing.subscription.current_period_end ? new Date(billing.subscription.current_period_end).toLocaleDateString() : "—"}</b></div><div><span>إلغاء بنهاية الفترة</span><b>{billing.subscription.cancel_at_period_end ? "نعم" : "لا"}</b></div></div> : <div className="stage3-empty">لا يوجد اشتراك محفوظ.</div>}
         </article>
         <article className="stage3-card">
-          <div className="stage3-card-head"><h2>الباقة والفترة</h2><span className="stage3-status">{billing.integration?.state || "integration_ready"}</span></div>
+          <div className="stage3-card-head"><h2>الباقة والفترة</h2><span className="stage3-status">{paymentState}</span></div>
           <div className="stage3-form-grid">
             <label className="stage3-field">الباقة<select value={selectedPlan} onChange={(event) => setSelectedPlan(event.target.value)}>{(billing.plans || [{id:"starter",code:"starter",name:"الشاشة"},{id:"pro",code:"pro",name:"الأعمال"},{id:"business",code:"business",name:"الكاملة"}]).map((plan) => <option key={plan.code} value={plan.code}>{planNames[plan.code] || plan.name}</option>)}</select></label>
             <label className="stage3-field">الفترة<select value={period} onChange={(event) => setPeriod(event.target.value)}>{periods.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
@@ -205,7 +205,7 @@ export default function Stage3Workspace({ documents, initialCountry }: { documen
         </article>
       </section>}
 
-      {tab === "einvoice" && <section className="stage3-card"><div className="stage3-card-head"><h2>الفوترة الإلكترونية</h2><span className="stage3-status">Integration-ready</span></div><p>ملفات الدولة والطابور وحالات الفشل موجودة في مساحة الفوترة، مع فصل واضح بين المهيأ والموصل الرسمي المفعّل.</p><div className="actions"><Link className="stage3-btn stage3-btn-primary" href="/dashboard/invoicing">فتح مساحة الفوترة</Link></div></section>}
+      {tab === "einvoice" && <section className="stage3-card"><div className="stage3-card-head"><h2>الفوترة الإلكترونية</h2><span className="stage3-status">{einvoiceState}</span></div><p>ملفات الدولة والطابور وحالات الفشل موجودة في مساحة الفوترة، مع فصل واضح بين المهيأ والموصل الرسمي المفعّل.</p><div className="actions"><Link className="stage3-btn stage3-btn-primary" href="/dashboard/invoicing">فتح مساحة الفوترة</Link></div></section>}
 
       {tab === "regional" && <section className="stage3-grid"><article className="stage3-card"><div className="stage3-card-head"><h2>Regional profile</h2><span className="stage3-status">{regionBusy ? "Loading" : "Ready"}</span></div><label className="stage3-field">الدولة<select value={country} onChange={(event) => { setRegionBusy(true); setCountry(event.target.value); }}><option value="OM">عُمان</option><option value="SA">السعودية</option><option value="AE">الإمارات</option></select></label>{region ? <div className="stage3-kv"><div><span>Locale</span><b>{region.locale || "—"}</b></div><div><span>Currency</span><b>{region.currency || "—"}</b></div><div><span>Timezone</span><b>{region.timezone || "—"}</b></div><div><span>Tax</span><b>{region.taxModel || "—"}</b></div><div><span>Direction</span><b>{region.direction || "—"}</b></div></div> : <div className="stage3-empty">تعذر تحميل الملف الإقليمي.</div>}</article><article className="stage3-card"><h2>Developer Platform</h2><p>التوثيق العام منفصل عن إدارة مفاتيح API. المفتاح الخام لا يُخزن.</p><div className="actions"><Link className="stage3-btn stage3-btn-primary" href="/dashboard/api-keys">إدارة المفاتيح</Link><Link className="stage3-btn" href="/developers">الوثائق</Link></div></article></section>}
 
