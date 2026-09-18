@@ -72,11 +72,13 @@ input,select,textarea{accent-color:var(--launch-gold)}
 @media(max-width:760px){
   .container,.wrap{width:calc(100% - 26px)!important}
   .nav,.dashboard-nav{min-height:64px}
+  .site-nav{flex-wrap:wrap;row-gap:7px;padding-block:8px}
   .brand{font-size:12px}
   .brand-mark{width:34px;height:34px}
   .site-nav>.nav-actions .btn{min-height:38px;padding:8px 10px;font-size:10px}
-  .site-nav>.nav-links{gap:0}
-  .site-nav>.nav-links a{padding:9px 10px;font-size:10px}
+  .site-nav>.nav-links{display:flex!important;flex:0 0 100%;order:3;max-width:100%;gap:0;justify-content:flex-start;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding-bottom:2px}
+  .site-nav>.nav-links::-webkit-scrollbar{display:none}
+  .site-nav>.nav-links a{flex:0 0 auto;padding:9px 10px;font-size:10px}
   .dashboard-brand{font-size:12px}
   .dashboard-user-text{display:none}
   .dashboard-nav>.dashboard-nav-main{gap:0}
