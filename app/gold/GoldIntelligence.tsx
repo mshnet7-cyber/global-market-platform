@@ -66,7 +66,7 @@ export default function GoldIntelligence({ language, countryCode, countryName, c
     <header className="topbar"><div className="container nav stage1-nav"><Link href="/" className="brand"><span className="brand-mark">GM</span><span>GLOBAL <b>MARKET</b></span></Link><div className="stage1-nav-title"><span className="eyebrow">ذكاء الذهب المتقدم</span><strong>{countryName} · {currency}</strong></div><div className="nav-actions"><Link className="btn btn-ghost" href={"/markets?country=" + countryCode + "&language=" + language}>مركز السوق</Link><Link className="btn btn-primary" href="/login">الدخول</Link></div></div></header>
     <main className="container stage1-main">
       <section className="gold-intro"><div><div className="eyebrow"><span className="live-dot"/>ذكاء الذهب المتقدم</div><h1>الذهب كنظام بيانات، لا كسعر فقط.</h1><p>الأونصة، الغرام، العيارات، Spot/Bid/Ask، التاريخ، والتحويلات المرتبطة بمحرك تسعير واحد.</p></div><div className="gold-live-card"><span>24K / GRAM</span><strong>{money(gold.perGram24k,currency)}</strong><em>{gold.status}</em><small>{gold.provider}</small></div></section>
-      <section className="gold-overview"><div className="gold-spot"><span>السعر الفوري / الأونصة</span><strong>{money(gold.spot,currency,2)}</strong><div className="gold-triple"><div><span>BID</span><b>{money(gold.bid,currency,2)}</b></div><div><span>ASK</span><b>{money(gold.ask,currency,2)}</b></div><div><span>SILVER</span><b>{money(silver.perGram24k,currency,3)}</b></div></div></div><div className="gold-purity-card"><span className="micro-label">مصفوفة النقاوة</span>{GOLD_KARATS.map((k)=><div key={k}><span>{k}K</span><b>{money(gold.purities[String(k)+"K"]??null,currency)}</b></div>)}</div></section>
+      <section className="gold-overview"><div className="gold-spot"><span>السعر الفوري / الأونصة</span><strong>{money(gold.spot,currency,2)}</strong><div className="gold-triple"><div><span>شراء</span><b>{money(gold.bid,currency,2)}</b></div><div><span>عرض</span><b>{money(gold.ask,currency,2)}</b></div><div><span>الفضة</span><b>{money(silver.perGram24k,currency,3)}</b></div></div></div><div className="gold-purity-card"><span className="micro-label">مصفوفة النقاوة</span>{GOLD_KARATS.map((k)=><div key={k}><span>{k}K</span><b>{money(gold.purities[String(k)+"K"]??null,currency)}</b></div>)}</div></section>
       <section className="gold-history-card"><div className="terminal-card-head"><div><span className="micro-label">سجل السعر</span><strong>آخر 24 ساعة مسجلة</strong></div><div className="terminal-source">{history.length} observations · {gold.status}</div></div><MiniChart points={history} currency={currency}/></section>
       <section className="gold-lower-grid">
         <section className="terminal-card"><div className="terminal-card-head"><div><span className="micro-label">محرك التسعير</span><strong>محرك تسعير الذهب</strong></div></div><div className="pricing-form-grid">
@@ -92,7 +92,7 @@ export default function GoldIntelligence({ language, countryCode, countryName, c
             )}
           </div></section>
       </section>
-      <div className="terminal-footnote">Trust layer: البيانات القديمة/غير الصالحة لا تُعاد تسميتها LIVE، والمصدر يظهر بجانب كل قيمة.</div>
+      <div className="terminal-footnote">طبقة الثقة: البيانات القديمة/غير الصالحة لا تُعاد تسميتها LIVE، والمصدر يظهر بجانب كل قيمة.</div>
     </main>
   </div>;
 }
