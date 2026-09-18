@@ -8,7 +8,7 @@ type Data = {
   sales: any[]; purchases: any[]; expenses: any[]; repairs: any[]; goldPurchases: any[]; accounts: any[]; journals: any[]; members: any[]; marketplaceListings: any[]; marketplaceOrders: any[];
 };
 const tabs = [
-  ["overview","Overview"],["pos","POS"],["inventory","Inventory"],["purchases","Purchases"],["contacts","Customers / Suppliers"],
+  ["overview","Overview"],["pos","POS"],["inventory","Inventory"],["purchases","Purchases"],["branches","Branches"],["contacts","Customers / Suppliers"],
   ["repairs","Repairs"],["buy-gold","Gold Buy"],["finance","Finance"],["directory","Directory"],["marketplace","Marketplace"],["staff","Staff"],
   ["displays","Displays"],["dooh","DOOH"]
 ] as const;
@@ -47,7 +47,7 @@ export default function OperationsPage(){
   return <main className="stage2-page">
     <header className="stage2-page-head">
       <div><div className="eyebrow">ENTERPRISE OPERATIONS</div><h1>مركز تشغيل التاجر</h1><p>ERP + Marketplace + Displays + DOOH في مساحة عمل واحدة، مع صلاحيات على مستوى المؤسسة.</p></div>
-      <div className="stage2-head-actions"><Link href="/directory" className="btn">دليل المحلات</Link><Link href="/marketplace" className="btn">Marketplace</Link><Link href="/admin" className="btn btn-primary">Master Admin</Link></div>
+      <div className="stage2-head-actions"><Link href="/directory" className="btn">دليل المحلات</Link><Link href="/marketplace" className="btn">Marketplace</Link></div>
     </header>
     <nav className="stage2-tabs">{tabs.map(function(x){return <button key={x[0]} className={tab===x[0]?"active":""} onClick={()=>setTab(x[0])}>{x[1]}</button>})}</nav>
     {message&&<div className="stage2-alert">{message}</div>}
