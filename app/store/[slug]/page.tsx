@@ -33,16 +33,31 @@ export default async function StorePage({ params, searchParams }: { params: Prom
   const gold = snapshot.gold;
   const title = store?.name ?? slug.replace(/[-_]+/g, " ");
 
-  return <div className="store-page-shell dashboard-shell"><main className="store-page wrap section" dir={isRtlLanguage(language) ? "rtl" : "ltr"} lang={language}>
-    <div className="eyebrow">STORE REFERENCE PAGE</div>
+  return <div className="page-frame store-page-public" dir={isRtlLanguage(language) ? "rtl" : "ltr"} lang={language}>
+    <header className="topbar"><div className="container nav site-nav">
+      <Link href="/" className="brand"><span className="brand-mark">GM</span><span>GLOBAL <b>MARKET</b></span></Link>
+      <nav className="nav-links" aria-label={language === "ar" ? "التنقل الرئيسي" : "Primary navigation"}>
+        <Link href={"/gold?country=" + country.code + "&language=" + language}>{messages.gold}</Link>
+        <Link href={"/silver?country=" + country.code + "&language=" + language}>{messages.silver}</Link>
+        <Link href={"/markets?country=" + country.code + "&language=" + language}>{messages.markets}</Link>
+        <Link href={"/stocks?country=" + country.code + "&language=" + language}>{messages.stocks}</Link>
+        <Link href={"/news?country=" + country.code + "&language=" + language}>{messages.news}</Link>
+        <Link href="/directory">{language === "ar" ? "المحلات" : "Stores"}</Link>
+      </nav>
+      <div className="nav-actions"><Link href="/login" className="btn btn-ghost">{messages.login}</Link><Link href="/pricing" className="btn btn-primary">{messages.plans}</Link></div>
+    </div></header>
+    <main className="store-page wrap section" lang={language}>
+    <div className="eyebrow"><span className="live-dot" />STORE REFERENCE</div>
     <h1>{title}</h1>
-    <p className="hero-copy">{messages.referenceOnly}</p>
+    <p className="hero-copy">{messages.referenceOnly}</p><div className="meta store-reference-meta">{countryName} · {currency}</div>
     <section className="gold-card">
       <div className="card-top"><div><span className="muted">{countryName} · {currency}</span><strong>XAU/{currency}</strong></div><span className="status">{gold.status}</span></div>
-      <div className="price">{formatMoney(gold.perGram24k, locale, currency, 3)} <small>/ gram 24K</small></div>
+      <div className="price">{formatMoney(gold.perGram24k, locale, currency, 3)} <small>/ غرام 24K</small></div>
       <div className="subline">{gold.provider} · {gold.timestamp ?? "—"}</div>
-      <div className="mini-grid"><div><span>Spot</span><b>{formatMoney(gold.spot, locale, currency, 2)}</b></div><div><span>Bid</span><b>{formatMoney(gold.bid, locale, currency, 2)}</b></div><div><span>Ask</span><b>{formatMoney(gold.ask, locale, currency, 2)}</b></div></div>
+      <div className="mini-grid"><div><span>السعر الفوري</span><b>{formatMoney(gold.spot, locale, currency, 2)}</b></div><div><span>شراء</span><b>{formatMoney(gold.bid, locale, currency, 2)}</b></div><div><span>عرض</span><b>{formatMoney(gold.ask, locale, currency, 2)}</b></div></div>
     </section>
     <div className="actions" style={{marginTop:20}}><Link href="/demo" className="btn primary">{messages.createDisplay}</Link><Link href="/" className="btn ghost">{language === "ar" ? "الرئيسية" : "Home"}</Link></div>
-  </main></div>;
+  </main>
+    <footer className="footer-premium"><div className="container footer-bottom"><span>© Global Market</span><span>{messages.referenceFooter}</span></div></footer>
+  </div>;
 }
