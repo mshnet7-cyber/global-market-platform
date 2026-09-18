@@ -33,7 +33,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const { organization, user, admin } = await guard();
+    const { organization, admin } = await guard();
     const body = await request.json().catch(() => null) as Record<string, unknown> | null;
     const url = String(body?.url ?? "").trim();
     const secret = String(body?.signing_secret ?? "");
