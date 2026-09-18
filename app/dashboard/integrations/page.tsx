@@ -10,7 +10,8 @@ import Stage3Workspace from "./Stage3Workspace";
 
 const label = (state: string) => state === "live" ? "LIVE" : state === "integration_ready" ? "INTEGRATION-READY" : "NOT CONFIGURED";
 
-export default async function IntegrationsPage() {
+export default async function IntegrationsPage({ searchParams }: { searchParams: Promise<{ plan?: string }> }) {
+  const params = await searchParams;
   const context = await getMerchantContext();
   if (!context.user || !context.organization) redirect("/login?next=/dashboard/integrations");
   const { supabase, organization, role, planCode } = context;
@@ -78,6 +79,11 @@ export default async function IntegrationsPage() {
             created_at: String(doc.created_at),
           }))}
           initialCountry={region.countryCode}
+          initialPlan={params.plan}
+          aiState={ai.state}
+          whatsappState={wa.state}
+          paymentState={pay.state}
+          einvoiceState={ei.state}
         />
       </div>
     </main>
