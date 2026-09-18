@@ -140,14 +140,9 @@ export default function SilverIntelligence({
           </div>
           <div className="gold-purity-card">
             <span className="micro-label">PURITY MATRIX</span>
-            {[
-              ["999", silver.purities["999"] ?? silver.perGram24k],
-              ["925", silver.purities["925"]],
-              ["900", silver.purities["900"]],
-              ["800", silver.purities["800"]],
-            ].map(([label, value]) => (
-              <div key={label}><span>{label}‰</span><b>{money(value as number | null, currency)}</b></div>
-            ))}
+            <div><span>999‰</span><b>{money(silver.purities["999"] ?? silver.perGram24k, currency)}</b></div>
+            <div><span>الوحدة</span><b>غرام</b></div>
+            <div><span>الأونصة</span><b>{money(silver.spot, currency, 2)}</b></div>
           </div>
         </section>
 
