@@ -123,7 +123,7 @@ export default function MarketTerminal({ language, countryCode, countryName, cur
           {rows.map((q) => {
             const code = q.symbol ?? q.instrument;
             const active = selected === code;
-            return <button type="button" className={"terminal-instrument " + (active ? "active" : "")} key={code} onClick={() => setSelected(code)}><span>{(q.symbol ?? "MK").slice(0,3)}</span><div><strong>{q.symbol ?? q.instrument}</strong><small>{fmt(q.spot, q.currency)} · {pct(q.changePercent)}</small></div><i onClick={(e) => { e.stopPropagation(); toggleWatch(code); }}>{watchlist.includes(code) ? "★" : "☆"}</i></button>;
+            return <div className="terminal-instrument-row" key={code}><button type="button" className={"terminal-instrument " + (active ? "active" : "")} onClick={() => setSelected(code)}><span>{(q.symbol ?? "MK").slice(0,3)}</span><div><strong>{q.symbol ?? q.instrument}</strong><small>{fmt(q.spot, q.currency)} · {pct(q.changePercent)}</small></div></button><button type="button" className="terminal-watch-toggle" aria-label={(watchlist.includes(code) ? "إزالة " : "إضافة ") + "من قائمة المتابعة " + code} onClick={() => toggleWatch(code)}>{watchlist.includes(code) ? "★" : "☆"}</button></div>;
           })}
           {filter === "watchlist" && rows.length === 0 ? <div className="terminal-empty">لا توجد رموز في القائمة.</div> : null}
         </aside>
