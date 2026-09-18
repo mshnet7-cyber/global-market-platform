@@ -69,6 +69,12 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
         </section>
 
         <Stage3Workspace
+          integrationStates={{
+            ai: ai.state,
+            whatsapp: wa.state,
+            payments: pay.state,
+            einvoice: ei.state,
+          }}
           documents={(documentsResult.data || []).map((doc) => ({
             id: String(doc.id),
             document_type: doc.document_type ? String(doc.document_type) : null,
