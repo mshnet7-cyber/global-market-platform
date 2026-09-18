@@ -21,6 +21,8 @@ export async function POST(request: Request) {
   const email = String(form.get("email") ?? "").trim().toLowerCase();
   const password = String(form.get("password") ?? "");
   const next = safeNext(form.get("next"));
+  const requestedPlan = String(form.get("plan") ?? "").trim();
+  const plan = ["starter", "pro", "business"].includes(requestedPlan) ? requestedPlan : "";
   const plan = String(form.get("plan") ?? "").trim().slice(0, 30);
   if (!name || !email || password.length < 10) return redirectWithError(request, "invalid", next, plan);
 
@@ -55,7 +57,8 @@ export async function POST(request: Request) {
     return redirectWithError(request, "account_setup", next, plan);
   }
 
+  const continuation = plan ? next + (next.includes("?") ? "&" : "?") + "plan=" + encodeURIComponent(plan) : next;
   return data.session
-    ? NextResponse.redirect(new URL(next, request.url))
-    : NextResponse.redirect(new URL("/login?created=1&next=" + encodeURIComponent(next), request.url));
+    ? NextResponse.redirect(new URL(continuation, request.url))
+    : NextResponse.redirect(new URL("/login?created=1&next=" + encodeURIComponent(continuation), request.url));
 }
