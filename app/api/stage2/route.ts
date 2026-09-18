@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import { createSupabaseAdminClient } from "../../../lib/supabase/admin";
 import { requireStage2Permission, type Stage2Permission } from "../../../lib/stage2-access";
 import { recordAuditEvent } from "../../../lib/provider-observability";
+import { queueCustomerWhatsApp } from "../../../lib/operational-notifications";
 
 const json = (data: unknown, status = 200) => NextResponse.json(data, {
   status,
@@ -212,13 +213,26 @@ export async function POST(request: Request) {
       const storeId = text(b.store_id,80);
       if (!isUuid(storeId)) return json({error:"store_required"},400);
       const lines = Array.isArray(b.lines) ? b.lines : [];
+      if (!lines.length || lines.length > 50) return json({error:"invalid_order_lines"},400);
+      const honeypot = text(b.website,120);
+      if (honeypot) return json({error:"order_rejected"},429);
+      const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip")?.trim() || "unknown";
+      const fingerprint = hash(forwarded + "|" + (request.headers.get("user-agent") ?? "unknown").slice(0,240));
+      const limit = await admin.rpc("gmp_allow_public_marketplace_order",{p_key_hash:fingerprint,p_now:new Date().toISOString()});
+      if (limit.error) return json({error:"rate_limit_unavailable"},503);
+      if (limit.data !== true) return json({error:"rate_limited",retry_after_seconds:60},429);
+      const idem = text(b.idempotency_key,120) || hash(JSON.stringify({storeId,buyer:text(b.buyer_phone,40),lines}));
       const result = await admin.rpc("gmp_create_marketplace_order",{
         p_store_id:storeId,p_buyer_name:text(b.buyer_name,120),p_buyer_phone:text(b.buyer_phone,40),
         p_buyer_email:text(b.buyer_email,160) || null,p_note:text(b.note,1000) || null,
         p_lines:lines,p_fulfillment_mode:text(b.fulfillment_mode,20) || "contact",
-        p_idempotency_key:text(b.idempotency_key,120) || hash(JSON.stringify({storeId,buyer:text(b.buyer_phone,40),lines}))
+        p_idempotency_key:idem
       });
       if (result.error) return json({error:result.error.message},400);
+      if (result.data?.success && !result.data?.idempotent) {
+        const { data: store } = await admin.from("gmp_stores").select("organization_id,whatsapp,phone").eq("id",storeId).maybeSingle();
+        void queueCustomerWhatsApp({organizationId:String(store?.organization_id ?? ""),recipient:String(b.buyer_phone ?? ""),kind:"order",parameters:[String(result.data.order_no ?? "")],metadata:{order_id:result.data.order_id,store_id:storeId}});
+      }
       return json(result.data,201);
     }
 
