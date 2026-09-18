@@ -44,19 +44,16 @@ export async function getStage2Access() {
     .eq("organization_id", context.organization.id)
     .eq("user_id", context.user.id)
     .maybeSingle();
-  const overrides = new Set<Stage2Permission>();
+  const permissions = new Set(base);
   const raw = data?.permissions;
-  if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+  if (raw && typeof raw === "object" && !Array.isArray(raw) && context.role !== "owner") {
     for (const [key, enabled] of Object.entries(raw as Record<string, unknown>)) {
-      if (enabled === true && base.has(key as Stage2Permission)) overrides.add(key as Stage2Permission);
+      const permission = key as Stage2Permission;
+      if (!OWNER_ALL.has(permission)) continue;
+      if (enabled === true) permissions.add(permission);
+      if (enabled === false) permissions.delete(permission);
     }
   }
-  const permissions = new Set(base);
-  for (const key of Object.keys(raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {})) {
-    const p = key as Stage2Permission;
-    if (raw[p] === false) permissions.delete(p);
-  }
-  for (const p of overrides) permissions.add(p);
   return { ...context, permissions };
 }
 
