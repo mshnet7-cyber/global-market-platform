@@ -53,7 +53,7 @@ export default function Stage3Workspace({ documents, initialCountry }: { documen
   const [billingResult, setBillingResult] = useState("");
   const [country, setCountry] = useState(initialCountry);
   const [region, setRegion] = useState<any>(null);
-  const [regionBusy, setRegionBusy] = useState(false);
+  const [regionBusy, setRegionBusy] = useState(true);
 
   const selectedDocument = useMemo(() => documents.find((item) => item.id === documentId) ?? null, [documents, documentId]);
 
@@ -75,7 +75,6 @@ export default function Stage3Workspace({ documents, initialCountry }: { documen
 
   useEffect(() => {
     let cancelled = false;
-    setRegionBusy(true);
     fetch("/api/stage3/regional?country=" + encodeURIComponent(country), { cache: "no-store" })
       .then(async (response) => {
         const data = await response.json().catch(() => null);
