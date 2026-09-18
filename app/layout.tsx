@@ -5,6 +5,7 @@ import "./premium.css";
 import "./ux-overrides.css";
 import "./launch-refinement.css";
 import "./stage1-core.css";
+import "./stage2.css";
 
 export const metadata: Metadata = {
   title: "Global Market Platform | Global market prices",

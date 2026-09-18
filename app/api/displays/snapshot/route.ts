@@ -48,6 +48,36 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "subscription_required" }, { status: 402, headers: noStore });
   }
 
+  const now = new Date();
+  const weekday = now.getUTCDay();
+  const { data: schedules } = await admin.from("gmp_display_schedules")
+    .select("id,content_id,starts_at,ends_at,days_of_week,enabled")
+    .eq("screen_id", screen.id).eq("store_id", store.id).eq("enabled", true)
+    .or("starts_at.is.null,starts_at.lte." + now.toISOString())
+    .or("ends_at.is.null,ends_at.gte." + now.toISOString())
+    .order("starts_at", { ascending: true }).limit(100);
+  const activeSchedules = (schedules ?? []).filter((s:any) => !Array.isArray(s.days_of_week) || !s.days_of_week.length || s.days_of_week.includes(weekday));
+  const contentIds = activeSchedules.map((s:any) => s.content_id);
+  const { data: contentRows } = contentIds.length ? await admin.from("gmp_display_content")
+    .select("id,content_type,title,body,media_path,payload,priority,active")
+    .in("id", contentIds).eq("store_id", store.id).eq("active", true).order("priority", { ascending: false })
+    : { data: [] as any[] };
+  const { data: placements } = await admin.from("gmp_ad_placements")
+    .select("id,campaign_id,creative_id,status,starts_at,ends_at,weight")
+    .eq("screen_id", screen.id).in("status", ["live","scheduled"])
+    .or("starts_at.is.null,starts_at.lte." + now.toISOString())
+    .or("ends_at.is.null,ends_at.gte." + now.toISOString()).limit(100);
+  const campaignIds = (placements ?? []).map((p:any)=>p.campaign_id);
+  const creativeIds = (placements ?? []).map((p:any)=>p.creative_id).filter(Boolean);
+  const { data: campaigns } = campaignIds.length ? await admin.from("gmp_ad_campaigns")
+    .select("id,title,body,image_path,target_url,advertiser_name,status,placement").in("id",campaignIds).in("status",["approved","active"]) : { data: [] as any[] };
+  const { data: creatives } = creativeIds.length ? await admin.from("gmp_ad_creatives")
+    .select("id,name,creative_type,asset_path,target_url,status").in("id",creativeIds).eq("status","approved") : { data: [] as any[] };
+  const campaignMap = new Map((campaigns ?? []).map((x:any)=>[x.id,x]));
+  const creativeMap = new Map((creatives ?? []).map((x:any)=>[x.id,x]));
+  const ads = (placements ?? []).map((p:any)=>({ placement:p, campaign:campaignMap.get(p.campaign_id)||null, creative:creativeMap.get(p.creative_id)||null }))
+    .filter((x:any)=>x.campaign || x.creative);
+
   const snapshot = await getFreeMetal(store.currency || "USD", "XAU", "gold");
   if (!snapshot) {
     return NextResponse.json({
@@ -60,10 +90,10 @@ export async function POST(request: Request) {
     }, { headers: noStore });
   }
 
-  const now = new Date().toISOString();
+  const nowIso = new Date().toISOString();
   const { error: screenUpdateError } = await admin
     .from("gmp_screens")
-    .update({ last_snapshot_at: snapshot.timestamp ?? now, last_seen_at: now, status: "connected", updated_at: now })
+    .update({ last_snapshot_at: snapshot.timestamp ?? nowIso, last_seen_at: nowIso, status: "connected", updated_at: now })
     .eq("id", screen.id);
   if (screenUpdateError) return NextResponse.json({ ok: false, error: "screen_update_failed" }, { status: 500, headers: noStore });
 
@@ -72,7 +102,9 @@ export async function POST(request: Request) {
     screen: { id: screen.id, name: screen.name, template: screen.template },
     store: { id: store.id, name: store.name, currency: store.currency, timezone: store.timezone, logo_path: store.logo_path, phone: store.phone, whatsapp: store.whatsapp },
     snapshot,
+    content: contentRows ?? [],
+    ads,
     status: snapshot.status,
-    server_time: now,
+    server_time: nowIso,
   }, { headers: noStore });
 }
