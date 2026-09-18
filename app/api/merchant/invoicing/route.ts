@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireMerchantPlan } from "../../../../lib/merchant-access";
+import { createSupabaseAdminClient } from "../../../../lib/supabase/admin";
 
 const countries = new Set(["OM", "SA", "AE"]);
 const statuses = new Set(["queued", "sending", "submitted", "accepted", "rejected", "failed", "cancelled"]);
@@ -66,10 +67,39 @@ export async function POST(request: Request) {
       if (!profile?.e_invoice_enabled || !profile.connector_id) return NextResponse.json({ error: "einvoice_profile_not_ready" }, { status: 409 });
       const { data: connector } = await supabase.from("gmp_compliance_connectors").select("id,status").eq("id", profile.connector_id).maybeSingle();
       if (!connector || connector.status !== "active") return NextResponse.json({ error: "connector_not_active", status: connector?.status ?? null }, { status: 409 });
+      const documentId = body.document_id ? String(body.document_id) : null;
+      let documentPayload: Record<string,unknown> = {};
+      if (documentId) {
+        const { data: doc } = await supabase.from("gmp_documents").select("id,review_status,ai_extracted_data").eq("id",documentId).eq("organization_id",organization.id).maybeSingle();
+        if (!doc) return NextResponse.json({ error: "document_not_found" }, { status: 404 });
+        if (doc.review_status !== "approved") return NextResponse.json({ error: "document_must_be_approved" }, { status: 409 });
+        documentPayload = (doc.ai_extracted_data && typeof doc.ai_extracted_data === "object") ? doc.ai_extracted_data as Record<string,unknown> : {};
+      }
       const key = String(body.idempotency_key ?? `${saleId}:${countryCode}`).slice(0, 200);
-      const { data, error } = await supabase.from("gmp_einvoice_submissions").upsert({ organization_id: organization.id, store_id: sale.store_id, sale_id: sale.id, connector_id: profile.connector_id, country_code: countryCode, status: "queued", idempotency_key: key, created_by: user.id }, { onConflict: "organization_id,idempotency_key" }).select("*").single();
+      const { data, error } = await supabase.from("gmp_einvoice_submissions").upsert({ organization_id: organization.id, store_id: sale.store_id, sale_id: sale.id, connector_id: profile.connector_id, country_code: countryCode, status: "queued", idempotency_key: key, source_document_id: documentId, payload: documentPayload, created_by: user.id }, { onConflict: "organization_id,idempotency_key" }).select("*").single();
       if (error) return NextResponse.json({ error: error.message }, { status: 400 });
       return NextResponse.json({ success: true, queued: true, row: data }, { status: 201 });
+    }
+    if (body.action === "send") {
+      const submissionId = String(body.submission_id ?? "");
+      if (!submissionId) return NextResponse.json({ error: "submission_id_required" }, { status: 400 });
+      const { data: submission } = await supabase.from("gmp_einvoice_submissions").select("id,organization_id,store_id,sale_id,country_code,status,payload,idempotency_key").eq("id", submissionId).eq("organization_id", organization.id).maybeSingle();
+      if (!submission) return NextResponse.json({ error: "submission_not_found" }, { status: 404 });
+      if (!["queued","failed"].includes(submission.status)) return NextResponse.json({ error: "submission_not_sendable", status: submission.status }, { status: 409 });
+      const { data: sale } = await supabase.from("gmp_sales").select("id,invoice_no,total,subtotal,vat_amount,store_id").eq("id", submission.sale_id).eq("organization_id", organization.id).maybeSingle();
+      if (!sale) return NextResponse.json({ error: "sale_not_found" }, { status: 404 });
+      const { data: lines } = await supabase.from("gmp_sale_lines").select("product_id,quantity,weight_grams,unit_price,making_charge,discount_amount,vat_amount,line_total").eq("sale_id", sale.id);
+      const { buildInvoicePayload, submitInvoice, validateInvoicePayload, getEInvoiceStatus } = await import("../../../../lib/stage3/einvoice");
+      if (getEInvoiceStatus().state !== "live") return NextResponse.json({ error: "einvoice_not_configured", integration_state: "integration_ready" }, { status: 503 });
+      const payload = buildInvoicePayload({countryCode:submission.country_code,invoiceNumber:String(sale.invoice_no||sale.id),currency:"OMR",supplier:{},customer:{},lines:(lines??[]) as Array<Record<string,unknown>>,totals:{subtotal:sale.subtotal,vat_amount:sale.vat_amount,total:sale.total,...(submission.payload??{})}});
+      validateInvoicePayload(payload);
+      const { data: admin } = { data: createSupabaseAdminClient() };
+      if (!admin) return NextResponse.json({ error: "service_not_configured" }, { status: 503 });
+      await admin.from("gmp_einvoice_submissions").update({status:"sending",error_code:null,error_message:null,updated_at:new Date().toISOString()}).eq("id",submission.id);
+      const { data: lastAttempt } = await admin.from("gmp_einvoice_attempts").select("attempt_no").eq("submission_id",submission.id).order("attempt_no",{ascending:false}).limit(1).maybeSingle();
+      const attemptNo=Number(lastAttempt?.attempt_no??0)+1;
+      try { const result=await submitInvoice(payload); await admin.from("gmp_einvoice_submissions").update({status:"submitted",request_hash:result.requestHash,submitted_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq("id",submission.id); await admin.from("gmp_einvoice_attempts").insert({submission_id:submission.id,attempt_no:attemptNo,status:"submitted",request_hash:result.requestHash}); return NextResponse.json({success:true,submission_id:submission.id,attempt_no:attemptNo,provider:result.data}); }
+      catch(e){const message=e instanceof Error?e.message.slice(0,500):"provider_error";await admin.from("gmp_einvoice_submissions").update({status:"failed",error_code:"provider_error",error_message:message,updated_at:new Date().toISOString()}).eq("id",submission.id);await admin.from("gmp_einvoice_attempts").insert({submission_id:submission.id,attempt_no:attemptNo,status:"failed",error_code:"provider_error",error_message:message});return NextResponse.json({error:"einvoice_provider_failed",retryable:true,submission_id:submission.id,attempt_no:attemptNo},502)}
     }
     return NextResponse.json({ error: "unsupported_action" }, { status: 400 });
   } catch (error) {
