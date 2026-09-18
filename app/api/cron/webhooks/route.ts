@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { createSupabaseAdminClient } from "../../../../../lib/supabase/admin";
-import { deliverWebhookAttempt } from "../../../../../lib/webhooks";
+import { createSupabaseAdminClient } from "../../../../lib/supabase/admin";
+import { deliverWebhookAttempt } from "../../../../lib/webhooks";
 
 export const runtime="nodejs";
 
