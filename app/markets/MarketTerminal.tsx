@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { MetalSnapshot, Quote } from "../../lib/types";
 import type { PublicPricePoint } from "../../lib/market-history";
 import Link from "next/link";
+import { formatMoneyDisplay } from "../../lib/currency-display";
 
 type TerminalData = {
   gold: MetalSnapshot;
@@ -16,11 +17,7 @@ type TerminalData = {
   selectedInstrument: string;
 };
 
-function fmt(value: number | null | undefined, currency: string, digits = 2) {
-  if (value == null || !Number.isFinite(value)) return "—";
-  try { return new Intl.NumberFormat("en-US", { style: "currency", currency, minimumFractionDigits: digits, maximumFractionDigits: digits }).format(value); }
-  catch { return value.toFixed(digits) + " " + currency; }
-}
+function fmt(value: number | null | undefined, currency: string, digits = 2) { return formatMoneyDisplay(value, currency, "en-US", digits); }
 function pct(value: number | null | undefined) {
   if (value == null || !Number.isFinite(value)) return "—";
   return (value > 0 ? "+" : "") + value.toFixed(2) + "%";
