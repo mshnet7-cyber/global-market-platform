@@ -190,7 +190,7 @@ export default function Stage3Workspace({ documents, initialCountry, initialPlan
 
       {tab === "billing" && <section className="stage3-grid">
         <article className="stage3-card">
-          <div className="stage3-card-head"><h2>الاشتراك</h2><span className="stage3-status">{billing.subscription?.status || "—"}</span></div>
+          <div className="stage3-card-head"><h2>الاشتراك</h2><span className="stage3-status">{statusLabel(billing.subscription?.status || paymentState)}</span></div>
           <p>{billing.integration?.state === "live" ? "الدفع متصل." : "الدفع Integration-ready؛ لا يتم وصفه بأنه Live قبل التفعيل الفعلي."}</p>
           {billing.subscription ? <div className="stage3-kv"><div><span>Provider</span><b>{billing.subscription.provider || "—"}</b></div><div><span>ينتهي</span><b>{billing.subscription.current_period_end ? new Date(billing.subscription.current_period_end).toLocaleDateString() : "—"}</b></div><div><span>إلغاء بنهاية الفترة</span><b>{billing.subscription.cancel_at_period_end ? "نعم" : "لا"}</b></div></div> : <div className="stage3-empty">لا يوجد اشتراك محفوظ.</div>}
         </article>
