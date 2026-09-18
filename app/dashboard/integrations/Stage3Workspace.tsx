@@ -171,7 +171,7 @@ export default function Stage3Workspace({ documents, initialCountry, initialPlan
           <div className="stage3-card-head"><h2>استخراج المستندات OCR</h2><span className="stage3-status">{selectedDocument?.review_status === "approved" ? "معتمد" : selectedDocument?.review_status === "rejected" ? "مرفوض" : "بانتظار المراجعة"}</span></div>
           <p>اختر مستندًا داخل المؤسسة. النتيجة منخفضة الثقة تنتقل إلى المراجعة قبل الاعتماد.</p>
           {documents.length ? <><label className="stage3-field">المستند<select value={documentId} onChange={(event) => setDocumentId(event.target.value)}>{documents.map((doc) => <option key={doc.id} value={doc.id}>{doc.document_type || "Document"} · {new Date(doc.created_at).toLocaleDateString()}</option>)}</select></label><div className="stage3-meta">{selectedDocument?.content_type || "—"} · {selectedDocument?.language || "—"}</div></> : <div className="stage3-empty">لا توجد مستندات جاهزة لمسار OCR.</div>}
-          <div className="actions"><button type="button" className="stage3-btn stage3-btn-primary" disabled={ocrBusy || !documentId} onClick={() => void runOcr()}>{ocrBusy ? "جارٍ الاستخراج…" : "تشغيل OCR"}</button></div>
+          <div className="actions"><button type="button" className="stage3-btn stage3-btn-primary" disabled={ocrBusy || !documentId || aiState !== "live"} onClick={() => void runOcr()}>{ocrBusy ? "جارٍ الاستخراج…" : "تشغيل OCR"}</button></div>
           {ocrResult && <pre className="stage3-result" role="status">{ocrResult}</pre>}
         </article>
       </section>}
