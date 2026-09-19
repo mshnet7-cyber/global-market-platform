@@ -45,3 +45,11 @@ test("Public health endpoint does not expose environment variable names",()=>{
  assert.match(health,/supabaseConfigured/);
  assert.match(health,/adminConfigured/);
 });
+
+test("E-invoice webhook is monotonic and replay-safe",()=>{
+ const src=read("app/api/stage3/webhooks/einvoice/route.ts");
+ assert.match(src,/current\.status === status/);
+ assert.match(src,/stale_or_invalid_status/);
+ assert.match(src,/\.eq\("status", current\.status\)/);
+ assert.match(src,/previous_status/);
+});
