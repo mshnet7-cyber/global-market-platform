@@ -27,3 +27,23 @@ test("Provider response limits are streaming, not post-buffer checks",()=>{const
 test("Provider endpoints are HTTPS-only and use the bounded streaming helper",()=>{for(const p of["lib/stage3/ai.ts","lib/stage3/whatsapp.ts","lib/stage3/payments.ts","lib/stage3/einvoice.ts"]){const src=read(p);assert.match(src,/protocol !== ["']https:/);assert.match(src,/redirect:\s*["']error["']/);assert.match(src,/10_000/);assert.match(src,/readBoundedText/);}});
 test("Incoming provider webhooks are body-bounded before JSON parsing",()=>{const helper=read("lib/bounded-body.ts");const payment=read("app/api/stage3/webhooks/payments/route.ts");const invoice=read("app/api/stage3/webhooks/einvoice/route.ts");assert.match(helper,/readBoundedRequestText/);assert.match(helper,/getReader\(\)/);assert.match(helper,/request_body_too_large/);assert.match(helper,/Number\.isInteger\(maxBytes\)/);assert.match(helper,/reader\.cancel\(\)/);for(const src of[payment,invoice]){assert.match(src,/readBoundedRequestText\(request\)/);assert.match(src,/413/);}});
 test("Public provider feeds have bounded JSON responses and health checks are cached",()=>{assert.ok(read("lib/stage3/provider-http.ts").includes("readBoundedJson"));assert.ok(read("lib/free-data.ts").includes("readBoundedJson"));assert.ok(read("lib/providers/market-data.ts").includes("readBoundedJson"));assert.ok(read("lib/free-data.ts").includes("MAX_PROVIDER_JSON_BYTES"));assert.ok(read("lib/providers/market-data.ts").includes("MAX_PROVIDER_JSON_BYTES"));const health=read("app/api/health/data/route.ts");assert.ok(health.includes("CACHE_TTL_MS"));assert.ok(health.includes("inFlight"));assert.ok(health.includes("stale-while-revalidate"));});
+test("Public JSON endpoints bound request bodies before parsing",()=>{
+  const helper=read("lib/bounded-body.ts");
+  assert.ok(helper.includes("readBoundedRequestJson"));
+  for(const p of["app/api/displays/heartbeat/route.ts","app/api/displays/pair-code/route.ts","app/api/displays/pair/route.ts","app/api/displays/snapshot/route.ts","app/api/stage2/route.ts"]){
+    const src=read(p);
+    assert.ok(src.includes("readBoundedRequestJson"));
+    assert.ok(src.includes("64 * 1024"));
+    assert.ok(src.includes("request_body_too_large"));
+    assert.ok(src.includes("413"));
+  }
+});
+test("Document uploads validate real file signatures after MIME checks",()=>{
+  const src=read("app/api/merchant/documents/route.ts");
+  assert.ok(src.includes("matchesFileSignature"));
+  assert.ok(src.includes("%PDF-"));
+  assert.ok(src.includes("0xff"));
+  assert.ok(src.includes("0x89"));
+  assert.ok(src.includes('"WEBP"'));
+  assert.ok(src.includes("file_signature_invalid"));
+});
