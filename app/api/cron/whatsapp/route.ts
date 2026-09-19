@@ -5,6 +5,9 @@ import { getWhatsAppStatus, sendWhatsAppMessage } from "../../../../lib/stage3/w
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+// Keep each invocation comfortably below Cloudflare Workers subrequest limits.
+const CF_SAFE_BATCH_LIMIT = 10;
+
 const json = (data: unknown, status = 200) => NextResponse.json(data, {
   status,
   headers: { "cache-control": "no-store" },
@@ -25,7 +28,7 @@ async function run(request: Request) {
   const admin = createSupabaseAdminClient();
   if (!admin) return json({ error: "service_not_configured" }, 503);
 
-  const { data, error } = await admin.rpc("gmp_claim_due_whatsapp_messages", { p_limit: 25 });
+  const { data, error } = await admin.rpc("gmp_claim_due_whatsapp_messages", { p_limit: CF_SAFE_BATCH_LIMIT });
   if (error) return json({ error: error.message }, 503);
 
   let processed = 0;
