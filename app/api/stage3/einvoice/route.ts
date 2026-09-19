@@ -52,13 +52,23 @@ export async function POST(request:Request){
     const cookie=request.headers.get("cookie");if(cookie)headers.set("cookie",cookie);
     const queueBody={...body,action:"queue",idempotency_key:String(body.idempotency_key??("stage3:"+organization.id+":"+saleId+":"+String(body.country_code??"OM").toUpperCase()))};
     const queued=await fetch(canonicalEndpoint,{method:"POST",headers,body:JSON.stringify(queueBody),cache:"no-store"});
-    const queuedData=await readBoundedJson<Record<string, any>>(queued).catch(()=>({error:"canonical_invoice_api_invalid_response"}));
+    let queuedData: Record<string, any>;
+    try {
+      queuedData = await readBoundedJson<Record<string, any>>(queued);
+    } catch {
+      queuedData = { error: "canonical_invoice_api_invalid_response" };
+    }
     if(!queued.ok)return json({...queuedData,canonical_endpoint:"/api/merchant/invoicing"},queued.status);
     if(action==="queue")return json({...queuedData,canonical_endpoint:"/api/merchant/invoicing"},queued.status);
     const submissionId=String(queuedData.row?.id??queuedData.submission_id??"");
     if(!submissionId)return json({error:"canonical_submission_missing"},502);
     const sent=await fetch(canonicalEndpoint,{method:"POST",headers,body:JSON.stringify({action:"send",submission_id:submissionId}),cache:"no-store"});
-    const sentData=await readBoundedJson<Record<string, any>>(sent).catch(()=>({error:"canonical_invoice_send_invalid_response"}));
+    let sentData: Record<string, any>;
+    try {
+      sentData = await readBoundedJson<Record<string, any>>(sent);
+    } catch {
+      sentData = { error: "canonical_invoice_send_invalid_response" };
+    }
     return json({...sentData,submission_id:submissionId,canonical_endpoint:"/api/merchant/invoicing"},sent.status);
   }catch(e){
     const m=e instanceof Error?e.message:"unexpected_error";
