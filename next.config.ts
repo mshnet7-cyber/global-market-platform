@@ -10,25 +10,17 @@ const nextConfig: NextConfig = {
         headers: [
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-          { key: "Permissions-Policy", value: "camera=(self), microphone=(self), geolocation=(self)" },
           { key: "X-Frame-Options", value: "SAMEORIGIN" },
-        ],
-      },
-      {
-        source: "/(.*)",
-        headers: [
-          { key: "X-Content-Type-Options", value: "nosniff" },
-          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-          { key: "X-Frame-Options", value: "SAMEORIGIN" },
-          { key: "Permissions-Policy", value: "geolocation=(), microphone=(), camera=(self)" },
-        ],
+          { key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=()" },
+          { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" }
+        ]
       },
       {
         source: "/api/merchant/:path*",
-        headers: [{ key: "Cache-Control", value: "no-store" }],
-      },
+        headers: [{ key: "Cache-Control", value: "no-store" }]
+      }
     ];
-  },
+  }
 };
 
 export default nextConfig;
