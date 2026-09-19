@@ -53,3 +53,11 @@ test("E-invoice webhook is monotonic and replay-safe",()=>{
  assert.match(src,/\.eq\("status", current\.status\)/);
  assert.match(src,/previous_status/);
 });
+
+test("Webhook retry claim uses a lease to prevent concurrent delivery",()=>{
+  const migration=read("supabase/migrations/20260919012000_gmp_webhook_claim_lease.sql");
+  const code=read("lib/webhooks.ts");
+  assert.match(migration,/for update skip locked/);
+  assert.match(migration,/next_attempt_at=now\(\)\+interval '5 minutes'/);
+  assert.match(code,/next_attempt_at:new Date\(Date\.now\(\)\+5\*60_000\)/);
+});
