@@ -15,6 +15,7 @@ function errorResponse(error: unknown) {
 export async function OPTIONS(){return new NextResponse(null,{status:204,headers:apiCorsHeaders()});}
 
 export async function GET(request:Request){
+  const start=Date.now();
   try{
     const key=await authenticateApiKey(request,"market:read");
     const url=new URL(request.url);
