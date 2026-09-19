@@ -10,13 +10,26 @@ const json = (data: unknown, status = 200) =>
   NextResponse.json(data, { status, headers: { "cache-control": "no-store" } });
 
 function deriveNextStatus(eventType: string) {
-  if (eventType.includes("succeeded") || eventType.includes("renew") || eventType === "subscription.activated" || eventType === "subscription.reactivated") return "active";
-  if (eventType.includes("failed") || eventType === "subscription.past_due") return "past_due";
-  if (eventType.includes("cancel")) return "canceled";
-  if (eventType.includes("suspend")) return "suspended";
-  if (eventType.includes("grace")) return "grace_period";
-  if (eventType.includes("expire")) return "expired";
+  const normalized = eventType.toLowerCase();
+  if (normalized.includes("failed") || normalized.includes("failure") || normalized === "subscription.past_due") return "past_due";
+  if (normalized.includes("cancel")) return "canceled";
+  if (normalized.includes("suspend")) return "suspended";
+  if (normalized.includes("grace")) return "grace_period";
+  if (normalized.includes("expire")) return "expired";
+  if (
+    normalized.includes("succeeded") ||
+    normalized === "subscription.activated" ||
+    normalized === "subscription.reactivated" ||
+    normalized.includes("renewed") ||
+    normalized.includes("renewal_succeeded")
+  ) return "active";
   return null;
+}
+
+function canReactivate(from: string, eventType: string) {
+  if (from !== "canceled" && from !== "expired") return true;
+  const normalized = eventType.toLowerCase();
+  return normalized === "subscription.reactivated" || normalized.includes("renewed") || normalized.includes("renewal_succeeded");
 }
 
 export async function POST(request: Request) {
@@ -82,6 +95,14 @@ export async function POST(request: Request) {
   const eventId = String(claim.event_id);
 
   try {
+    if (nextStatus === "active" && !canReactivate(subscription.status, eventType)) {
+      await admin.from("gmp_billing_events").update({
+        status: "ignored",
+        error_message: "reactivation_requires_explicit_event",
+      }).eq("id", eventId);
+      return json({ received: true, ignored: "reactivation_requires_explicit_event", current_status: subscription.status, next_status: nextStatus }, 409);
+    }
+
     try {
       assertTransition(subscription.status, nextStatus);
     } catch {
