@@ -15,6 +15,7 @@ export async function POST(request:Request){
     const body=await request.json().catch(()=>null) as Record<string,unknown>|null;
     if(!body)return json({error:"invalid_json"},400);
     const action=String(body.action??"validate");
+    if(!["validate","queue","send"].includes(action)) return json({error:"unsupported_action"},400);
     if(action==="validate"){
       const payload=buildInvoicePayload({
         countryCode:String(body.country_code??"OM").toUpperCase().slice(0,2),
