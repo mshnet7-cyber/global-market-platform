@@ -19,6 +19,8 @@ ok("vinext deployment path exists", typeof pkg.scripts?.["build:vinext"] === "st
 ok("Cloudflare Vite config exists", existsSync(join(root,"vite.config.ts")));
 ok("Cloudflare Wrangler config exists", existsSync(join(root,"wrangler.jsonc")));
 ok("Cloudflare worker entry exists", existsSync(join(root,"worker/index.ts")));
+ok("OMR symbol artwork exists", existsSync(join(root,"public","omr-symbol.svg")));
+ok("OMR money component exists", existsSync(join(root,"components","MoneyDisplay.tsx")));
 ok("merchant camera API exists", existsSync(join(root,"app/api/merchant/cameras/route.ts")));
 ok("merchant compliance API exists", existsSync(join(root,"app/api/merchant/compliance/route.ts")));
 ok("merchant invoicing API exists", existsSync(join(root,"app/api/merchant/invoicing/route.ts")));
@@ -35,6 +37,7 @@ const webhookApi=text("app/api/dashboard/webhooks/route.ts");
 ok("webhook destination validation wired", webhookApi.includes("validateWebhookUrl") && webhookApi.includes("invalid_webhook_destination"));
 const webhooks=text("lib/webhooks.ts");
 ok("webhook SSRF guard", webhooks.includes("node:dns") && webhooks.includes("resolve4") && webhooks.includes("resolve6") && !webhooks.includes("dns/promises") && !webhooks.includes("lookup(") && webhooks.includes('redirect:"error"') && webhooks.includes("webhook_destination_not_allowed"));
+ok("OMR Unicode does not leak into plain-text formatter", !webhooks.includes("\\u20C4"));
 const storePage=text("app/store/[slug]/page.tsx");
 ok("public store requires publication", storePage.includes("notFound()") && storePage.includes('eq("status","published")'));
 const marketplaceLock=text("supabase/migrations/20260918204610_gmp_marketplace_rpc_security_hardening_20260919.sql");
@@ -87,4 +90,5 @@ ok("compliance active-case guard tracked", complianceGuard.includes("gmp_complia
 ok("health endpoint does not expose env names", !text("app/api/health/route.ts").includes("missingEnvironmentVariables"));
 ok("Cloudflare cron bridge is configured", text("worker/index.ts").includes("/api/cron/webhooks") && text("worker/index.ts").includes("/api/cron/whatsapp") && text("worker/index.ts").includes("controller.cron"));
 ok("Cloudflare Workers config uses Worker entry and daily crons", text("wrangler.jsonc").includes('"main": "./worker/index.ts"') && text("wrangler.jsonc").includes('"0 0 * * *"') && text("wrangler.jsonc").includes('"5 0 * * *"'));
+ok("OMR display uses vector mask", text("components/MoneyDisplay.tsx").includes("omr-symbol") && text("app/ux-overrides.css").includes("mask:url(\"/omr-symbol.svg\""));
 console.log(`verify-project: ${checks.length} checks passed`);
