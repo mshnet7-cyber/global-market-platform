@@ -37,9 +37,8 @@ html{background:var(--ux-bg)}body{font-family:Inter,"Noto Sans Arabic","IBM Plex
   width:.72em;
   height:.56em;
   flex:0 0 .72em;
-  background:currentColor;
-  -webkit-mask:url("/omr-symbol.svg") center / contain no-repeat;
-  mask:url("/omr-symbol.svg") center / contain no-repeat;
+  color:currentColor;
+  overflow:visible;
   transform:translateY(.035em);
 }
 .money-display-number{display:inline-block}
