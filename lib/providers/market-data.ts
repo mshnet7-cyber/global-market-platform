@@ -143,8 +143,7 @@ async function fetchEodhd(symbols: readonly SymbolDef[]): Promise<ProviderResult
   if (!commercialDisplayAllowed()) return null;
   const key = process.env.EODHD_API_KEY;
   if (!key) return null;
-  const quotes: Quote[] = [];
-  for (const item of symbols) {
+  const results = await Promise.all(symbols.map(async (item) => {
     try {
       const url = new URL(`https://eodhd.com/api/real-time/${encodeURIComponent(item.symbol)}.US`);
       url.searchParams.set("api_token", key);
@@ -153,10 +152,10 @@ async function fetchEodhd(symbols: readonly SymbolDef[]): Promise<ProviderResult
       const close = parseNumber(json?.close ?? json?.previousClose);
       const timestamp = json?.timestamp ? new Date(Number(json.timestamp) * 1000).toISOString() : validTimestamp(json?.date);
       const previousClose = parseNumber(json?.previousClose);
-      if (close == null || !timestamp || !isFresh(timestamp)) continue;
+      if (close == null || !timestamp || !isFresh(timestamp)) return null;
       const change = previousClose == null ? null : close - previousClose;
       const changePercent = previousClose ? (change! / previousClose) * 100 : null;
-      quotes.push({
+      return {
         instrument: `${item.name} (${item.symbol})`,
         symbol: item.symbol,
         exchange: item.exchange,
@@ -171,11 +170,12 @@ async function fetchEodhd(symbols: readonly SymbolDef[]): Promise<ProviderResult
         timestamp,
         provider: "EODHD",
         status: "DELAYED",
-      });
+      } satisfies Quote;
     } catch {
-      // Continue with remaining instruments; one provider failure is non-fatal.
+      return null;
     }
-  }
+  }));
+  const quotes = results.filter((quote): quote is Quote => Boolean(quote));
   return quotes.length ? { quotes, provider: "EODHD" } : null;
 }
 
