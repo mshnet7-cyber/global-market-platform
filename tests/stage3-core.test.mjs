@@ -61,3 +61,16 @@ test("Webhook retry claim uses a lease to prevent concurrent delivery",()=>{
   assert.match(migration,/next_attempt_at=now\(\)\+interval '5 minutes'/);
   assert.match(code,/next_attempt_at:new Date\(Date\.now\(\)\+5\*60_000\)/);
 });
+
+
+test("Provider endpoints are HTTPS-only and outbound responses are bounded",()=>{
+ const whatsapp=read("lib/stage3/whatsapp.ts");
+ const payment=read("lib/stage3/payments.ts");
+ const invoice=read("lib/stage3/einvoice.ts");
+ for(const src of [whatsapp,payment,invoice]){
+   assert.match(src,/protocol !== ["']https:/);
+   assert.match(src,/redirect:\s*["']error["']/);
+   assert.match(src,/10_000/);
+   assert.match(src,/1_000_000/);
+ }
+});
