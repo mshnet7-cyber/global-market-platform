@@ -34,3 +34,6 @@ jobs:
       - name: Cloudflare Workers production build
         if: startsWith(github.head_ref, 'cloudflare-workers-') || startsWith(github.ref, 'refs/heads/cloudflare-workers-')
         run: npm run build:vinext
+      - name: Cloudflare Workers deploy dry-run
+        if: startsWith(github.head_ref, 'cloudflare-workers-') || startsWith(github.ref, 'refs/heads/cloudflare-workers-')
+        run: npm run deploy:cloudflare:dry-run
