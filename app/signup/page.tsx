@@ -17,7 +17,7 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
     <header className="topbar"><div className="container nav site-nav">
       <Link href="/" className="brand"><span className="brand-mark">GM</span><span>GLOBAL <b>MARKET</b></span></Link>
       <nav className="nav-links" aria-label="التنقل الرئيسي">
-        <Link href="/gold">الذهب</Link><Link href="/silver">الفضة</Link><Link href="/markets">الأسواق</Link><Link href="/news">الأخبار</Link><Link href="/pricing">الباقات</Link>
+        <Link href="/gold">الذهب</Link><Link href="/silver">الفضة</Link><Link href="/markets">الأسواق</Link><Link href="/stocks">الأسهم</Link><Link href="/currencies">العملات</Link><Link href="/news">الأخبار</Link><Link href="/pricing">الباقات</Link>
       </nav>
       <div className="nav-actions"><Link className="btn btn-ghost" href="/login">تسجيل الدخول</Link><Link className="btn btn-primary" href="/demo">المعاينة</Link></div>
     </div></header>
