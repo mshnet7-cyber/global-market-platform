@@ -20,6 +20,7 @@ export async function POST(request:Request){
   if(!admin)return NextResponse.json({error:"service_not_configured"},{status:503});
   if(Array.isArray(p.events)&&p.events.length>MAX_EVENTS)return NextResponse.json({error:"too_many_events",max_events:MAX_EVENTS},{status:413});
   const events=Array.isArray(p.events)?p.events:[p];
+  if(events.some(item=>!item||typeof item!=="object"||Array.isArray(item)))return NextResponse.json({error:"invalid_event"},{status:400});
   for(const item of events){
     const e=item as Record<string,unknown>;
     const id=String(e.client_reference||"");
