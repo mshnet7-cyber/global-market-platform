@@ -10,7 +10,7 @@ test("Developer API v2 has auth, IDs and usage telemetry",()=>{assert.match(read
 test("Stage 3 UI exposes real integration states and webhook management",()=>{const page=read("app/dashboard/integrations/page.tsx");const workspace=read("app/dashboard/integrations/Stage3Workspace.tsx");assert.match(page,/aiState=\{ai\.state\}/);assert.match(page,/whatsappState=\{wa\.state\}/);assert.match(workspace,/statusLabel\(aiState\)/);assert.match(workspace,/statusLabel\(whatsappState\)/);assert.match(read("app/dashboard/api-keys/page.tsx"),/WebhooksWorkspace/);assert.match(read("app/api/dashboard/webhooks/route.ts"),/encryptWebhookSecret/);assert.match(read("app/dashboard/api-keys/WebhooksWorkspace.tsx"),/market\.alert\.triggered/);assert.doesNotMatch(read("app/dashboard/api-keys/WebhooksWorkspace.tsx"),/secret_ciphertext/);});
 test("Retry workers use Vercel Hobby-compatible daily schedules",()=>{const v=read("vercel.json");assert.match(v,/\/api\/cron\/webhooks/);assert.match(v,/\/api\/cron\/whatsapp/);assert.match(v,/0 0 \* \* \*/);assert.match(v,/5 0 \* \* \*/);assert.doesNotMatch(v,/0 \* \* \* \*/);assert.match(v,/"crons"/);});
 test("P0 marketplace abuse protection and atomic idempotency are present",()=>{const s=read("supabase/migrations/20260919000000_gmp_p0_p1_hardening.sql");assert.match(s,/gmp_public_order_rate_limits/);assert.match(s,/for update skip locked|on conflict \(store_id,idempotency_key\)/i);const route=read("app/api/stage2/route.ts");assert.match(route,/gmp_allow_public_marketplace_order/);assert.match(route,/rate_limited/);});
-test("P1 OCR workflow has upload, OCR, review and private storage",()=>{const api=read("app/api/merchant/documents/route.ts");const page=read("app/dashboard/documents/page.tsx");assert.match(api,/storage\.from/);assert.match(api,/gmp_documents/);assert.match(api,/action===\"ocr\"/);assert.match(api,/action===\"review\"/);assert.match(page,/integration\?\.state==="live"?"رفع وتشغيل OCR":"رفع المستند"/);assert.match(page,/اعتماد/);assert.match(page,/رفض/);});
+test("P1 OCR workflow has upload, OCR, review and private storage",()=>{const api=read("app/api/merchant/documents/route.ts");const page=read("app/dashboard/documents/page.tsx");assert.match(api,/storage\.from/);assert.match(api,/gmp_documents/);assert.match(api,/action===\"ocr\"/);assert.match(api,/action===\"review\"/);assert.ok(page.includes('integration?.state==="live"?"رفع وتشغيل OCR":"رفع المستند"'));assert.match(page,/اعتماد/);assert.match(page,/رفض/);});
 test("Webhook destinations reject SSRF targets and redirects",()=>{const src=read("lib/webhooks.ts");assert.match(src,/validateWebhookUrl/);assert.match(src,/dns\/promises/);assert.match(src,/redirect:"error"/);assert.match(read("app/api/dashboard/webhooks/route.ts"),/invalid_webhook_destination/);});
 test("WhatsApp retry worker is authenticated and atomically claimed",()=>{const route=read("app/api/cron/whatsapp/route.ts");const sql=read("supabase/migrations/20260919005000_gmp_whatsapp_retry_claim.sql");assert.match(route,/CRON_SECRET/);assert.match(route,/export async function GET/);assert.match(route,/gmp_claim_due_whatsapp_messages/);assert.match(route,/status: "sent"/);assert.match(route,/retryDelay/);assert.match(sql,/for update skip locked/);assert.match(sql,/revoke execute on function public\.gmp_claim_due_whatsapp_messages/);});
 test("P1 webhook retry queue and dead-letter handling are present",()=>{assert.match(read("lib/webhooks.ts"),/next_attempt_at/);assert.match(read("lib/webhooks.ts"),/dead_lettered/);assert.match(read("lib/webhooks.ts"),/blocked \|\| attempt>=max/);assert.match(read("lib/webhooks.ts"),/Math\.pow/);assert.match(read("app/api/cron/webhooks/route.ts"),/export async function GET/);assert.match(read("app/api/cron/webhooks/route.ts"),/gmp_claim_due_webhook_deliveries/);});
@@ -54,12 +54,13 @@ test("Authenticated JSON APIs also enforce bounded request parsing",()=>{
     assert.ok(src.includes("64 * 1024"));
   }
 });
-test("Public history endpoints are restricted to public instruments",()=>{
+test("Public history access is restricted to a known public instrument set",()=>{
   const helper=read("lib/market-history.ts");
   assert.ok(helper.includes("PUBLIC_HISTORY_INSTRUMENTS"));
   assert.ok(helper.includes("isPublicHistoryInstrument"));
-  assert.ok(read("app/api/gold/history/route.ts").includes("instrument_not_public"));
-  assert.ok(read("app/api/market/terminal/route.ts").includes("instrument_not_public"));
+  assert.ok(read("app/api/gold/history/route.ts").includes("isPublicHistoryInstrument"));
+  assert.ok(read("app/api/market/terminal/route.ts").includes("isPublicHistoryInstrument"));
+  assert.ok(read("app/api/market/terminal/route.ts").includes("history=isPublicHistoryInstrument(selected)"));
 });
 test("E-invoice rejects unknown actions before queue/send side effects",()=>{
   assert.ok(read("app/api/stage3/einvoice/route.ts").includes('["validate","queue","send"].includes(action)'));
