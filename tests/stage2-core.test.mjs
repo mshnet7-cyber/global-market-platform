@@ -59,7 +59,7 @@ test("Repair lifecycle matches database statuses",()=>{
   assert.doesNotMatch(read("app/api/stage2/route.ts"),/statuses:\["received","in_progress"/);
 });
 
-test("Public APIs do not expose internal marketplace metadata or organization IDs",()=>{ const api=read("app/api/stage2/route.ts"); assert.match(api,/gmp_marketplace_listings.*select\("id,store_id,listing_type,title,description,category,price,currency,availability,contact_mode,image_path,updated_at"\)/s); assert.doesNotMatch(api,/action === "marketplace"[\\s\\S]{0,2500}organization_id/); });
+test("Public APIs do not expose internal marketplace metadata or organization IDs",()=>{ const api=read("app/api/stage2/route.ts"); assert.match(api,/gmp_marketplace_listings.*select\("id,store_id,listing_type,title,description,category,price,currency,availability,contact_mode,image_path,updated_at"\)/s); assert.doesNotMatch(api,/action === "marketplace"[\s\S]{0,2500}organization_id/); });
 
 test("Public store profiles require publication",()=>{ const src=read("app/store/[slug]/page.tsx"); assert.match(src,/notFound\(\)/); assert.match(src,/eq\("status","published"\)/); });
 
