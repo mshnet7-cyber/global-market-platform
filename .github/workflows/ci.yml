@@ -3,7 +3,7 @@ name: CI
 on:
   workflow_dispatch:
   push:
-    branches: [main, stage3-ai-integrations-global]
+    branches: [main, stage3-ai-integrations-global, 'stage3-*']
   pull_request:
 
 permissions:
