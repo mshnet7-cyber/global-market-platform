@@ -56,7 +56,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
         <section className="stage3-grid" aria-label="Integration status">
           {cards.map((card) => (
             <article className="stage3-card" key={card[0]}>
-              <div className="stage3-card-head"><h2>{card[0]}</h2><span className={card[1] === "LIVE" ? "stage3-status live" : "stage3-status"}>{card[1]}</span></div>
+              <div className="stage3-card-head"><h2>{card[0]}</h2><span className={card[1] === "مباشر" ? "stage3-status live" : "stage3-status"}>{card[1]}</span></div>
               <strong>{card[2]}</strong>
               <p>{card[3]}</p>
             </article>
