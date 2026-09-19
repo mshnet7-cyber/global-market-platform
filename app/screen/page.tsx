@@ -3,6 +3,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import MoneyDisplay from "../../components/MoneyDisplay";
 
 const SESSION_KEY = "gmp_screen_session";
 const SNAPSHOT_KEY = "gmp_screen_snapshot";
@@ -141,15 +142,15 @@ export default function ScreenPage() {
               </div>
               <div className="gold-card screen-gold">
                 <div className="screen-price-caption">ذهب 24K / غرام · {payload?.store.currency ?? "OMR"}</div>
-                <div className="screen-gold-price">{formatNumber(snapshot?.perGram24k ?? null, 3)}</div>
+                <div className="screen-gold-price"><MoneyDisplay value={snapshot?.perGram24k ?? null} currency={payload?.store.currency ?? "OMR"} locale="en-US" maximumFractionDigits={3} /></div>
                 <div className="screen-meta-grid">
-                  <div className="card"><div>السعر الفوري / الأونصة</div><strong>{formatNumber(snapshot?.spot ?? null, 3)}</strong></div>
-                  <div className="card"><div>شراء مرجعي</div><strong>{formatNumber(snapshot?.bid ?? null, 3)}</strong></div>
-                  <div className="card"><div>بيع مرجعي</div><strong>{formatNumber(snapshot?.ask ?? null, 3)}</strong></div>
+                  <div className="card"><div>السعر الفوري / الأونصة</div><strong><MoneyDisplay value={snapshot?.spot ?? null} currency={payload?.store.currency ?? "OMR"} locale="en-US" maximumFractionDigits={3} /></strong></div>
+                  <div className="card"><div>شراء مرجعي</div><strong><MoneyDisplay value={snapshot?.bid ?? null} currency={payload?.store.currency ?? "OMR"} locale="en-US" maximumFractionDigits={3} /></strong></div>
+                  <div className="card"><div>بيع مرجعي</div><strong><MoneyDisplay value={snapshot?.ask ?? null} currency={payload?.store.currency ?? "OMR"} locale="en-US" maximumFractionDigits={3} /></strong></div>
                 </div>
               </div>
               <div className="screen-purity-grid">
-                {["22K", "21K", "18K", "14K"].map((k) => <div className="card" key={k}><div>{k}</div><strong>{formatNumber(snapshot?.purities?.[k] ?? null, 3)}</strong></div>)}
+                {["22K", "21K", "18K", "14K"].map((k) => <div className="card" key={k}><div>{k}</div><strong><MoneyDisplay value={snapshot?.purities?.[k] ?? null} currency={payload?.store.currency ?? "OMR"} locale="en-US" maximumFractionDigits={3} /></strong></div>)}
               </div>
               {(payload?.content?.length || payload?.ads?.length) ? <section className="screen-content-area">
                 {(payload.content || []).map((item) => <article className="card screen-content-card" key={item.id}>
