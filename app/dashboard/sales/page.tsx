@@ -19,7 +19,7 @@ export default async function SalesPage() {
   return <div className="dashboard-shell">
     <DashboardHeader organizationName={organization.name} role={role} planName={planCode === "business" ? "الكاملة" : "الأعمال"} />
     <main className="wrap section dashboard-module-page pos-page">
-      <div className="eyebrow">POS · SALES</div>
+      <div className="eyebrow">نقطة البيع · المبيعات</div>
       <h1>بيع سريع</h1>
       <p className="hero-copy">اختَر المحل والصنف، وأكمل العملية. عند الاعتماد يُخصم المخزون ويُنشأ القيد المحاسبي ذريًا.</p>
       <div className="module-context"><span>{stores?.length ?? 0} متجر</span><span>{products?.length ?? 0} صنف نشط</span><span>الترحيل الذري مفعّل</span></div>
