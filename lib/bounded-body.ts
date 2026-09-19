@@ -1,9 +1,16 @@
 const DEFAULT_MAX_BODY_BYTES = 1_000_000;
 
+export function requestContentLengthExceeds(request: Request, maxBytes: number): boolean {
+  if (!Number.isInteger(maxBytes) || maxBytes <= 0) throw new Error("invalid_request_limit");
+  const raw = request.headers.get("content-length");
+  if (raw === null) return false;
+  const contentLength = Number(raw);
+  return !Number.isSafeInteger(contentLength) || contentLength < 0 || contentLength > maxBytes;
+}
+
 export async function readBoundedRequestText(request: Request, maxBytes = DEFAULT_MAX_BODY_BYTES): Promise<string> {
   if (!Number.isInteger(maxBytes) || maxBytes <= 0) throw new Error("invalid_request_limit");
-  const contentLength = Number(request.headers.get("content-length") ?? 0);
-  if (Number.isFinite(contentLength) && contentLength > maxBytes) throw new Error("request_body_too_large");
+  if (requestContentLengthExceeds(request, maxBytes)) throw new Error("request_body_too_large");
   if (!request.body) {
     const raw = await request.text();
     if (Buffer.byteLength(raw, "utf8") > maxBytes) throw new Error("request_body_too_large");
