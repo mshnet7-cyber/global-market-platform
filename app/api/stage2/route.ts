@@ -109,7 +109,8 @@ export async function GET(request: Request) {
         .eq("store_id", store.id).eq("status","active").order("updated_at",{ascending:false}).limit(200);
       const { data: branches } = await admin.from("gmp_branches").select("id,name,code,city,address,phone,whatsapp,active")
         .eq("organization_id", store.organization_id).eq("active",true).order("name").limit(50);
-      return json({ store, directory, listings: listings ?? [], branches: branches ?? [] });
+      const publicStore = { id: store.id, name: store.name, slug: store.slug, phone: store.phone, whatsapp: store.whatsapp, logo_path: store.logo_path, country_code: store.country_code, currency: store.currency, timezone: store.timezone };
+      return json({ store: publicStore, directory, listings: listings ?? [], branches: branches ?? [] });
     }
 
     if (action === "listings") {
@@ -514,8 +515,7 @@ export async function POST(request: Request) {
       };
       const cfg=map[entity]; if(!cfg || (cfg.statuses.length && !cfg.statuses.includes(status)))return json({error:"invalid_status"},400);
       const query=access.supabase.from(cfg.table).update({status,updated_at:new Date().toISOString()}).eq("id",id);
-      if(entity==="dooh_campaign" || entity==="dooh_placement")query.eq("organization_id",access.organization.id);
-      if(entity==="marketplace_order" || entity==="dooh_campaign" || entity==="dooh_placement" || entity==="display_content" || entity==="repair") query.eq("organization_id",access.organization.id);
+      if(entity==="marketplace_order" || entity==="dooh_campaign" || entity==="dooh_placement" || entity==="repair") query.eq("organization_id",access.organization.id);
 
       const {data,error}=await query.select("*").single();
       if(error)return json({error:error.message},400);return json({success:true,row:data});
