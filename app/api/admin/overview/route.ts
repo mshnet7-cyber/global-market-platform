@@ -28,7 +28,7 @@ async function guard(){
 export async function GET(){
   try{
     const {admin}=await guard();
-    const [orgs,stores,branches,members,screens,campaigns,providers,alerts,audits,plans,subscriptions] = await Promise.all([
+    const results = await Promise.all([
       admin.from("gmp_organizations").select("id,name,slug,owner_id,created_at").order("created_at",{ascending:false}).limit(300),
       admin.from("gmp_stores").select("id,organization_id,name,slug,country_code,currency,timezone,created_at").order("created_at",{ascending:false}).limit(500),
       admin.from("gmp_branches").select("id,organization_id,name,code,city,active,created_at").order("created_at",{ascending:false}).limit(500),
@@ -41,6 +41,9 @@ export async function GET(){
       admin.from("gmp_plans").select("id,code,name,active").order("code"),
       admin.from("gmp_subscriptions").select("organization_id,plan_id,status,current_period_end,created_at").order("created_at",{ascending:false}).limit(500)
     ]);
+    const firstError = results.find((result) => result.error)?.error;
+    if (firstError) return json({error:"data_load_failed",detail:firstError.message},500);
+    const [orgs,stores,branches,members,screens,campaigns,providers,alerts,audits,plans,subscriptions] = results;
     return json({orgs:orgs.data||[],stores:stores.data||[],branches:branches.data||[],members:members.data||[],screens:screens.data||[],campaigns:campaigns.data||[],providers:providers.data||[],alerts:alerts.data||[],audits:audits.data||[],plans:plans.data||[],subscriptions:subscriptions.data||[]});
   }catch(e){const m=e instanceof Error?e.message:"unexpected_error";return json({error:m},m==="unauthorized"?401:m==="forbidden"?403:500);}
 }
