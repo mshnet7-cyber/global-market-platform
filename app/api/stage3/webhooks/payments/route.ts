@@ -157,12 +157,37 @@ export async function POST(request: Request) {
     if (typeof payload.cancel_at_period_end === "boolean") subscriptionPatch.cancel_at_period_end = payload.cancel_at_period_end;
     if (payload.grace_until) subscriptionPatch.grace_until = payload.grace_until;
 
-    const { error: subscriptionUpdateError } = await admin
+    const { data: updatedSubscription, error: subscriptionUpdateError } = await admin
       .from("gmp_subscriptions")
       .update(subscriptionPatch)
       .eq("id", subscription.id)
-      .eq("organization_id", subscription.organization_id);
+      .eq("organization_id", subscription.organization_id)
+      .eq("status", subscription.status)
+      .select("id,status")
+      .maybeSingle();
     if (subscriptionUpdateError) throw new Error("subscription_update_failed");
+    if (!updatedSubscription) {
+      const { data: latestSubscription, error: latestSubscriptionError } = await admin
+        .from("gmp_subscriptions")
+        .select("status")
+        .eq("id", subscription.id)
+        .eq("organization_id", subscription.organization_id)
+        .maybeSingle();
+      if (latestSubscriptionError) throw new Error("subscription_recheck_failed");
+      const latestStatus = String(latestSubscription?.status ?? "");
+      await admin.from("gmp_billing_events").update({
+        status: latestStatus === nextStatus ? "processed" : "ignored",
+        payment_id: paymentId,
+        error_message: latestStatus === nextStatus ? null : "concurrent_subscription_state_change",
+      }).eq("id", eventId);
+      return json({
+        received: true,
+        idempotent: latestStatus === nextStatus,
+        ignored: latestStatus === nextStatus ? undefined : "concurrent_subscription_state_change",
+        event_id: eventId,
+        status: latestStatus || null,
+      });
+    }
 
     const { error: eventUpdateError } = await admin
       .from("gmp_billing_events")
