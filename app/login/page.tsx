@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { demoLoginAction, loginAction } from "./actions";
 
 function safeNext(value: string | undefined) {
   const next = value?.trim();
@@ -8,7 +9,7 @@ function safeNext(value: string | undefined) {
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string; error?: string; created?: string; logged_out?: string }> }) {
   const params = await searchParams;
   const next = safeNext(params.next);
-  const error = params.error === "credentials" ? "البريد الإلكتروني أو كلمة المرور غير صحيحة." : params.error === "invalid" ? "أدخل البريد الإلكتروني وكلمة المرور." : params.error ? "تعذر تسجيل الدخول. تحقق من البيانات وحاول مرة أخرى." : "";
+  const error = params.error === "credentials" ? "البريد الإلكتروني أو كلمة المرور غير صحيحة." : params.error === "invalid" ? "أدخل البريد الإلكتروني وكلمة المرور." : params.error === "unavailable" ? "خدمة تسجيل الدخول غير متاحة حاليًا." : params.error === "demo_disabled" ? "الدخول التجريبي متاح في نسخة المعاينة فقط." : params.error ? "تعذر تسجيل الدخول. تحقق من البيانات وحاول مرة أخرى." : "";
   const notice = params.created === "1" ? "تم إنشاء الحساب. سجّل الدخول للمتابعة." : params.logged_out === "1" ? "تم تسجيل الخروج." : "";
 
   return <div className="page-frame login-page" dir="rtl" lang="ar">
@@ -24,13 +25,13 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       <section className="login-card" aria-labelledby="login-title"><div className="eyebrow">الوصول إلى الحساب</div><h2 id="login-title">تسجيل الدخول</h2><p>استخدم بيانات الحساب الإداري للوصول إلى لوحة المحل.</p>
         {error && <div className="notice" role="alert">{error}</div>}
         {notice && <div className="notice" role="status">{notice}</div>}
-        <form className="login-form" action="/api/auth/login" method="post"><input type="hidden" name="next" value={next} /><label className="label">البريد الإلكتروني<input className="select" type="email" name="email" autoComplete="email" inputMode="email" required /></label><label className="label">كلمة المرور<input className="select" type="password" name="password" autoComplete="current-password" required /></label><button className="btn btn-primary" type="submit">دخول إلى لوحة المحل</button></form>
+        <form className="login-form" action={loginAction}><input type="hidden" name="next" value={next} /><label className="label">البريد الإلكتروني<input className="select" type="email" name="email" autoComplete="email" inputMode="email" maxLength={320} required /></label><label className="label">كلمة المرور<input className="select" type="password" name="password" autoComplete="current-password" maxLength={256} required /></label><button className="btn btn-primary" type="submit">دخول إلى لوحة المحل</button></form>
         <div className="actions" style={{marginTop:14}}><Link className="btn" href={"/signup?next=" + encodeURIComponent(next)}>إنشاء حساب جديد</Link><Link className="btn btn-ghost" href="/pricing">مشاهدة الباقات</Link></div>
         {process.env.VERCEL_ENV === "preview" && <div className="notice" style={{marginTop:16}}>
           <strong>الدخول السريع للتجربة</strong>
           <div className="actions" style={{marginTop:10}}>
-            <form action="/api/auth/demo-login" method="post"><input type="hidden" name="role" value="platform_admin" /><button className="btn btn-primary" type="submit">دخول إدارة المنصة</button></form>
-            <form action="/api/auth/demo-login" method="post"><input type="hidden" name="role" value="shop_owner" /><button className="btn" type="submit">دخول المحل التجريبي</button></form>
+            <form action={demoLoginAction}><input type="hidden" name="role" value="platform_admin" /><button className="btn btn-primary" type="submit">دخول إدارة المنصة</button></form>
+            <form action={demoLoginAction}><input type="hidden" name="role" value="shop_owner" /><button className="btn" type="submit">دخول المحل التجريبي</button></form>
           </div>
           <div style={{marginTop:10,fontSize:13}}>أو استخدم بيانات الحساب أدناه.</div>
           <strong>بيانات التجربة للمعاينة</strong>
