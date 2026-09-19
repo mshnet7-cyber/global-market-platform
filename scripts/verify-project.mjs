@@ -24,6 +24,14 @@ ok("invoicing dashboard exists", existsSync(join(root,"app/dashboard/invoicing/p
 ok("document intelligence API exists", existsSync(join(root,"app/api/merchant/documents/route.ts")));
 ok("document intelligence dashboard exists", existsSync(join(root,"app/dashboard/documents/page.tsx")));
 ok("webhook retry endpoint exists", existsSync(join(root,"app/api/cron/webhooks/route.ts")));
+const webhookApi=text("app/api/dashboard/webhooks/route.ts");
+ok("webhook destination validation wired", webhookApi.includes("validateWebhookUrl") && webhookApi.includes("invalid_webhook_destination"));
+const webhooks=text("lib/webhooks.ts");
+ok("webhook SSRF guard", webhooks.includes("dns/promises") && webhooks.includes("redirect:"error"") && webhooks.includes("webhook_destination_not_allowed"));
+const storePage=text("app/store/[slug]/page.tsx");
+ok("public store requires publication", storePage.includes("notFound()") && storePage.includes('eq("status","published")'));
+const marketplaceLock=text("supabase/migrations/20260919000600_gmp_marketplace_rpc_security_hardening.sql");
+ok("public marketplace RPC locked down", marketplaceLock.includes("revoke execute on function public.gmp_create_marketplace_order") && marketplaceLock.includes("from anon,authenticated"));
 const migrationFiles = execFileSync("git",["ls-files","supabase/migrations"],{encoding:"utf8"}).split("\n").filter(Boolean);
 ok("operational workflow migration tracked", migrationFiles.some(x=>x.includes("gmp_full_plan_operational_workflows_v1")));
 ok("camera endpoint migration tracked", migrationFiles.some(x=>x.includes("gmp_camera_endpoint_hardening_v1")));
