@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
 type Data = {
@@ -30,24 +30,24 @@ export default function OperationsPage(){
   const [tab,setTab]=useState("overview"),[data,setData]=useState<Data|null>(null),[loading,setLoading]=useState(true),[message,setMessage]=useState(""),[busy,setBusy]=useState(false);
   const [displayData,setDisplayData]=useState<any>(null),[team,setTeam]=useState<any>(null),[dooh,setDooh]=useState<any>(null),[directory,setDirectory]=useState<any[]>([]);
   const [storeId,setStoreId]=useState(""),[productId,setProductId]=useState(""),[qty,setQty]=useState("1"),[weight,setWeight]=useState("0"),[price,setPrice]=useState("0"),[payment,setPayment]=useState("cash");
-  async function get(url:string){const r=await fetch(url,{cache:"no-store"});const d=await r.json().catch(()=>null);if(!r.ok)throw new Error(d?.error||"request_failed");return d;}
-  async function post(payload:any){const r=await fetch("/api/stage2",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload)});const d=await r.json().catch(()=>null);if(!r.ok)throw new Error(d?.error||"request_failed");return d;}
-  async function load(){
+  const get=useCallback(async(url:string)=>{const r=await fetch(url,{cache:"no-store"});const d=await r.json().catch(()=>null);if(!r.ok)throw new Error(d?.error||"request_failed");return d;},[]);
+  const post=useCallback(async(payload:any)=>{const r=await fetch("/api/stage2",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload)});const d=await r.json().catch(()=>null);if(!r.ok)throw new Error(d?.error||"request_failed");return d;},[]);
+  const load=useCallback(async()=>{
     setLoading(true);setMessage("");
     try{const d=await get("/api/stage2?action=erp");setData(d);setStoreId(function(v){return v||d.stores?.[0]?.id||""});setProductId(function(v){return v||d.products?.[0]?.id||""});if(d.products?.[0])setPrice(String(d.products[0].price||0));}
     catch(e){setMessage(e instanceof Error?e.message:"تعذر تحميل مركز التشغيل");}
     finally{setLoading(false);}
-  }
-  async function aux(){
+  },[get]);
+  const aux=useCallback(async()=>{
     try{
       if(tab==="staff")setTeam(await get("/api/stage2?action=team"));
       if(tab==="displays")setDisplayData(await get("/api/stage2?action=displays"));
       if(tab==="dooh")setDooh(await get("/api/stage2?action=dooh"));
       if(tab==="directory")setDirectory((await get("/api/stage2?action=directory")).rows||[]);
     }catch(e){setMessage(e instanceof Error?e.message:"تعذر تحميل الوحدة");}
-  }
-  useEffect(()=>{const id=window.setTimeout(()=>{void load();},0);return()=>window.clearTimeout(id);},[]);
-  useEffect(()=>{const id=window.setTimeout(()=>{void aux();},0);return()=>window.clearTimeout(id);},[tab]);
+  },[get,tab]);
+  useEffect(()=>{const id=window.setTimeout(()=>{void load();},0);return()=>window.clearTimeout(id);},[load]);
+  useEffect(()=>{const id=window.setTimeout(()=>{void aux();},0);return()=>window.clearTimeout(id);},[aux]);
   const product=useMemo(()=>data?.products?.find(p=>p.id===productId),[data,productId]);
   async function act(payload:any){setBusy(true);setMessage("");try{await post(payload);setMessage("تم حفظ العملية");await load();await aux();}catch(e){setMessage(e instanceof Error?e.message:"حدث خطأ");}finally{setBusy(false);}}
   if(loading)return <main className="stage2-page"><div className="stage2-empty">جارٍ تحميل مركز التشغيل…</div></main>;
