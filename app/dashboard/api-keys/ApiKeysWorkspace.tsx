@@ -15,7 +15,7 @@ type KeyRow = {
 const scopeLabels: Record<string, string> = {
   "market:read": "قراءة السوق",
   "alerts:write": "كتابة التنبيهات",
-  "webhooks:write": "كتابة Webhooks",
+  "webhooks:write": "إدارة خطافات الويب",
 };
 
 export default function ApiKeysWorkspace({ initialKeys }: { initialKeys: KeyRow[] }) {
@@ -91,7 +91,7 @@ export default function ApiKeysWorkspace({ initialKeys }: { initialKeys: KeyRow[
       <div className="grid two">
         <article className="card">
           <div className="card-title">إنشاء مفتاح</div>
-          <label className="field" style={{ marginTop: 12 }}>اسم المفتاح<input value={name} onChange={(event) => setName(event.target.value)} placeholder="مثال: ERP integration" maxLength={80} /></label>
+          <label className="field" style={{ marginTop: 12 }}>اسم المفتاح<input value={name} onChange={(event) => setName(event.target.value)} placeholder="مثال: تكامل نظام خارجي" maxLength={80} /></label>
           <div className="field" style={{ marginTop: 12 }}><span>الصلاحيات</span>{Object.entries(scopeLabels).map(([scope, label]) => <label key={scope} style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 7 }}><input type="checkbox" checked={scopes.includes(scope)} onChange={() => toggleScope(scope)} />{label}<small className="meta">{scope}</small></label>)}</div>
           <button type="button" className="btn primary" disabled={busy} style={{ marginTop: 14 }} onClick={() => void createKey()}>{busy ? "جارٍ التنفيذ…" : "إنشاء المفتاح"}</button>
         </article>
@@ -103,7 +103,7 @@ export default function ApiKeysWorkspace({ initialKeys }: { initialKeys: KeyRow[
               <div>
                 <strong>{item.name}</strong>
                 <div className="meta">{item.key_prefix} · {(item.scopes || []).map((scope) => scopeLabels[scope] || scope).join("، ")}</div>
-                <div className="meta">{item.revoked_at ? "ملغى" : item.last_used_at ? "آخر استخدام: " + new Date(item.last_used_at).toLocaleString() : "لم يُستخدم بعد"}</div>
+                <div className="meta">{item.revoked_at ? "ملغى" : item.last_used_at ? "آخر استخدام: " + new Date(item.last_used_at).toLocaleString("ar-OM") : "لم يُستخدم بعد"}</div>
               </div>
               {!item.revoked_at && <button type="button" className="btn" disabled={busy} onClick={() => void revoke(item.id)}>إلغاء</button>}
             </div>
