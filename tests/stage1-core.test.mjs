@@ -36,7 +36,7 @@ test("external API requires authentication and rate limiting",()=>{
 
 test("alerts and webhooks have audit/security boundaries",()=>{
   assert.match(read("app/api/alerts/rules/route.ts"),/recordAuditEvent/);
-  assert.match(read("app/api/v1/webhooks/route.ts"),/encryptWebhookSecret/);
+  assert.match(read("app/api/v1/webhooks/route.ts"),/encryptWebhookSecret/); assert.match(read("app/api/v1/webhooks/route.ts"),/validateWebhookUrl/); assert.match(read("app/api/v1/webhooks/route.ts"),/EVENT_TYPES/);
   assert.match(read("lib/webhooks.ts"),/aes-256-gcm/);
 });
 
