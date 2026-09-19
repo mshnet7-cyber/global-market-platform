@@ -1,9 +1,24 @@
 import { createSupabaseServerClient } from "./supabase/server";
+import { createSupabaseAdminClient } from "./supabase/admin";
+import { getDemoSession } from "./demo-auth";
 
 export type MerchantPlanCode = "starter" | "pro" | "business";
 export type MerchantRole = "owner" | "admin" | "viewer";
 
 export async function getMerchantContext() {
+  const demo = await getDemoSession();
+  if (demo?.role === "shop_owner") {
+    const admin = createSupabaseAdminClient();
+    if (!admin) return { supabase: null, user: null, organization: null, role: null as MerchantRole | null, planCode: null as MerchantPlanCode | null };
+    const { data: organization } = await admin.from("gmp_organizations").select("id,name,slug,owner_id").eq("slug","global-market-demo-shop").maybeSingle();
+    if (!organization) return { supabase: admin, user: null, organization: null, role: null, planCode: null };
+    const { data: subscription } = await admin.from("gmp_subscriptions").select("status,current_period_end,plan_id,gmp_plans(code),created_at").eq("organization_id", organization.id).order("created_at",{ ascending:false }).limit(1).maybeSingle();
+    const relation = Array.isArray(subscription?.gmp_plans) ? subscription?.gmp_plans[0] : subscription?.gmp_plans;
+    const active = subscription?.status === "active" || subscription?.status === "trialing" || subscription?.status === "grace_period";
+    const notExpired = !subscription?.current_period_end || new Date(subscription.current_period_end).getTime() >= Date.now();
+    return { supabase: admin, user: { id: demo.account.userId, email: demo.account.email }, organization, role: "owner" as const, planCode: active && notExpired ? (relation?.code as MerchantPlanCode ?? null) : null };
+  }
+
   const supabase = await createSupabaseServerClient();
   if (!supabase) return { supabase: null, user: null, organization: null, role: null as MerchantRole | null, planCode: null as MerchantPlanCode | null };
 
