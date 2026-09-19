@@ -3,17 +3,29 @@ import { fetchFrankfurterUsdLocal, fetchGoldApi } from "../../../../lib/free-dat
 
 export const runtime = "nodejs";
 
-export async function GET() {
-  const startedAt = Date.now();
+const CACHE_TTL_MS = 15_000;
+let cached: {
+  expiresAt: number;
+  payload: {
+    ok: boolean;
+    checks: {
+      gold: { ok: boolean; priceUsdPerOunce: number | null; bidUsd: number | null; askUsd: number | null; timestamp: string | null };
+      silver: { ok: boolean; priceUsdPerOunce: number | null; timestamp: string | null };
+      usdToOmr: { ok: boolean; rate: number | null };
+    };
+  };
+} | null = null;
+let inFlight: Promise<typeof cached.payload> | null = null;
+
+async function readHealthData() {
   const [gold, silver, omrRate] = await Promise.all([
     fetchGoldApi("XAU"),
     fetchGoldApi("XAG"),
     fetchFrankfurterUsdLocal("OMR"),
   ]);
 
-  const ok = Boolean(gold?.price && silver?.price && omrRate);
-  return NextResponse.json({
-    ok,
+  return {
+    ok: Boolean(gold?.price && silver?.price && omrRate),
     checks: {
       gold: {
         ok: Boolean(gold?.price),
@@ -32,10 +44,35 @@ export async function GET() {
         rate: omrRate,
       },
     },
+  };
+}
+
+async function getCachedHealthData() {
+  const now = Date.now();
+  if (cached && cached.expiresAt > now) return cached.payload;
+  if (inFlight) return inFlight;
+  inFlight = readHealthData()
+    .then((payload) => {
+      cached = { payload, expiresAt: Date.now() + CACHE_TTL_MS };
+      return payload;
+    })
+    .finally(() => {
+      inFlight = null;
+    });
+  return inFlight;
+}
+
+export async function GET() {
+  const startedAt = Date.now();
+  const payload = await getCachedHealthData();
+  return NextResponse.json({
+    ...payload,
     latencyMs: Date.now() - startedAt,
     timestamp: new Date().toISOString(),
   }, {
-    status: ok ? 200 : 503,
-    headers: { "Cache-Control": "no-store" },
+    status: payload.ok ? 200 : 503,
+    headers: {
+      "Cache-Control": "public, max-age=15, stale-while-revalidate=30",
+    },
   });
 }
