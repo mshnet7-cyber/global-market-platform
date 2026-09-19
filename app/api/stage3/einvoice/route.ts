@@ -6,10 +6,12 @@ import { buildInvoicePayload, getEInvoiceStatus, validateInvoicePayload } from "
 
 const json=(data:unknown,status=200)=>NextResponse.json(data,{status,headers:{"cache-control":"no-store","x-gmp-einvoice-canonical":"merchant-invoicing"}});
 
-function canonicalUrl() {
+function canonicalUrl(request: Request) {
   const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim() || process.env.GMP_APP_URL?.trim();
   const vercelHost = process.env.VERCEL_URL?.trim();
-  const origin = configured || (vercelHost ? `https://${vercelHost}` : "");
+  const requestOrigin = new URL(request.url);
+  const localFallback = ["localhost", "127.0.0.1", "::1"].includes(requestOrigin.hostname) ? requestOrigin.origin : "";
+  const origin = configured || (vercelHost ? `https://${vercelHost}` : localFallback);
   if (!origin) throw new Error("canonical_origin_not_configured");
   const url = new URL(origin);
   if (url.protocol !== "https:" && !["localhost", "127.0.0.1", "::1"].includes(url.hostname)) {
@@ -45,7 +47,7 @@ export async function POST(request:Request){
     }
     const saleId=String(body.sale_id??"");
     if(!saleId)return json({error:"sale_id_required"},400);
-    const canonicalEndpoint=canonicalUrl();
+    const canonicalEndpoint=canonicalUrl(request);
     const headers=new Headers({"content-type":"application/json"});
     const cookie=request.headers.get("cookie");if(cookie)headers.set("cookie",cookie);
     const queueBody={...body,action:"queue",idempotency_key:String(body.idempotency_key??("stage3:"+organization.id+":"+saleId+":"+String(body.country_code??"OM").toUpperCase()))};
