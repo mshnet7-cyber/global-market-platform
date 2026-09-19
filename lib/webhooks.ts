@@ -119,7 +119,7 @@ export async function dispatchWebhookEvent(organizationId: string | null, eventT
       const eventId = randomUUID();
       await admin.from("gmp_webhook_events").insert({event_id:eventId,organization_id:organizationId,event_type:eventType,payload});
       const { data: delivery } = await admin.from("gmp_webhook_deliveries").insert({
-        endpoint_id:endpoint.id,event_id:eventId,event_type:eventType,payload,attempts:0,next_attempt_at:new Date().toISOString(),max_attempts:8
+        endpoint_id:endpoint.id,event_id:eventId,event_type:eventType,payload,attempts:0,next_attempt_at:new Date(Date.now()+5*60_000).toISOString(),max_attempts:8
       }).select("id").single();
       if (!delivery) continue;
       await deliverWebhookAttempt(admin, { id: delivery.id, endpoint_id:endpoint.id,event_id:eventId,event_type:eventType,url:endpoint.url,secret_ciphertext:endpoint.secret_ciphertext,payload,attempts:0 }, body, timestamp);
