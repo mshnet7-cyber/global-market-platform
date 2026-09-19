@@ -42,14 +42,14 @@ export async function submitInvoice(payload: Record<string,unknown>) {
   let response:Response;
   try {
     response=await fetch(`${providerUrl.toString().replace(/\/$/,"")}/invoices`,{method:"POST",headers:{"content-type":"application/json",authorization:`Bearer ${c.apiKey}`,"x-gmp-request-hash":requestHash,"idempotency-key":requestHash},body:JSON.stringify(payload),cache:"no-store",signal:controller.signal,redirect:"error"});
+    const raw=await readBoundedText(response);
+    let data:Record<string,unknown>={};
+    try{data=JSON.parse(raw) as Record<string,unknown>}catch{data={raw:raw.slice(0,4000)}}
+    if(!response.ok)throw new Error(`einvoice_provider_http_${response.status}`);
+    return {requestHash,data};
   } finally {
     clearTimeout(timer);
   }
-  const raw=await readBoundedText(response);
-  let data:Record<string,unknown>={};
-  try{data=JSON.parse(raw) as Record<string,unknown>}catch{data={raw:raw.slice(0,4000)}}
-  if(!response.ok)throw new Error(`einvoice_provider_http_${response.status}`);
-  return {requestHash,data};
 }
 
 export function verifyEInvoiceWebhook(body:string,signature:string|null) {
