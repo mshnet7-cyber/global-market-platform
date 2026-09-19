@@ -14,7 +14,7 @@ export async function POST(request: Request) {
 
   let form: FormData;
   try { form = await readBoundedRequestFormData(request, 64 * 1024); }
-  catch (error) { return new NextResponse(error instanceof Error && error.message === "request_body_too_large" ? "Request body too large." : "Invalid request body.", { status: 400 }); }
+  catch (error) { return new NextResponse(error instanceof Error && error.message === "request_body_too_large" ? "Request body too large." : "Invalid request body.", { status: error instanceof Error && error.message === "request_body_too_large" ? 413 : 400 }); }
 
 
   const screenId = String(form.get("screen_id") ?? "").trim();
