@@ -1,3 +1,4 @@
+import { readBoundedRequestJson } from "../../../../lib/bounded-body";
 import { NextResponse } from "next/server";
 import { authenticateApiKey, apiCorsHeaders } from "../../../../lib/api-keys";
 import { encryptWebhookSecret, validateWebhookUrl } from "../../../../lib/webhooks";
@@ -21,7 +22,7 @@ export async function POST(request:Request){
   try{
     const key=await authenticateApiKey(request,"webhooks:write");
     if(!key.organizationId)throw new Error("organization_required");
-    const body=await request.json().catch(()=>null) as Record<string,unknown>|null;
+    const body=await readBoundedRequestJson(request, 64 * 1024).catch(()=>null) as Record<string,unknown>|null;
     const target=String(body?.url??"").trim();
     const secret=String(body?.signing_secret??"");
     const events=Array.isArray(body?.event_types)?body.event_types.map(String).slice(0,20):["market.alert.triggered"];
