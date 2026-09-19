@@ -36,6 +36,17 @@ ok("public store requires publication", storePage.includes("notFound()") && stor
 const marketplaceLock=text("supabase/migrations/20260919000600_gmp_marketplace_rpc_security_hardening.sql");
 ok("public marketplace RPC locked down", marketplaceLock.includes("revoke execute on function public.gmp_create_marketplace_order") && marketplaceLock.includes("from anon,authenticated"));
 const migrationFiles = execFileSync("git",["ls-files","supabase/migrations"],{encoding:"utf8"}).split("\n").filter(Boolean);
+const migrationVersionOwners = new Map();
+const duplicateMigrationVersions = [];
+for (const file of migrationFiles) {
+  const fileName = file.split("/").pop() ?? file;
+  const match = fileName.match(/^(\d+)_/);
+  if (!match) continue;
+  const previous = migrationVersionOwners.get(match[1]);
+  if (previous && previous !== file) duplicateMigrationVersions.push(`${match[1]}: ${previous} <> ${file}`);
+  migrationVersionOwners.set(match[1], file);
+}
+ok("migration filename versions are unique", duplicateMigrationVersions.length === 0, duplicateMigrationVersions.join("; "));
 ok("operational workflow migration tracked", migrationFiles.some(x=>x.includes("gmp_full_plan_operational_workflows_v1")));
 ok("camera endpoint migration tracked", migrationFiles.some(x=>x.includes("gmp_camera_endpoint_hardening_v1")));
 ok("invoicing hardening migration tracked", migrationFiles.some(x=>x.includes("gmp_harden_invoicing_rls_indexes_transitions_v1")));
