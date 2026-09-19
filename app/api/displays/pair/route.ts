@@ -1,3 +1,4 @@
+import { readBoundedRequestJson } from "../../../../lib/bounded-body";
 import { NextResponse } from "next/server";
 import crypto from "node:crypto";
 import { createSupabaseAdminClient } from "../../../../lib/supabase/admin";
@@ -29,8 +30,13 @@ export async function POST(request: Request) {
   const contentType = request.headers.get("content-type") ?? "";
   let code = "";
   if (contentType.includes("application/json")) {
-    const body = await request.json().catch(() => null) as { code?: string } | null;
-    code = String(body?.code ?? "").trim();
+    try {
+      const body = await readBoundedRequestJson<{ code?: string }>(request, 64 * 1024);
+      code = String(body?.code ?? "").trim();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "invalid_json";
+      return NextResponse.json({ ok: false, error: message }, { status: message === "request_body_too_large" ? 413 : 400, headers: noStore });
+    }
   } else {
     const form = await request.formData();
     code = String(form.get("code") ?? "").trim();
