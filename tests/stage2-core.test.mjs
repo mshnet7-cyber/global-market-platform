@@ -78,3 +78,4 @@ test("Public store response scopes branches to the requested store branch",()=>{
  assert.match(src,/\.eq\("id", store\.branch_id\)/);
  assert.doesNotMatch(src,/\.eq\("organization_id", store\.organization_id\)\.eq\("active",true\)\.order\("name"\)/);
 });
+\n\ntest("RLS consolidation removes overlapping permissive policies",()=>{\n const src=read("supabase/migrations/20260919010000_gmp_rls_policy_consolidation.sql");\n assert.match(src,/gmp_ad_creatives_admin_insert/); assert.match(src,/gmp_ad_placements_admin_update/); assert.match(src,/gmp_display_content_admin_delete/); assert.match(src,/gmp_display_schedules_admin_insert/); assert.match(src,/gmp_marketplace_listings_select/); assert.match(src,/gmp_store_directory_select/);\n});\n
