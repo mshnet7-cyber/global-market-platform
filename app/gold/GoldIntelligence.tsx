@@ -5,9 +5,9 @@ import Link from "next/link";
 import type { MetalSnapshot } from "../../lib/types";
 import type { PublicPricePoint } from "../../lib/market-history";
 import { calculateGoldPrice, GOLD_KARATS } from "../../lib/gold-pricing";
-import { formatMoneyDisplay } from "../../lib/currency-display";
+import MoneyDisplay from "../../components/MoneyDisplay";
 
-function money(value: number | null | undefined, currency: string, digits = 3) { return formatMoneyDisplay(value, currency, "en-US", digits); }
+function money(value: number | null | undefined, currency: string, digits = 3) { return <MoneyDisplay value={value} currency={currency} locale="en-US" maximumFractionDigits={digits} />; }
 
 function MiniChart({ points, currency }: { points: PublicPricePoint[]; currency: string }) {
   const values = points.map((p) => p.value).filter((v): v is number => typeof v === "number" && Number.isFinite(v));

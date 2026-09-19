@@ -1,5 +1,5 @@
 import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes, randomUUID } from "crypto";
-import { lookup } from "dns/promises";
+import dns from "node:dns";
 import { isIP } from "net";
 import { createSupabaseAdminClient } from "./supabase/admin";
 
@@ -68,12 +68,12 @@ export async function validateWebhookUrl(value: string) {
   const host = url.hostname.replace(/^\[|\]$/g, "").toLowerCase();
   if (host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") || host.endsWith(".internal") || host === "metadata.google.internal") return false;
   if (isIP(host)) return !isPrivateIp(host);
-  try {
-    const addresses = await lookup(host, { all: true, verbatim: true });
-    return addresses.length > 0 && addresses.every((entry) => !isPrivateIp(entry.address));
-  } catch {
-    return false;
-  }
+  const results = await Promise.allSettled([
+    dns.promises.resolve4(host),
+    dns.promises.resolve6(host),
+  ]);
+  const addresses = results.flatMap((result) => result.status === "fulfilled" ? result.value : []);
+  return addresses.length > 0 && addresses.every((address) => !isPrivateIp(address));
 }
 
 function encryptionKey() {

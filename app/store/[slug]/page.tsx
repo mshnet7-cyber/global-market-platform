@@ -4,9 +4,9 @@ import { countries, isValidLanguage } from "../../../lib/config";
 import { getMessages, getDisplayName, isRtlLanguage } from "../../../lib/i18n";
 import { getSnapshot } from "../../../lib/providers";
 import { createSupabaseAdminClient } from "../../../lib/supabase/admin";
-import { formatMoneyDisplay } from "../../../lib/currency-display";
+import MoneyDisplay from "../../../components/MoneyDisplay";
 
-function formatMoney(value: number | null, locale: string, currency: string, maximumFractionDigits = 3) { return formatMoneyDisplay(value, currency, locale, maximumFractionDigits); }
+function formatMoney(value: number | null, locale: string, currency: string, maximumFractionDigits = 3) { return <MoneyDisplay value={value} currency={currency} locale={locale} maximumFractionDigits={maximumFractionDigits} />; }
 
 export default async function StorePage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams?: Promise<{ language?: string }> }) {
   const { slug } = await params;

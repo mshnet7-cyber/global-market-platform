@@ -1,0 +1,18 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "global-market-platform",
+  "main": "./worker/index.ts",
+  "compatibility_date": "2026-09-19",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "dist/client",
+    "not_found_handling": "none",
+    "binding": "ASSETS"
+  },
+  "triggers": {
+    "crons": [
+      "0 0 * * *",
+      "5 0 * * *"
+    ]
+  }
+}
