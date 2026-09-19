@@ -26,6 +26,12 @@ export async function queueCustomerWhatsApp(input:{
   if (!admin) return { queued:false, reason:"service_not_configured" };
   const status=getWhatsAppStatus();
   const payload={kind:input.kind,parameters:input.parameters??[],document_url:input.documentUrl??null,metadata:input.metadata??{}};
+  const eventKey = [input.metadata?.event_id,input.metadata?.submission_id,input.metadata?.sale_id,input.metadata?.order_id,input.metadata?.repair_id].find((value) => value != null && String(value).trim())?.toString().trim();
+  const idempotencyKey = eventKey ? `${input.kind}:${eventKey}` : null;
+  if (idempotencyKey) {
+    const { data: existing } = await admin.from("gmp_whatsapp_messages").select("id,status,external_id").eq("organization_id",input.organizationId).eq("idempotency_key",idempotencyKey).maybeSingle();
+    if (existing) return {queued:true,id:existing.id,sent:existing.status==="sent",idempotent:true};
+  }
   const {data:row,error}=await admin.from("gmp_whatsapp_messages").insert({
     organization_id:input.organizationId,
     recipient,
@@ -33,8 +39,16 @@ export async function queueCustomerWhatsApp(input:{
     template_name:templates[input.kind],
     payload,
     status:"queued",
+    idempotency_key:idempotencyKey,
   }).select("id").single();
-  if(error||!row) return {queued:false,reason:error?.message??"queue_failed"};
+  if(error) {
+    if(idempotencyKey && String(error.code)==="23505") {
+      const { data: existing } = await admin.from("gmp_whatsapp_messages").select("id,status,external_id").eq("organization_id",input.organizationId).eq("idempotency_key",idempotencyKey).maybeSingle();
+      if (existing) return {queued:true,id:existing.id,sent:existing.status==="sent",idempotent:true};
+    }
+    return {queued:false,reason:error.message??"queue_failed"};
+  }
+  if(!row) return {queued:false,reason:"queue_failed"};
   if(status.state!=="live") return {queued:true,id:row.id,integration_state:"integration_ready"};
   try {
     const result=await sendWhatsAppTemplate({to:recipient,templateName:templates[input.kind],parameters:input.parameters,clientReference:row.id});
