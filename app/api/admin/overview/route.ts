@@ -64,7 +64,7 @@ export async function POST(request:Request){
     }
     if(action==="campaign_status"){
       const status=String(b.status||"pending");
-      if(!["pending","approved","active","paused","completed","cancelled"].includes(status))return json({error:"invalid_status"},400);
+      if(!["pending","approved","rejected","paused","completed"].includes(status))return json({error:"invalid_status"},400);
       const {data,error}=await admin.from("gmp_ad_campaigns").update({status,updated_at:new Date().toISOString()}).eq("id",id).select("*").single();
       if(error)return json({error:error.message},400);
       return json({success:true,row:data});
