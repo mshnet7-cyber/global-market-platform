@@ -14,7 +14,7 @@ function cfg() {
 
 export function getEInvoiceStatus() {
   const c = cfg();
-  const state: IntegrationState = c.provider && c.baseUrl && c.apiKey && c.approved ? "live" : "integration_ready";
+  const state: IntegrationState = c.provider && c.baseUrl && c.apiKey && c.webhookSecret && c.approved ? "live" : "integration_ready";
   return { state, provider: c.provider, reason: state === "live" ? undefined : "government_or_provider_credentials_and_approval_not_configured" };
 }
 
