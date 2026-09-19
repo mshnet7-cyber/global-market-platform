@@ -100,7 +100,7 @@ const adminApi=text("app/api/admin/overview/route.ts");
 const logoutRoute=text("app/api/auth/logout/route.ts");
 ok("preview-only demo auth is implemented", demoAuth.includes('VERCEL_ENV === "preview"') && !demoAuth.includes('DEMO_MODE === "true"') && demoAuth.includes("matchDemoCredentials"));
 ok("demo admin credentials route is wired", loginRoute.includes("matchDemoCredentials") && loginRoute.includes('demoRole === "platform_admin"') && adminApi.includes("getDemoSession"));
-ok("demo shop is wired to merchant context", text("lib/merchant-access.ts").includes('demo?.role === "shop_owner"') && text("lib/merchant-access.ts").includes('global-market-demo-shop'));
+ok("demo shop is wired to merchant context", text("lib/merchant-access.ts").includes('if (demo)') && text("lib/merchant-access.ts").includes('demo.role !== "shop_owner"') && text("lib/merchant-access.ts").includes('global-market-demo-shop'));
 ok("demo session is cleared on logout", logoutRoute.includes("clearDemoSession"));
 const demoLoginRoute=text("app/api/auth/demo-login/route.ts");
 const loginPage=text("app/login/page.tsx");
