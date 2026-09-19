@@ -81,3 +81,18 @@ test("E-invoice canonical facade refuses untrusted request origins",()=>{
   assert.ok(src.includes("canonical_origin_invalid"));
   assert.ok(src.includes("localhost"));
 });
+
+test("Form and WhatsApp webhook payloads have explicit transport bounds",()=>{
+  const helper=read("lib/bounded-body.ts");
+  assert.ok(helper.includes("requestContentLengthExceeds"));
+  const whatsapp=read("app/api/stage3/webhooks/whatsapp/route.ts");
+  assert.ok(whatsapp.includes("readBoundedRequestText"));
+  assert.ok(whatsapp.includes("256*1024"));
+  assert.ok(whatsapp.includes("MAX_EVENTS=100"));
+  assert.ok(whatsapp.includes("status:413"));
+  for(const p of["app/api/merchant/documents/route.ts","app/api/stores/create/route.ts","app/api/displays/create/route.ts","app/api/displays/revoke/route.ts"]){
+    const src=read(p);
+    assert.ok(src.includes("requestContentLengthExceeds"));
+    assert.ok(src.includes("request.formData()"));
+  }
+});
