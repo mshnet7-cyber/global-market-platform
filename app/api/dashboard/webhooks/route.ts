@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getMerchantContext } from "../../../../lib/merchant-access";
-import { encryptWebhookSecret } from "../../../../lib/webhooks";
+import { encryptWebhookSecret, validateWebhookUrl } from "../../../../lib/webhooks";
 import { createSupabaseAdminClient } from "../../../../lib/supabase/admin";
 
 const json = (data: unknown, status = 200) => NextResponse.json(data, { status, headers: { "cache-control": "no-store" } });
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     const url = String(body?.url ?? "").trim();
     const secret = String(body?.signing_secret ?? "");
     const events = Array.isArray(body?.event_types) ? body.event_types.map(String) : ["market.alert.triggered"];
-    if (!/^https:\/\/[A-Za-z0-9.-]+(?::\d+)?(?:\/.*)?$/.test(url)) return json({ error: "invalid_webhook_url" }, 400);
+    if (!(await validateWebhookUrl(url))) return json({ error: "invalid_webhook_destination" }, 400);
     if (secret.length < 16 || secret.length > 512) return json({ error: "invalid_webhook_secret" }, 400);
     if (!events.length || events.some((event) => !EVENT_TYPES.includes(event as typeof EVENT_TYPES[number]))) return json({ error: "unsupported_event_type" }, 400);
 
