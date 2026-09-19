@@ -20,3 +20,117 @@ html{background:var(--ux-bg)}body{font-family:Inter,"Noto Sans Arabic","IBM Plex
 @media(max-width:760px){.container,.wrap{width:calc(100% - 28px)}.nav,.dashboard-nav{min-height:68px}.brand{font-size:13px}.brand-mark{width:36px;height:36px}.nav-actions .btn{min-height:40px;padding-inline:12px}.hero-premium{padding:60px 0 28px}.hero h1{font-size:clamp(40px,12vw,58px);line-height:1.03}.lede,.hero p{font-size:15px}.hero-actions{margin-top:21px}.market-price{font-size:48px}.ticker-section{grid-template-columns:1fr;gap:8px}.ticker-label{min-height:36px}.ticker-grid{grid-template-columns:1fr 1fr}.ticker-grid a{padding:11px 12px}.section{padding-top:46px}.section-head{align-items:flex-start;flex-direction:column;gap:8px}.section-head h2{font-size:25px}.market-cards{grid-template-columns:1fr 1fr}.market-card{min-height:136px;padding:15px}.market-card>div:nth-child(2) strong{font-size:18px}.dual-section{grid-template-columns:1fr}.merchant-banner{margin-top:46px;margin-bottom:48px;padding:25px 22px;align-items:flex-start;flex-direction:column}.merchant-banner h2{font-size:24px}.section-page .page-hero{padding:45px 0 18px}.section-header{align-items:flex-start;flex-direction:column;gap:15px}.section-header h1{font-size:clamp(40px,12vw,56px)}.meta-block{text-align:start}.section-page .hero-panel{padding:24px}.panel-value{font-size:47px}.quote-grid{grid-template-columns:1fr!important}.dashboard-main{padding-top:25px}.dashboard-hero{flex-direction:column;align-items:stretch;gap:18px}.dashboard-kpis{grid-template-columns:1fr 1fr}.dashboard-main .grid.grid-4,.dashboard-main .grid.three{grid-template-columns:1fr 1fr}.plan-grid{grid-template-columns:1fr}.plan-strip{grid-template-columns:1fr}.two,.two-col{grid-template-columns:1fr}.dashboard-module-page>.section{padding-top:35px}.dashboard-module-page h1{font-size:40px}.login-page .login-layout{display:grid;grid-template-columns:1fr;gap:26px;min-height:auto;padding-top:35px}.login-page .login-story h1{font-size:40px}.login-page .login-story>p{font-size:14px}.login-card{padding:23px}.login-highlights{grid-template-columns:1fr}.store-page>.section{padding-top:42px}.footer-grid{grid-template-columns:1fr 1fr}.footer-bottom{flex-direction:column;gap:8px}.pricing-page .page-hero{padding-top:45px}}
 @media(max-width:480px){.nav-actions .btn-ghost{display:none}.market-cards,.dashboard-main .grid.grid-4,.dashboard-main .grid.three,.footer-grid{grid-template-columns:1fr}.dashboard-kpis{grid-template-columns:1fr 1fr}.ticker-grid{grid-template-columns:1fr}.market-card{min-height:126px}.market-card>b{display:none}.section-page .site-main{padding-bottom:54px}.section-news .news-card{min-height:120px}.login-page .login-layout{padding-bottom:35px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.btn,.market-card,.module-card,.nav-links a,.dashboard-nav-main a{transition:none}.btn:hover,.market-card:hover,.module-card:hover,.nav-links a:hover,.dashboard-nav-main a:hover{transform:none}}
+
+
+/* 2026 public visual refinement + device-independent Omani Rial symbol */
+.money-display-omr{
+  display:inline-flex;
+  align-items:baseline;
+  direction:ltr;
+  unicode-bidi:isolate;
+  white-space:nowrap;
+  gap:.24em;
+  vertical-align:baseline;
+}
+.omr-symbol{
+  display:inline-block;
+  width:.72em;
+  height:.56em;
+  flex:0 0 .72em;
+  background:currentColor;
+  -webkit-mask:url("/omr-symbol.svg") center / contain no-repeat;
+  mask:url("/omr-symbol.svg") center / contain no-repeat;
+  transform:translateY(.035em);
+}
+.money-display-number{display:inline-block}
+.sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+
+.home-page{
+  background:
+    radial-gradient(900px 520px at 83% 9%,rgba(216,181,106,.09),transparent 60%),
+    radial-gradient(700px 420px at 8% 34%,rgba(99,148,184,.045),transparent 62%),
+    var(--ux-bg);
+}
+.home-page .topbar{background:rgba(6,16,23,.88);border-bottom-color:rgba(239,232,216,.11)}
+.home-page .brand{font-size:16px}
+.home-page .brand-mark{
+  position:relative;
+  width:42px;
+  height:42px;
+  border-radius:13px;
+  background:linear-gradient(145deg,#15242d,#0b151c);
+  border-color:rgba(216,181,106,.34);
+  box-shadow:inset 0 1px rgba(255,255,255,.07),0 12px 30px rgba(0,0,0,.18);
+}
+.home-page .brand-mark:after{
+  content:"";
+  position:absolute;
+  inset:5px;
+  border:1px solid rgba(216,181,106,.16);
+  border-radius:9px;
+}
+.home-page .nav-links a{border-radius:9px}
+.home-page .hero-premium{
+  padding-top:104px;
+  padding-bottom:54px;
+  min-height:600px;
+}
+.home-page .hero-copy-wrap{max-width:760px}
+.home-page .hero h1{
+  font-weight:880;
+  text-wrap:balance;
+}
+.home-page .hero .lede{max-width:650px}
+.home-page .hero-actions{gap:10px}
+.home-page .hero-note{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  padding-top:3px;
+}
+.home-page .market-hero-card{
+  padding:31px;
+  border-radius:24px;
+  background:
+    linear-gradient(145deg,rgba(28,42,50,.98),rgba(8,18,25,.98)),
+    #0d1a22;
+  border-color:rgba(216,181,106,.24);
+  box-shadow:0 34px 90px rgba(0,0,0,.34),inset 0 1px rgba(255,255,255,.035);
+}
+.home-page .market-hero-card:before{
+  content:"";
+  position:absolute;
+  top:-70px;
+  inset-inline-end:-70px;
+  width:190px;
+  height:190px;
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(216,181,106,.16),transparent 68%);
+  pointer-events:none;
+}
+.home-page .market-price{
+  margin-top:38px;
+  font-size:clamp(52px,5.5vw,76px);
+  line-height:.96;
+}
+.home-page .market-price .omr-symbol{width:.68em;height:.52em;flex-basis:.68em}
+.home-page .ticker-grid a,
+.home-page .market-card,
+.home-page .section-panel,
+.home-page .merchant-banner{transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease,background .18s ease}
+.home-page .ticker-grid a:hover{transform:translateY(-1px)}
+.home-page .market-card{min-height:162px}
+.home-page .market-card-gold{box-shadow:inset 0 1px rgba(255,255,255,.025),0 12px 35px rgba(0,0,0,.10)}
+.home-page .section-panel{background:linear-gradient(145deg,#0c1820,#09141b)}
+.home-page .merchant-banner{
+  border-color:rgba(216,181,106,.20);
+  background:
+    linear-gradient(120deg,rgba(216,181,106,.06),transparent 42%),
+    #0b171e;
+}
+.home-page .footer-brand .brand-mark{width:36px;height:36px}
+@media(max-width:760px){
+  .home-page .hero-premium{padding-top:68px;min-height:auto}
+  .home-page .market-hero-card{padding:24px}
+  .home-page .market-price{font-size:48px}
+}
