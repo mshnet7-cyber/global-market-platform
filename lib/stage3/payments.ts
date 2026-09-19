@@ -33,7 +33,7 @@ function cfg() {
 
 export function getPaymentStatus() {
   const c = cfg();
-  const state: IntegrationState = c.checkoutUrl && c.apiKey && c.webhookSecret && c.approved ? "live" : "integration_ready";
+  const state: IntegrationState = c.provider && c.checkoutUrl && c.apiKey && c.webhookSecret && c.approved ? "live" : "integration_ready";
   return { state, provider: c.provider, reason: state === "live" ? undefined : "provider_credentials_or_commercial_approval_not_configured" };
 }
 
