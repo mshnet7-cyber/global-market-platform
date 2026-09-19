@@ -24,6 +24,9 @@ ok("invoicing dashboard exists", existsSync(join(root,"app/dashboard/invoicing/p
 ok("document intelligence API exists", existsSync(join(root,"app/api/merchant/documents/route.ts")));
 ok("document intelligence dashboard exists", existsSync(join(root,"app/dashboard/documents/page.tsx")));
 ok("webhook retry endpoint exists", existsSync(join(root,"app/api/cron/webhooks/route.ts")));
+ok("WhatsApp retry endpoint exists", existsSync(join(root,"app/api/cron/whatsapp/route.ts")));
+const whatsappRetry=text("supabase/migrations/20260919005000_gmp_whatsapp_retry_claim.sql");
+ok("WhatsApp retry claim tracked", whatsappRetry.includes("for update skip locked") && whatsappRetry.includes("gmp_claim_due_whatsapp_messages"));
 const webhookApi=text("app/api/dashboard/webhooks/route.ts");
 ok("webhook destination validation wired", webhookApi.includes("validateWebhookUrl") && webhookApi.includes("invalid_webhook_destination"));
 const webhooks=text("lib/webhooks.ts");
