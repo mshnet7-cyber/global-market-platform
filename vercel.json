@@ -1,7 +1,7 @@
 {
   "framework": "nextjs",
   "crons": [
-    { "path": "/api/cron/webhooks", "schedule": "0 3 * * *" },
-    { "path": "/api/cron/whatsapp", "schedule": "5 3 * * *" }
+    { "path": "/api/cron/webhooks", "schedule": "0 * * * *" },
+    { "path": "/api/cron/whatsapp", "schedule": "5 * * * *" }
   ]
 }
