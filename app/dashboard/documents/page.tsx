@@ -66,11 +66,11 @@ export default function DocumentsPage(){
 
     <section className="stage2-panel">
       <h2>رفع مستند</h2>
-      <p>PDF أو JPG أو PNG أو WEBP حتى 10MB. لا تُعتبر معالجة OCR مباشرة دون مزود فعلي.</p>
+      <p>PDF أو JPG أو PNG أو WEBP حتى 10MB. الرفع متاح دائمًا، بينما معالجة OCR الفعلية تتطلب مزود ذكاء اصطناعي مفعّلًا.</p>
       <div className="stage2-form-grid">
         <label>نوع المستند<select value={type} onChange={e=>setType(e.target.value)}><option value="supplier_invoice">فاتورة مورد</option><option value="expense_receipt">إيصال مصروف</option><option value="identity">هوية</option><option value="repair_photo">صورة إصلاح</option><option value="other">أخرى</option></select></label>
         <label>الملف<input id="doc-file" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" onChange={e=>setFile(e.target.files?.[0]??null)} disabled={busy}/></label>
-        <div className="stage2-actions"><button className="btn btn-primary" disabled={busy||!file} onClick={()=>void upload()}>{busy?"جارٍ التنفيذ…":"رفع وتشغيل OCR"}</button></div>
+        <div className="stage2-actions"><button className="btn btn-primary" disabled={busy||!file} onClick={()=>void upload()}>{busy?"جارٍ التنفيذ…":integration?.state==="live"?"رفع وتشغيل OCR":"رفع المستند"}</button></div>
       </div>
       {progress&&<div className="stage2-callout" role="status">{progress}</div>}
       {message&&<div className="stage2-alert" role="alert">{message}</div>}
@@ -83,7 +83,7 @@ export default function DocumentsPage(){
         <td>{({supplier_invoice:"فاتورة مورد",expense_receipt:"إيصال مصروف",identity:"هوية",repair_photo:"صورة إصلاح",other:"أخرى"} as Record<string,string>)[d.document_type] ?? d.document_type ?? "—"}</td><td>{({pending:"بانتظار المراجعة",approved:"معتمد",rejected:"مرفوض"} as Record<string,string>)[d.review_status] ?? d.review_status ?? "—"}</td><td>{d.ai_confidence==null?"—":Math.round(Number(d.ai_confidence)*100)+"%"}</td>
         <td><details><summary>عرض الاستخراج</summary><pre style={{whiteSpace:"pre-wrap",maxWidth:520}}>{JSON.stringify(d.ai_extracted_data??{},null,2)}</pre></details></td>
         <td><div className="stage2-actions">
-          <button className="btn" disabled={busy} onClick={()=>void action(d.id,"ocr")}>إعادة OCR</button>
+          <button className="btn" disabled={busy||integration?.state!=="live"} onClick={()=>void action(d.id,"ocr")}>إعادة OCR</button>
           {d.review_status==="pending"&&<><button className="btn btn-primary" disabled={busy} onClick={()=>void action(d.id,"review","approved")}>اعتماد</button><button className="btn" disabled={busy} onClick={()=>void action(d.id,"review","rejected")}>رفض</button></>}
         </div></td>
       </tr>)}</tbody></table></div>}
