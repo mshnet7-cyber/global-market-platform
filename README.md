@@ -33,6 +33,6 @@ Known external launch dependencies are kept explicit rather than simulated: comm
 
 The repository contains a parallel Cloudflare Workers path for the Next.js 16 App Router. It uses vinext, the Cloudflare Vite plugin, a Worker entrypoint for the existing scheduled jobs, and Wrangler configuration. The existing Next.js/Vercel commands remain intact.
 
-Run `npm run check:vinext` before adoption, `npm run build:vinext` to build the Workers target, and `npm run deploy:cloudflare` after authenticating Wrangler with a Cloudflare account. The Worker can use a `workers.dev` hostname or a custom domain.
+Run `npm run check:vinext` before adoption, `npm run build:vinext` to build the Workers target, and `npm run deploy:cloudflare:dry-run` to validate the deployment configuration without deploying. After Cloudflare authentication, use `npm run deploy:cloudflare` for the real deployment. The Worker can use a `workers.dev` hostname or a custom domain.
 
 Cloudflare Workers Free is a continuous serverless runtime rather than an unlimited plan: current documented limits include 100,000 requests/day and 3,000 Workers Build minutes/month. The two application cron schedules are within the documented five-cron Free-account allowance. Vinext is currently beta, so the Cloudflare path is maintained separately until runtime compatibility is verified in the deployed environment.
