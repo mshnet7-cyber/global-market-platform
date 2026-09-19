@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { isSameOriginRequest } from "../../../../lib/request-security";
-import { getDemoCredentials, setDemoSession, isDemoEnvironment, type DemoRole } from "../../../../lib/demo-auth";
+import { setDemoSession, isDemoEnvironment, type DemoRole } from "../../../../lib/demo-auth";
 
 export async function POST(request: Request) {
   if (!isSameOriginRequest(request)) return NextResponse.json({ error: "cross_site_request" }, { status: 403 });
