@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "../../../../lib/supabase/server";
+import { isSameOriginRequest } from "../../../../lib/request-security";
 
 function safeNext(value: unknown) {
   const next = String(value ?? "").trim();
@@ -7,6 +8,7 @@ function safeNext(value: unknown) {
 }
 
 export async function POST(request: Request) {
+  if (!isSameOriginRequest(request)) return new NextResponse(JSON.stringify({ error: "cross_site_request" }), { status: 403, headers: { "content-type": "application/json" } });
   const form = await request.formData();
   const email = String(form.get("email") ?? "").trim().toLowerCase();
   const password = String(form.get("password") ?? "");
