@@ -24,7 +24,7 @@ test("e-invoice queue is fail-closed",()=>{
  assert.match(src,/sale\.status !== "issued"/);
  assert.match(src,/connector\.status !== "active"/);
  assert.match(src,/idempotency_key/);
- assert.match(src,/organization_id[\s,]+idempotency_key/); assert.match(src,/idempotent:true/); assert.match(src,/\.insert\(/); assert.doesNotMatch(src,/gmp_einvoice_submissions[^\n]*\.upsert/);
+ assert.match(src,/\.eq\("organization_id", organization\.id\)/); assert.match(src,/\.eq\("idempotency_key", key\)/); assert.match(src,/idempotent:true/); assert.match(src,/\.insert\(/); assert.doesNotMatch(src,/gmp_einvoice_submissions[^\n]*\.upsert/);
 });
 
 test("dashboard exposes all three business workflows",()=>{
