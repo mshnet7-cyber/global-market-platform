@@ -61,7 +61,7 @@ test("Repair lifecycle matches database statuses",()=>{
 
 test("Public store profiles require publication",()=>{ const src=read("app/store/[slug]/page.tsx"); assert.match(src,/notFound\(\)/); assert.match(src,/eq\("status","published"\)/); });
 
-test("Public marketplace order RPC is server-only",()=>{ const m=read("supabase/migrations/20260919001000_gmp_marketplace_rpc_execute_lockdown.sql"); assert.match(m,/revoke execute on function public\.gmp_create_marketplace_order/); assert.match(m,/from public, anon, authenticated/); assert.match(m,/to service_role/); });
+test("Public marketplace order RPC is server-only",()=>{ const m=read("supabase/migrations/20260919000600_gmp_marketplace_rpc_security_hardening.sql"); assert.match(m,/revoke execute on function public\.gmp_create_marketplace_order/); assert.match(m,/from public, anon, authenticated/); assert.match(m,/to service_role/); });
 
 test("No Stage 2 paid checkout or external Stage 3 features",()=>{
   const src=read("app/marketplace/page.tsx");
