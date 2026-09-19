@@ -15,7 +15,7 @@ const pkg = JSON.parse(text("package.json"));
 ok("Next is declared", Boolean(pkg.dependencies?.next));
 ok("build script exists", typeof pkg.scripts?.build === "string");
 ok("lint script exists", typeof pkg.scripts?.lint === "string");
-ok("vinext deployment path exists", typeof pkg.scripts?.["build:vinext"] === "string" && typeof pkg.scripts?.["deploy:cloudflare"] === "string");
+ok("vinext deployment path exists", typeof pkg.scripts?.["build:vinext"] === "string" && typeof pkg.scripts?.["deploy:cloudflare"] === "string" && typeof pkg.scripts?.["deploy:cloudflare:dry-run"] === "string");
 ok("Cloudflare Vite config exists", existsSync(join(root,"vite.config.ts")));
 ok("Cloudflare Wrangler config exists", existsSync(join(root,"wrangler.jsonc")));
 ok("Cloudflare worker entry exists", existsSync(join(root,"worker/index.ts")));
@@ -68,9 +68,9 @@ const ci=text(".github/workflows/ci.yml");
 ok("CI runs tests", ci.includes("npm test"));
 ok("CI runs lint", ci.includes("npm run lint"));
 ok("CI runs build", ci.includes("npm run build"));
+ok("CI validates Cloudflare dry-run", ci.includes("npm run deploy:cloudflare:dry-run"));
 const hardening=text("supabase/migrations/20260918204134_gmp_p0_p1_hardening_20260919.sql");
 ok("marketplace abuse protection tracked", hardening.includes("gmp_public_order_rate_limits") && hardening.includes("gmp_allow_public_marketplace_order"));
-
 ok("marketplace RPC execute lockdown tracked", marketplaceLock.includes("revoke execute on function public.gmp_create_marketplace_order") && marketplaceLock.includes("from anon,authenticated"));
 ok("webhook retry hardening tracked", hardening.includes("gmp_claim_due_webhook_deliveries") && hardening.includes("dead_lettered"));
 const launchIndexes=text("supabase/migrations/20260919004107_gmp_launch_fk_indexes.sql");
@@ -85,8 +85,6 @@ ok("billing claim migration tracked", billingClaim.includes("gmp_claim_billing_e
 ok("e-invoice claim migration tracked", einvoiceClaim.includes("gmp_claim_einvoice_send") && einvoiceClaim.includes("for update") && einvoiceClaim.includes("revoke execute"));
 ok("compliance active-case guard tracked", complianceGuard.includes("gmp_compliance_active_entity_uniq"));
 ok("health endpoint does not expose env names", !text("app/api/health/route.ts").includes("missingEnvironmentVariables"));
-
-
 ok("Cloudflare cron bridge is configured", text("worker/index.ts").includes("/api/cron/webhooks") && text("worker/index.ts").includes("/api/cron/whatsapp") && text("worker/index.ts").includes("controller.cron"));
 ok("Cloudflare Workers config uses Worker entry and daily crons", text("wrangler.jsonc").includes('"main": "./worker/index.ts"') && text("wrangler.jsonc").includes('"0 0 * * *"') && text("wrangler.jsonc").includes('"5 0 * * *"'));
 console.log(`verify-project: ${checks.length} checks passed`);
