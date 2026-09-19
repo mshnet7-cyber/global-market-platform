@@ -63,7 +63,15 @@ test("Webhook retry claim uses a lease to prevent concurrent delivery",()=>{
 });
 
 
-test("Provider response limits are streaming, not post-buffer checks",()=>{\n const helper=read("lib/stage3/provider-http.ts");\n for(const p of ["lib/stage3/payments.ts","lib/stage3/einvoice.ts","lib/stage3/whatsapp.ts"]) assert.match(read(p),/readBoundedText/);\n assert.match(helper,/getReader\(\)/);\n assert.match(helper,/value\.byteLength/);\n assert.match(helper,/1_000_000/);\n});\n\ntest("Provider endpoints are HTTPS-only and outbound responses are bounded",()=>{
+test("Provider response limits are streaming, not post-buffer checks",()=>{
+ const helper=read("lib/stage3/provider-http.ts");
+ for(const p of ["lib/stage3/payments.ts","lib/stage3/einvoice.ts","lib/stage3/whatsapp.ts"]) assert.match(read(p),/readBoundedText/);
+ assert.match(helper,/getReader\(\)/);
+ assert.match(helper,/value\.byteLength/);
+ assert.match(helper,/1_000_000/);
+});
+
+test("Provider endpoints are HTTPS-only and outbound responses are bounded",()=>{
  const whatsapp=read("lib/stage3/whatsapp.ts");
  const payment=read("lib/stage3/payments.ts");
  const invoice=read("lib/stage3/einvoice.ts");
