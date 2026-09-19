@@ -44,3 +44,14 @@ test("existing public market page is superseded by a focused terminal",()=>{
   assert.match(read("app/markets/page.tsx"),/MarketTerminal/);
   assert.match(read("app/gold/page.tsx"),/GoldIntelligence/);
 });
+
+
+test("auth state-changing routes enforce same-origin requests",()=>{
+ for (const path of ["app/api/auth/login/route.ts","app/api/auth/signup/route.ts","app/api/auth/logout/route.ts"]) {
+  const src=read(path); assert.match(src,/isSameOriginRequest/); assert.match(src,/cross_site_request/);
+ }
+});
+
+test("security headers are defined once with no conflicting duplicate policy blocks",()=>{
+ const src=read("next.config.ts"); assert.equal((src.match(/source: \"\/\(\.\*\)\\"/g)||[]).length,1); assert.match(src,/X-Content-Type-Options/); assert.match(src,/X-Frame-Options/); assert.match(src,/Permissions-Policy/);
+});
