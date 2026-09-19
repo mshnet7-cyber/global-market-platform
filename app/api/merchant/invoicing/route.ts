@@ -95,11 +95,29 @@ export async function POST(request: Request) {
       validateInvoicePayload(payload);
       const admin = createSupabaseAdminClient();
       if (!admin) return NextResponse.json({ error: "service_not_configured" }, { status: 503 });
-      await admin.from("gmp_einvoice_submissions").update({status:"sending",error_code:null,error_message:null,updated_at:new Date().toISOString()}).eq("id",submission.id);
-      const { data: lastAttempt } = await admin.from("gmp_einvoice_attempts").select("attempt_no").eq("submission_id",submission.id).order("attempt_no",{ascending:false}).limit(1).maybeSingle();
-      const attemptNo=Number(lastAttempt?.attempt_no??0)+1;
-      try { const result=await submitInvoice(payload); await admin.from("gmp_einvoice_submissions").update({status:"submitted",request_hash:result.requestHash,submitted_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq("id",submission.id); await admin.from("gmp_einvoice_attempts").insert({submission_id:submission.id,attempt_no:attemptNo,status:"submitted",request_hash:result.requestHash}); return NextResponse.json({success:true,submission_id:submission.id,attempt_no:attemptNo,provider:result.data}); }
-      catch(e){const message=e instanceof Error?e.message.slice(0,500):"provider_error";await admin.from("gmp_einvoice_submissions").update({status:"failed",error_code:"provider_error",error_message:message,updated_at:new Date().toISOString()}).eq("id",submission.id);await admin.from("gmp_einvoice_attempts").insert({submission_id:submission.id,attempt_no:attemptNo,status:"failed",error_code:"provider_error",error_message:message});return NextResponse.json({error:"einvoice_provider_failed",retryable:true,submission_id:submission.id,attempt_no:attemptNo},{status:502})}
+      const { data: claimed, error: claimError } = await admin.rpc("gmp_claim_einvoice_send", {
+        p_submission_id: submission.id,
+        p_organization_id: organization.id,
+      });
+      if (claimError) {
+        const message = claimError.message.includes("submission_not_sendable") ? "submission_not_sendable" : claimError.message.includes("submission_not_found") ? "submission_not_found" : claimError.message;
+        return NextResponse.json({ error: message }, { status: message === "submission_not_sendable" ? 409 : 400 });
+      }
+      const claim = Array.isArray(claimed) ? claimed[0] : claimed;
+      if (!claim?.attempt_id || !claim?.attempt_no) return NextResponse.json({ error: "send_claim_failed" }, { status: 409 });
+      const attemptNo=Number(claim.attempt_no);
+      try {
+        const result=await submitInvoice(payload);
+        const { error: attemptUpdateError } = await admin.from("gmp_einvoice_attempts").update({status:"submitted",request_hash:result.requestHash}).eq("id",claim.attempt_id).eq("submission_id",submission.id);
+        if (attemptUpdateError) return NextResponse.json({ error: "attempt_record_update_failed" }, { status: 503 });
+        await admin.from("gmp_einvoice_submissions").update({status:"submitted",request_hash:result.requestHash,submitted_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq("id",submission.id).eq("organization_id",organization.id);
+        return NextResponse.json({success:true,submission_id:submission.id,attempt_no:attemptNo,provider:result.data});
+      } catch(e) {
+        const message=e instanceof Error?e.message.slice(0,500):"provider_error";
+        await admin.from("gmp_einvoice_submissions").update({status:"failed",error_code:"provider_error",error_message:message,updated_at:new Date().toISOString()}).eq("id",submission.id).eq("organization_id",organization.id);
+        await admin.from("gmp_einvoice_attempts").update({status:"failed",error_code:"provider_error",error_message:message}).eq("id",claim.attempt_id).eq("submission_id",submission.id);
+        return NextResponse.json({error:"einvoice_provider_failed",retryable:true,submission_id:submission.id,attempt_no:attemptNo},{status:502});
+      }}
     }
     return NextResponse.json({ error: "unsupported_action" }, { status: 400 });
   } catch (error) {
