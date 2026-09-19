@@ -100,3 +100,26 @@ test("Form and WhatsApp webhook payloads have explicit transport bounds",()=>{
     assert.ok(src.includes("413"));
   }
 });
+
+test("Trusted callback origin is centralized and request-host independent",()=>{
+  const helper=read("lib/trusted-origin.ts");
+  const billing=read("app/api/stage3/billing/route.ts");
+  const einvoice=read("app/api/stage3/einvoice/route.ts");
+  assert.ok(helper.includes("NEXT_PUBLIC_SITE_URL"));
+  assert.ok(helper.includes("GMP_APP_URL"));
+  assert.ok(helper.includes("VERCEL_URL"));
+  assert.ok(helper.includes("canonical_origin_not_configured"));
+  assert.ok(helper.includes("canonical_origin_invalid"));
+  assert.ok(helper.includes("url.username || url.password"));
+  assert.ok(billing.includes("getTrustedAppOrigin"));
+  assert.ok(einvoice.includes("getTrustedAppOrigin"));
+  assert.doesNotMatch(billing,/new URL\(request\.url\)\.origin/);
+  assert.doesNotMatch(einvoice,/new URL\(request\.url\)\.origin/);
+});
+
+test("Regional public endpoint bounds country selector",()=>{
+  const route=read("app/api/stage3/regional/route.ts");
+  assert.match(route,/\^\[A-Z\]\{2\}\$/);
+  assert.ok(route.includes("invalid_country"));
+  assert.ok(route.includes("getRegionalProfile"));
+});
