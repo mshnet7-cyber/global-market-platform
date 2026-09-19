@@ -26,7 +26,12 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         {notice && <div className="notice" role="status">{notice}</div>}
         <form className="login-form" action="/api/auth/login" method="post"><input type="hidden" name="next" value={next} /><label className="label">البريد الإلكتروني<input className="select" type="email" name="email" autoComplete="email" inputMode="email" required /></label><label className="label">كلمة المرور<input className="select" type="password" name="password" autoComplete="current-password" required /></label><button className="btn btn-primary" type="submit">دخول إلى لوحة المحل</button></form>
         <div className="actions" style={{marginTop:14}}><Link className="btn" href={"/signup?next=" + encodeURIComponent(next)}>إنشاء حساب جديد</Link><Link className="btn btn-ghost" href="/pricing">مشاهدة الباقات</Link></div>
-        <div className="login-security">شاشة العرض العامة لا تحتاج إلى كلمة مرور الحساب. لا تدخل بياناتك على جهاز مشترك إلا بعد التأكد من تسجيل الخروج.</div>
+        {process.env.VERCEL_ENV === "preview" && <div className="notice" style={{marginTop:16}}>
+          <strong>بيانات التجربة للمعاينة</strong>
+          <div style={{marginTop:8}}>إدارة المنصة: <code>admin@accounts.omangold.local</code> / <code>GMP-Demo-Admin-2026!</code></div>
+          <div style={{marginTop:4}}>المحل: <code>sharaf@accounts.omangold.local</code> / <code>GMP-Demo-Shop-2026!</code></div>
+        </div>}
+        <div className="login-security">شاشة العرض العامة لا تحتاج إلى كلمة مرور الحساب. حسابات التجربة تعمل في نسخة المعاينة فقط.</div>
       </section>
     </main>
   </div>;
