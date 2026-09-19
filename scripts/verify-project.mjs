@@ -68,6 +68,6 @@ const einvoiceClaim=text("supabase/migrations/20260919006000_gmp_einvoice_send_c
 const complianceGuard=text("supabase/migrations/20260919007000_gmp_compliance_active_case_guard.sql");
 ok("billing claim migration tracked", billingClaim.includes("gmp_claim_billing_event") && billingClaim.includes("for update") && billingClaim.includes("revoke execute"));
 ok("e-invoice claim migration tracked", einvoiceClaim.includes("gmp_claim_einvoice_send") && einvoiceClaim.includes("for update") && einvoiceClaim.includes("revoke execute"));
-ok("compliance active-case guard tracked", complianceGuard.includes("gmp_compliance_active_entity_uniq"));
+ok("compliance active-case guard tracked", complianceGuard.includes("gmp_compliance_active_entity_uniq"));\nconst rlsConsolidation=text("supabase/migrations/20260919010000_gmp_rls_policy_consolidation.sql");\nok("RLS policy consolidation tracked", rlsConsolidation.includes("gmp_marketplace_listings_select") && rlsConsolidation.includes("gmp_store_directory_select") && rlsConsolidation.includes("admin_insert") && rlsConsolidation.includes("admin_update") && rlsConsolidation.includes("admin_delete"));
 ok("health endpoint does not expose env names", !text("app/api/health/route.ts").includes("missingEnvironmentVariables"));
 console.log(`verify-project: ${checks.length} checks passed`);
