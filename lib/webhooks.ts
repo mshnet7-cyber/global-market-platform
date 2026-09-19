@@ -161,8 +161,9 @@ export async function deliverWebhookAttempt(admin:any, delivery:any, body?:strin
   } catch(error) {
     const attempt=Number(delivery.attempts??0)+1;
     const max=Number(delivery.max_attempts??8);
-    const nextAttempt=attempt>=max?null:new Date(Date.now()+Math.min(24*60*60_000,Math.pow(2,Math.max(0,attempt-1))*30_000+Math.floor(Math.random()*5000))).toISOString();
-    await admin.from("gmp_webhook_deliveries").update({ok:false,attempts:attempt,last_attempt_at:new Date().toISOString(),next_attempt_at:nextAttempt,dead_lettered:attempt>=max,error_message:error instanceof Error?error.message.slice(0,500):"delivery_failed"}).eq("id",delivery.id);
+    const blocked = error instanceof Error && error.message === "webhook_destination_not_allowed";
+    const nextAttempt=blocked || attempt>=max ? null : new Date(Date.now()+Math.min(24*60*60_000,Math.pow(2,Math.max(0,attempt-1))*30_000+Math.floor(Math.random()*5000))).toISOString();
+    await admin.from("gmp_webhook_deliveries").update({ok:false,attempts:attempt,last_attempt_at:new Date().toISOString(),next_attempt_at:nextAttempt,dead_lettered:blocked || attempt>=max,error_message:error instanceof Error?error.message.slice(0,500):"delivery_failed"}).eq("id",delivery.id);
     return false;
   }
 }
