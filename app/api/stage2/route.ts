@@ -1,3 +1,4 @@
+import { readBoundedRequestJson } from "../../../lib/bounded-body";
 import { NextResponse } from "next/server";
 import crypto from "node:crypto";
 import { createSupabaseAdminClient } from "../../../lib/supabase/admin";
@@ -26,7 +27,7 @@ function isUuid(value: string) {
 function hash(value: string) { return crypto.createHash("sha256").update(value).digest("hex"); }
 
 async function body(request: Request) {
-  return asObject(await request.json().catch(() => null));
+  return asObject(await readBoundedRequestJson(request, 64 * 1024));
 }
 
 async function orgStore(supabase: any, organizationId: string, storeId: string) {
@@ -206,7 +207,13 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const b = await body(request);
+  let b: Record<string, unknown>;
+  try {
+    b = await body(request);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "invalid_json";
+    return json({ error: message }, message === "request_body_too_large" ? 413 : 400);
+  }
   const action = text(b.action, 80);
   try {
     if (action === "marketplace_order") {
