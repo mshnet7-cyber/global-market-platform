@@ -39,7 +39,8 @@ async function invoke(path: string, payload: Record<string, unknown>): Promise<A
   const timer = setTimeout(() => controller.abort(), 10_000);
   let response: Response;
   try {
-    response = await fetch(new URL(path, `${baseUrl.toString().replace(/\/$/, "")}/`), {
+    const endpoint = `${baseUrl.toString().replace(/\/$/, "")}${path.startsWith("/") ? path : `/${path}`}`;
+    response = await fetch(endpoint, {
       method: "POST",
       headers: {
         "content-type": "application/json",
