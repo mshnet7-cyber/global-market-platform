@@ -71,7 +71,7 @@ export default function OperationsPage(){
         <div><span>الذهب المشترى</span><strong>{data.goldPurchases.length}</strong><small>{money(data.goldPurchases.slice(0,30).reduce((s,p)=>s+num(p.weight_grams),0))} غ</small></div>
       </div>
       <div className="stage2-grid two">
-        <article className="stage2-panel"><div className="stage2-panel-head"><h2>تكامل المرحلة الأولى</h2><span className="stage2-badge">{data.planCode}</span></div><p>التسعير المرجعي بقي في lib/gold-pricing.ts، والسوق في طبقة Stage 1. البيع هنا يستدعي مسار الترحيل الذري الموجود.</p><div className="stage2-mini-list"><div>نقطة البيع ← المخزون ← تكلفة المبيعات ← القيد</div><div>شراء الذهب ← الهوية / المخاطر / المراجعة</div><div>الإصلاحات ← دورة القطعة ← أساس سجل التدقيق</div><div>السوق ← تواصل / طلب، دون دفع إلكتروني</div></div></article>
+        <article className="stage2-panel"><div className="stage2-panel-head"><h2>تكامل المرحلة الأولى</h2><span className="stage2-badge">{data.planCode==="business"?"الكاملة":data.planCode==="pro"?"الأعمال":data.planCode||"غير محددة"}</span></div><p>التسعير المرجعي بقي في lib/gold-pricing.ts، والسوق في طبقة Stage 1. البيع هنا يستدعي مسار الترحيل الذري الموجود.</p><div className="stage2-mini-list"><div>نقطة البيع ← المخزون ← تكلفة المبيعات ← القيد</div><div>شراء الذهب ← الهوية / المخاطر / المراجعة</div><div>الإصلاحات ← دورة القطعة ← أساس سجل التدقيق</div><div>السوق ← تواصل / طلب، دون دفع إلكتروني</div></div></article>
         <article className="stage2-panel"><h2>المتاجر</h2>{data.stores.map(s=><div className="stage2-row" key={s.id}><div><strong>{s.name}</strong><small>{s.country_code} · {s.currency}</small></div><span>{s.timezone}</span></div>)}</article>
       </div>
     </section>}
