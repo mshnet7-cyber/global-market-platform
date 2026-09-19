@@ -1,12 +1,14 @@
 import { makeMetalSnapshot } from './price-engine';
 import type { MetalSnapshot, NewsItem } from './types';
+import { readBoundedJson } from './stage3/provider-http';
 
 const FREE_TIMEOUT_MS = 4500;
+const MAX_PROVIDER_JSON_BYTES = 512 * 1024;
 const MAX_NEWS_AGE_MS = 10 * 60 * 1000;
 const MAX_METAL_AGE_MS = 10 * 60 * 1000;
 const LIVE_METAL_MAX_AGE_MS = 90 * 1000;
 
-async function safeJson(url: string, init?: RequestInit) {
+async function safeJson<T = any>(url: string, init?: RequestInit): Promise<T> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FREE_TIMEOUT_MS);
   try {
@@ -17,7 +19,7 @@ async function safeJson(url: string, init?: RequestInit) {
       headers: { Accept: 'application/json', ...(init?.headers ?? {}) },
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return await response.json();
+    return await readBoundedJson<T>(response, MAX_PROVIDER_JSON_BYTES);
   } finally {
     clearTimeout(timer);
   }
@@ -29,7 +31,7 @@ export async function fetchFrankfurterRate(from: string, to: string): Promise<nu
   if (source === target) return 1;
   try {
     const url = new URL(`https://api.frankfurter.dev/v2/rate/${encodeURIComponent(source)}/${encodeURIComponent(target)}`);
-    const json = await safeJson(url.toString());
+    const json = await safeJson<{ rate?: unknown }>(url.toString());
     return typeof json.rate === 'number' && Number.isFinite(json.rate) && json.rate > 0 ? json.rate : null;
   } catch {
     return null;
@@ -53,7 +55,7 @@ function parseTimestamp(value: unknown): string | null {
 
 export async function fetchGoldApi(symbol: 'XAU' | 'XAG'): Promise<{ price: number; bid: number | null; ask: number | null; timestamp: string | null } | null> {
   try {
-    const json = await safeJson(`https://api.gold-api.com/price/${symbol}`);
+    const json = await safeJson<Record<string, unknown>>(`https://api.gold-api.com/price/${symbol}`);
     const price = Number(json.price);
     if (!Number.isFinite(price) || price <= 0) return null;
     const bid = Number(json.bid);
@@ -77,7 +79,7 @@ export async function fetchCurrentGold(symbol: 'XAU' | 'XAG'): Promise<{ price: 
   try {
     const url = new URL(endpoint);
     url.searchParams.set('symbol', symbol);
-    const json = await safeJson(url.toString(), {
+    const json = await safeJson<Record<string, unknown>>(url.toString(), {
       headers: { 'x-api-key': key, Accept: 'application/json' },
     });
     const metal = String(json.metal ?? '').toUpperCase();
@@ -166,7 +168,7 @@ export async function fetchMarketaux(language: string): Promise<NewsItem[] | nul
     url.searchParams.set('filter_entities', 'true');
     url.searchParams.set('group_similar', 'true');
     url.searchParams.set('limit', '10');
-    const json = await safeJson(url.toString());
+    const json = await safeJson<{ data?: unknown }>(url.toString());
     if (!Array.isArray(json.data)) return [];
     return json.data.map((item: any, i: number) => {
       const title = String(item.title ?? 'Untitled');
@@ -204,7 +206,7 @@ export async function fetchNewsData(language: string): Promise<NewsItem[] | null
     url.searchParams.set('apikey', key);
     url.searchParams.set('language', language);
     url.searchParams.set('size', '10');
-    const json = await safeJson(url.toString());
+    const json = await safeJson<{ results?: unknown }>(url.toString());
     if (!Array.isArray(json.results)) return [];
     return json.results.map((item: any, i: number) => ({
       id: String(item.article_id ?? `newsdata-${i}`),
