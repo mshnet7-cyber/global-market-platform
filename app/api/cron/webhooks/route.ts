@@ -4,7 +4,7 @@ import { deliverWebhookAttempt } from "../../../../lib/webhooks";
 
 export const runtime="nodejs";
 
-export async function POST(request:Request){
+async function run(request:Request){
   const secret=process.env.CRON_SECRET?.trim() || process.env.GMP_CRON_SECRET?.trim();
   const provided=request.headers.get("authorization")?.replace(/^Bearer\s+/i,"") || request.headers.get("x-cron-secret");
   if(!secret || !provided || provided!==secret) return NextResponse.json({error:"unauthorized"},{status:401});
@@ -19,3 +19,7 @@ export async function POST(request:Request){
   }
   return NextResponse.json({success:true,processed,delivered,failed:processed-delivered});
 }
+
+
+export async function GET(request:Request){ return run(request); }
+export async function POST(request:Request){ return run(request); }
