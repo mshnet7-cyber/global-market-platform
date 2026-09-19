@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 type Doc=any;
 
@@ -13,12 +13,12 @@ export default function DocumentsPage(){
   const [progress,setProgress]=useState("");
   const [message,setMessage]=useState("");
 
-  async function load(){
+  const load=useCallback(async()=>{
     const r=await fetch("/api/merchant/documents",{cache:"no-store"});
     const d=await r.json();
     if(r.ok){setDocs(d.documents??[]);setIntegration(d.integration)}else setMessage(d.error??"تعذر تحميل المستندات");
-  }
-  useEffect(()=>{void load()},[]);
+  },[]);
+  useEffect(()=>{void load()},[load]);
 
   async function upload(){
     if(!file)return setMessage("اختر مستندًا أولًا");
