@@ -21,7 +21,7 @@ export async function POST(request: Request) {
   if (!isSameOriginRequest(request)) return new NextResponse(JSON.stringify({ error: "cross_site_request" }), { status: 403, headers: { "content-type": "application/json" } });
   let form: FormData;
   try { form = await readBoundedRequestFormData(request, 64 * 1024); }
-  catch (error) { return new NextResponse(error instanceof Error && error.message === "request_body_too_large" ? "Request body too large." : "Invalid request body.", { status: 400 }); }
+  catch (error) { return new NextResponse(error instanceof Error && error.message === "request_body_too_large" ? "Request body too large." : "Invalid request body.", { status: error instanceof Error && error.message === "request_body_too_large" ? 413 : 400 }); }
   const name = String(form.get("name") ?? "").trim().slice(0, 120);
   const email = String(form.get("email") ?? "").trim().toLowerCase();
   const password = String(form.get("password") ?? "");
