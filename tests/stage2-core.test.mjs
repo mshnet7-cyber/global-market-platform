@@ -70,3 +70,11 @@ test("No Stage 2 paid checkout or external Stage 3 features",()=>{
   assert.doesNotMatch(src,/stripe|checkout\\.com|payment_intent/i);
   assert.match(src,/payment-free|بدون دفع/i);
 });
+
+
+test("Public store response scopes branches to the requested store branch",()=>{
+ const src=read("app/api/stage2/route.ts");
+ assert.match(src,/branch_id,name,slug/);
+ assert.match(src,/\.eq\("id", store\.branch_id\)/);
+ assert.doesNotMatch(src,/\.eq\("organization_id", store\.organization_id\)\.eq\("active",true\)\.order\("name"\)/);
+});
