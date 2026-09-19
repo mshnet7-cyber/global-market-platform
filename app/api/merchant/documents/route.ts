@@ -34,7 +34,13 @@ export async function POST(request:Request){
     if(requestContentLengthExceeds(request, MAX_BYTES + 256 * 1024)) return json({error:"request_body_too_large",max_bytes:MAX_BYTES},413);
     const {supabase,organization,user}=await requireMerchantPlan(["business"]);
     const admin=createSupabaseAdminClient(); if(!admin)return json({error:"service_not_configured"},503);
-    const form=await readBoundedRequestFormData(request, MAX_BYTES + 256 * 1024);
+    let form: FormData;
+    try {
+      form = await readBoundedRequestFormData(request, MAX_BYTES + 256 * 1024);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "invalid_request";
+      return json({error:message==="request_body_too_large"?"request_body_too_large":"invalid_request_body"},message==="request_body_too_large"?413:400);
+    }
     const action=String(form.get("action")??"upload");
     if(action==="upload"){
       const file=form.get("file");
