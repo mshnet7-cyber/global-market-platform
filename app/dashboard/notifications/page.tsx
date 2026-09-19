@@ -12,7 +12,7 @@ export default async function NotificationsPage(){
   return <div className="dashboard-shell">
     <DashboardHeader organizationName={organization.name} role={role} planName={planCode||"لا توجد خطة فعالة"} />
     <main className="wrap section dashboard-module-page">
-      <div className="eyebrow">NOTIFICATIONS</div>
+      <div className="eyebrow">الإشعارات</div>
       <h1>الإشعارات</h1>
       <p className="hero-copy">تنبيهات السوق والأحداث المرتبطة بحسابك. غير المقروء يبقى واضحًا حتى تراجعه.</p>
       <NotificationsWorkspace initialNotifications={data??[]} />
