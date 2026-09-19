@@ -1,3 +1,4 @@
+import { readBoundedRequestJson } from "../../../../lib/bounded-body";
 import { NextResponse } from "next/server";
 import { requireMerchantPlan } from "../../../../lib/merchant-access";
 import { buildInvoicePayload, getEInvoiceStatus, validateInvoicePayload } from "../../../../lib/stage3/einvoice";
@@ -12,7 +13,7 @@ export async function GET(){
 export async function POST(request:Request){
   try{
     const { organization }=await requireMerchantPlan(["business"]);
-    const body=await request.json().catch(()=>null) as Record<string,unknown>|null;
+    const body=await readBoundedRequestJson(request, 64 * 1024).catch(()=>null) as Record<string,unknown>|null;
     if(!body)return json({error:"invalid_json"},400);
     const action=String(body.action??"validate");
     if(!["validate","queue","send"].includes(action)) return json({error:"unsupported_action"},400);
