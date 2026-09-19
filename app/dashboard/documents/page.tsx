@@ -26,13 +26,13 @@ export default function DocumentsPage(){
     try{
       const fd=new FormData();fd.set("action","upload");fd.set("file",file);fd.set("document_type",type);
       const r=await fetch("/api/merchant/documents",{method:"POST",body:fd});const d=await r.json();
-      if(!r.ok)throw new Error(d.error??"upload_failed");
+      if(!r.ok)throw new Error(d.error??"تعذر حفظ المستند");
       setProgress("2/4 تم إنشاء سجل المستند. بدء OCR…");
       const o=new FormData();o.set("action","ocr");o.set("document_id",d.document.id);
       const or=await fetch("/api/merchant/documents",{method:"POST",body:o});const od=await or.json();
       if(!or.ok){
         setProgress("2/4 تم الرفع، لكن OCR غير متاح حاليًا.");
-        setMessage(od.integration_state==="integration_ready"?"المستند محفوظ بأمان. أضف AI provider credentials لتشغيل OCR.":od.error??"تعذر تشغيل OCR");
+        setMessage(od.integration_state==="integration_ready"?"المستند محفوظ بأمان. أضف بيانات اعتماد مزود الذكاء الاصطناعي لتشغيل OCR.":od.error??"تعذر تشغيل OCR");
       }else{
         setProgress("3/4 اكتمل OCR. النتيجة بانتظار المراجعة.");
         setMessage("تم استخراج البيانات. راجع النتيجة ثم وافق أو ارفض.");
@@ -49,7 +49,7 @@ export default function DocumentsPage(){
       const fd=new FormData();fd.set("action",action);fd.set("document_id",documentId);if(status)fd.set("status",status);
       setProgress(action==="ocr"?"إعادة تشغيل OCR…":"حفظ قرار المراجعة…");
       const r=await fetch("/api/merchant/documents",{method:"POST",body:fd});const d=await r.json();
-      if(!r.ok)throw new Error(d.error??"operation_failed");
+      if(!r.ok)throw new Error(d.error??"تعذر تنفيذ العملية");
       setMessage(action==="ocr"?"تم تحديث نتيجة OCR.":"تم حفظ قرار المراجعة.");
       await load();
     }catch(e){setMessage(e instanceof Error?e.message:"تعذر تنفيذ العملية")}
@@ -60,7 +60,7 @@ export default function DocumentsPage(){
     <header className="topbar"><div className="container nav site-nav"><a href="/dashboard" className="brand"><span className="brand-mark">GM</span><span>GLOBAL <b>MARKET</b></span></a><nav className="nav-links" aria-label="تنقل لوحة المحل"><a href="/dashboard">الرئيسية</a><a href="/dashboard/sales">المبيعات</a><a href="/dashboard/inventory">المخزون</a><a href="/dashboard/reports">التقارير</a><a href="/dashboard/integrations">التكاملات</a></nav><div className="nav-actions"><a className="btn btn-ghost" href="/dashboard">لوحة التحكم</a></div></div></header>
   <main className="wrap section dashboard-module-page">
     <header className="stage2-page-head">
-      <div><div className="eyebrow">ذكاء المستندات</div><h1>المستندات و OCR</h1><p>رفع آمن → سجل مستند → OCR → مراجعة → اعتماد/رفض. المستندات خاصة وليست Public.</p></div>
+      <div><div className="eyebrow">ذكاء المستندات</div><h1>المستندات و OCR</h1><p>رفع آمن → سجل مستند → OCR → مراجعة → اعتماد/رفض. المستندات خاصة وليست عامة.</p></div>
       <span className="stage2-badge">{integration?.state==="live"?"OCR مباشر":"OCR جاهز للتكامل"}</span>
     </header>
 
