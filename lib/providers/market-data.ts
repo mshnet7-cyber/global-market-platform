@@ -143,7 +143,7 @@ async function fetchEodhd(symbols: readonly SymbolDef[]): Promise<ProviderResult
   if (!commercialDisplayAllowed()) return null;
   const key = process.env.EODHD_API_KEY;
   if (!key) return null;
-  const results = await Promise.all(symbols.map(async (item) => {
+  const results: Array<Quote | null> = await Promise.all(symbols.map(async (item): Promise<Quote | null> => {
     try {
       const url = new URL(`https://eodhd.com/api/real-time/${encodeURIComponent(item.symbol)}.US`);
       url.searchParams.set("api_token", key);
@@ -175,7 +175,7 @@ async function fetchEodhd(symbols: readonly SymbolDef[]): Promise<ProviderResult
       return null;
     }
   }));
-  const quotes = results.filter((quote): quote is Quote => Boolean(quote));
+  const quotes = results.filter((quote): quote is Quote => quote !== null);
   return quotes.length ? { quotes, provider: "EODHD" } : null;
 }
 
