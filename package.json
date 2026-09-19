@@ -13,7 +13,8 @@
     "deploy:cloudflare": "vinext build && wrangler deploy",
     "lint": "eslint .",
     "verify": "node scripts/verify-project.mjs",
-    "test": "node --test tests/merchant-workflows.test.mjs tests/stage1-core.test.mjs tests/stage2-core.test.mjs tests/stage3-core.test.mjs && npm run verify"
+    "test": "node --test tests/merchant-workflows.test.mjs tests/stage1-core.test.mjs tests/stage2-core.test.mjs tests/stage3-core.test.mjs && npm run verify",
+    "check:vinext": "vinext check"
   },
   "dependencies": {
     "@supabase/ssr": "0.7.0",
@@ -25,7 +26,7 @@
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "1.56.0",
-    "@cloudflare/workers-types": "4.20260919.0",
+    "@cloudflare/workers-types": "5.20260919.1",
     "@types/node": "22.10.2",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
