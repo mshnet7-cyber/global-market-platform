@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from "../../../../lib/supabase/server";
 import { createSupabaseAdminClient } from "../../../../lib/supabase/admin";
 import { getMerchantContext } from "../../../../lib/merchant-access";
 import { isValidCountry } from "../../../../lib/config";
+import { requestContentLengthExceeds } from "../../../../lib/bounded-body";
 
 function slugify(value: string) {
   return value.toLowerCase().trim().replace(/[^a-z0-9\u0600-\u06ff]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "store";
@@ -29,6 +30,8 @@ export async function POST(request: Request) {
   const { user, organization, role } = context;
   if (!user) return NextResponse.redirect(new URL("/login?next=/dashboard", request.url));
   if (!organization || !role || role === "viewer") return NextResponse.redirect(new URL("/dashboard?error=forbidden", request.url));
+
+  if (requestContentLengthExceeds(request, 64 * 1024)) return new NextResponse("Request body too large.", { status: 413 });
 
   const form = await request.formData();
   const name = String(form.get("name") ?? "").trim().slice(0, 120);
