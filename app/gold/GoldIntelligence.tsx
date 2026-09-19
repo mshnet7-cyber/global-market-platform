@@ -6,6 +6,7 @@ import type { MetalSnapshot } from "../../lib/types";
 import type { PublicPricePoint } from "../../lib/market-history";
 import { calculateGoldPrice, GOLD_KARATS } from "../../lib/gold-pricing";
 import MoneyDisplay from "../../components/MoneyDisplay";
+import { formatMoneyDisplay } from "../../lib/currency-display";
 
 function money(value: number | null | undefined, currency: string, digits = 3) { return <MoneyDisplay value={value} currency={currency} locale="en-US" maximumFractionDigits={digits} />; }
 
@@ -78,7 +79,7 @@ export default function GoldIntelligence({ language, countryCode, countryName, c
           <label>فرق السعر / غ<input inputMode="decimal" value={spread} onChange={e=>setSpread(e.target.value)}/></label>
           <label>الضريبة %<input inputMode="decimal" value={tax} onChange={e=>setTax(e.target.value)}/></label>
         </div>{calc ? <div className="pricing-breakdown"><div><span>قيمة المعدن</span><b>{money(calc.metalValue,currency)}</b></div><div><span>الهدر</span><b>{money(calc.wastageValue,currency)}</b></div><div><span>فرق السعر</span><b>{money(calc.spreadValue,currency)}</b></div><div><span>المصنعية</span><b>{money(calc.workmanshipValue,currency)}</b></div><div><span>الضريبة</span><b>{money(calc.taxAmount,currency)}</b></div><div className="total"><span>الإجمالي</span><b>{money(calc.total,currency)}</b></div></div> : <div className="terminal-empty">البيانات السوقية غير متاحة لإجراء الحساب.</div>}</section>
-        <section className="terminal-card"><div className="terminal-card-head"><div><span className="micro-label">التنبيهات</span><strong>تنبيه سعر الذهب</strong></div></div><div className="alert-form"><label>نبّهني عندما يتجاوز XAU هذه القيمة<input inputMode="decimal" value={threshold} onChange={e=>setThreshold(e.target.value)} placeholder={money(gold.spot,currency,2)}/></label><button type="button" className="btn btn-primary" onClick={createAlert}>إنشاء التنبيه</button>{alertMessage&&<div className="terminal-footnote">{alertMessage}</div>}</div><div className="terminal-footnote">التنبيهات تُسجل للحساب وتدعم القنوات المستقبلية.</div>
+        <section className="terminal-card"><div className="terminal-card-head"><div><span className="micro-label">التنبيهات</span><strong>تنبيه سعر الذهب</strong></div></div><div className="alert-form"><label>نبّهني عندما يتجاوز XAU هذه القيمة<input inputMode="decimal" value={threshold} onChange={e=>setThreshold(e.target.value)} placeholder={formatMoneyDisplay(gold.spot,currency,"en-US",2)}/></label><button type="button" className="btn btn-primary" onClick={createAlert}>إنشاء التنبيه</button>{alertMessage&&<div className="terminal-footnote">{alertMessage}</div>}</div><div className="terminal-footnote">التنبيهات تُسجل للحساب وتدعم القنوات المستقبلية.</div>
           <div className="alert-rules-list">
             <div className="micro-label">التنبيهات النشطة</div>
             {alerts.length===0 ? <div className="terminal-empty">لا توجد تنبيهات محفوظة لهذا الحساب.</div> : alerts.map(rule=>
