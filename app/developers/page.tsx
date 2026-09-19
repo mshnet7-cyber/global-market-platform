@@ -1,12 +1,12 @@
 import Link from "next/link";
 
 const endpoints = [
-  ["GET", "/api/v2/market/gold", "Gold market reference data", "market:read"],
-  ["GET", "/api/v2/market/markets", "Market reference data", "market:read"],
+  ["GET", "/api/v2/market/gold", "بيانات مرجعية للذهب", "market:read"],
+  ["GET", "/api/v2/market/markets", "بيانات مرجعية للأسواق", "market:read"],
 ];
 
 export default function DevelopersPage() {
-  return <main className="stage3-page"><div className="stage3-shell">
+  return <main className="stage3-page" lang="ar" dir="rtl"><div className="stage3-shell">
     <header className="stage3-header">
       <div><div className="stage3-eyebrow">منصة المطورين · API V2</div><h1>واجهة بيانات عامة قابلة للتكامل.</h1><p>مصادقة بمفاتيح API، وحدود للطلبات، ومعرّفات للطلبات، وتتبع للاستخدام، واستجابات ثابتة دون كشف بيانات مؤسسات خاصة.</p></div>
       <div className="actions"><Link href="/dashboard/api-keys" className="stage3-btn stage3-btn-primary">إدارة مفاتيح API</Link><Link href="/" className="stage3-btn">الرئيسية</Link></div>
@@ -17,6 +17,6 @@ export default function DevelopersPage() {
       <article className="stage3-card"><h2>الأخطاء</h2><p>كل رد خطأ يحتوي error وrequest_id، مع 401/403/429/503 وفق الحالة.</p></article>
       <article className="stage3-card"><h2>خطافات الويب</h2><p>التكاملات تستخدم توقيعات HMAC مع event IDs لمنع التكرار.</p></article>
     </section>
-    <section className="stage3-panel"><h2>التشغيل</h2><p>للاستخدام الفعلي، أنشئ مفتاحًا من مساحة الحساب ثم استخدمه للوصول إلى endpoints المصرّح بها. المفاتيح متاحة فقط للحسابات ذات الخطة والصلاحية المناسبتين.</p><Link href="/dashboard/api-keys" className="stage3-btn">فتح إدارة المفاتيح</Link></section>
+    <section className="stage3-panel"><h2>التشغيل</h2><p>للاستخدام الفعلي، أنشئ مفتاحًا من مساحة الحساب ثم استخدمه للوصول إلى المسارات المصرّح بها. المفاتيح متاحة فقط للحسابات ذات الخطة والصلاحية المناسبتين.</p><Link href="/dashboard/api-keys" className="stage3-btn">فتح إدارة المفاتيح</Link></section>
   </div></main>;
 }
