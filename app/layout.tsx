@@ -24,8 +24,6 @@ export const viewport: Viewport = {
 };
 
 const RTL_LANGUAGES = new Set(["ar", "fa", "he", "ur"]);
-const CSS_PAINT_GATE = `html[data-css-paint-gate="true"] body{visibility:hidden}html[data-css-paint-gate="true"] body:before{content:"";position:fixed;inset:0;background:#061017;z-index:2147483647;pointer-events:none}html[data-css-paint-gate="true"] body:after{content:"";position:fixed;inset:0;background:#061017;z-index:2147483646;pointer-events:none}`;
-const CSS_PAINT_SCRIPT = `(()=>{const ready=()=>document.documentElement.removeAttribute("data-css-paint-gate");if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",ready,{once:true});else ready();window.setTimeout(ready,1600);})();`;
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const headerStore = await headers();
@@ -33,13 +31,8 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   const language = /^[a-z]{2,3}$/.test(rawLanguage) ? rawLanguage : "ar";
   const dir = RTL_LANGUAGES.has(language) ? "rtl" : "ltr";
   return (
-    <html lang={language} dir={dir} data-css-paint-gate="true">
+    <html lang={language} dir={dir}>
       <head>
-        <style dangerouslySetInnerHTML={{ __html: CSS_PAINT_GATE }} />
-        <script dangerouslySetInnerHTML={{ __html: CSS_PAINT_SCRIPT }} />
-        <noscript>
-          <style>{`html[data-css-paint-gate="true"] body{visibility:visible}html[data-css-paint-gate="true"] body:before,html[data-css-paint-gate="true"] body:after{display:none}`}</style>
-        </noscript>
       </head>
       <body>
         <PwaRegister />
