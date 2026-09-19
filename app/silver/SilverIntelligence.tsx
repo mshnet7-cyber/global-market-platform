@@ -4,10 +4,10 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { MetalSnapshot } from "../../lib/types";
 import type { PublicPricePoint } from "../../lib/market-history";
-import { formatMoneyDisplay } from "../../lib/currency-display";
+import MoneyDisplay from "../../components/MoneyDisplay";
 
 function money(value: number | null | undefined, currency: string, digits = 3) {
-  return formatMoneyDisplay(value, currency, "en-US", digits);
+  return <MoneyDisplay value={value} currency={currency} locale="en-US" maximumFractionDigits={digits} />;
 }
 
 function MiniChart({ points, currency }: { points: PublicPricePoint[]; currency: string }) {
