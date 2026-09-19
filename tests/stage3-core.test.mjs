@@ -26,3 +26,22 @@ test("P1 operational WhatsApp notifications are integration-ready",()=>{const n=
 test("Security headers and payment provider isolation are enforced",()=>{ const config=read("next.config.ts"); const payment=read("app/api/stage3/webhooks/payments/route.ts"); assert.match(config,/X-Content-Type-Options/); assert.match(config,/Referrer-Policy/); assert.match(config,/X-Frame-Options/); assert.match(config,/Permissions-Policy/); assert.match(payment,/eq\("provider",provider\)/); });
 
 test("P1 API v1/v2 market endpoints support currency and telemetry",()=>{assert.match(read("app/api/v1/markets/route.ts"),/recordApiUsage/);assert.match(read("app/api/v2/market/markets/route.ts"),/recordApiUsage/);assert.match(read("app/api/v2/market/markets/route.ts"),/currency/);});
+test("Payment and e-invoice event claims are atomic and server-only",()=>{
+ const payment=read("app/api/stage3/webhooks/payments/route.ts");
+ const billing=read("supabase/migrations/20260919008100_gmp_billing_event_claim_v2.sql");
+ const invoice=read("supabase/migrations/20260919006000_gmp_einvoice_send_claim.sql");
+ assert.match(payment,/gmp_claim_billing_event/);
+ assert.match(payment,/billing_event_claim_failed/);
+ assert.match(payment,/billing_processing_failed/);
+ assert.match(billing,/for update/);
+ assert.match(billing,/on conflict \(provider,event_key\) do nothing/i);
+ assert.match(billing,/revoke execute on function public\.gmp_claim_billing_event/);
+ assert.match(invoice,/gmp_claim_einvoice_send/);
+ assert.match(invoice,/for update/);
+});
+test("Public health endpoint does not expose environment variable names",()=>{
+ const health=read("app/api/health/route.ts");
+ assert.doesNotMatch(health,/missingEnvironmentVariables/);
+ assert.match(health,/supabaseConfigured/);
+ assert.match(health,/adminConfigured/);
+});
