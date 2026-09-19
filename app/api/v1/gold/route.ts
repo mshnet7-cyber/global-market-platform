@@ -26,6 +26,6 @@ export async function GET(request:Request){
     if(!/^[A-Z]{3}$/.test(currency)) return NextResponse.json({error:"invalid_currency",request_id:randomUUID()},{status:400,headers:apiCorsHeaders()});
     const snapshot=await getSnapshot(currency,language,false,false);
     const trust=assessQuote(snapshot.gold);
-    const requestId=randomUUID(); await recordApiUsage({apiKeyId:key.id,organizationId:key.organizationId,requestId,route:"/api/v1/gold",method:"GET",statusCode:200,latencyMs:0}); return NextResponse.json({api_version:"1",request_id:requestId,generated_at:snapshot.generatedAt,data:snapshot.gold,trust:{status:trust.status,trusted:trust.trusted,reason:trust.reason,age_ms:trust.ageMs},source:{provider:snapshot.gold.provider,timestamp:snapshot.gold.timestamp}}, {headers:apiCorsHeaders()});
+    const requestId=randomUUID(); await recordApiUsage({apiKeyId:key.id,organizationId:key.organizationId,requestId,route:"/api/v1/gold",method:"GET",statusCode:200,latencyMs:Date.now()-start,apiVersion:"1"}); return NextResponse.json({api_version:"1",request_id:requestId,generated_at:snapshot.generatedAt,data:snapshot.gold,trust:{status:trust.status,trusted:trust.trusted,reason:trust.reason,age_ms:trust.ageMs},source:{provider:snapshot.gold.provider,timestamp:snapshot.gold.timestamp}}, {headers:apiCorsHeaders()});
   }catch(error){return errorResponse(error);}
 }

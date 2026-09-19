@@ -22,6 +22,7 @@ export async function recordApiUsage(input: {
   method: string;
   statusCode: number;
   latencyMs: number;
+  apiVersion?: "1" | "2";
 }) {
   const admin = createSupabaseAdminClient();
   if (!admin) return;
@@ -30,7 +31,7 @@ export async function recordApiUsage(input: {
       api_key_id: input.apiKeyId,
       organization_id: input.organizationId,
       request_id: input.requestId,
-      api_version: "2",
+      api_version: input.apiVersion ?? "2",
       route: input.route.slice(0, 200),
       method: input.method.slice(0, 12),
       status_code: input.statusCode,

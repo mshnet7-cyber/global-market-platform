@@ -13,6 +13,7 @@ function errorResponse(error: unknown) {
 }
 export async function OPTIONS(){return new NextResponse(null,{status:204,headers:apiCorsHeaders()});}
 export async function GET(request:Request){
+  const start=Date.now();
   try{
     const key=await authenticateApiKey(request,"market:read");
     const url=new URL(request.url);
@@ -22,6 +23,6 @@ export async function GET(request:Request){
     const instrument=url.searchParams.get("instrument")?.toUpperCase()??null;
     const country=url.searchParams.get("country")?.toUpperCase()||appConfig.defaultCountry; const currency=(url.searchParams.get("currency")?.toUpperCase()||"USD"); if(!/^[A-Z]{3}$/.test(currency)) return NextResponse.json({error:"invalid_currency",request_id:randomUUID()},{status:400,headers:apiCorsHeaders()}); const snapshot=await getSnapshot(currency,language,false,true);
     const quotes=(kind==="stocks"?snapshot.stocks:snapshot.markets).map(withTrustStatus).filter(q=>!instrument||q.symbol===instrument||q.instrument.toUpperCase().includes(instrument));
-    const requestId=randomUUID(); await recordApiUsage({apiKeyId:key.id,organizationId:key.organizationId,requestId,route:"/api/v1/markets",method:"GET",statusCode:200,latencyMs:0}); return NextResponse.json({api_version:"1",request_id:requestId,generated_at:snapshot.generatedAt,kind,country,count:quotes.length,data:quotes}, {headers:apiCorsHeaders()});
+    const requestId=randomUUID(); await recordApiUsage({apiKeyId:key.id,organizationId:key.organizationId,requestId,route:"/api/v1/markets",method:"GET",statusCode:200,latencyMs:Date.now()-start,apiVersion:"1"}); return NextResponse.json({api_version:"1",request_id:requestId,generated_at:snapshot.generatedAt,kind,country,count:quotes.length,data:quotes}, {headers:apiCorsHeaders()});
   }catch(error){return errorResponse(error);}
 }
