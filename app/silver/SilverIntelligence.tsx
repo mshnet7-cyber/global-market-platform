@@ -105,9 +105,9 @@ export default function SilverIntelligence({
       <header className="topbar">
         <div className="container nav stage1-nav">
           <Link href="/" className="brand"><span className="brand-mark">GM</span><span>GLOBAL <b>MARKET</b></span></Link>
-          <div className="stage1-nav-title"><span className="eyebrow">ADVANCED SILVER INTELLIGENCE</span><strong>{countryName} · {currency}</strong></div>
+          <div className="stage1-nav-title"><span className="eyebrow">{language === "ar" ? "ذكاء الفضة المتقدم" : "ADVANCED SILVER INTELLIGENCE"}</span><strong>{countryName} · {currency}</strong></div>
           <div className="nav-actions">
-            <Link className="btn btn-ghost" href={"/gold?country=" + countryCode + "&language=" + language}>Gold Intelligence</Link>
+            <Link className="btn btn-ghost" href={"/gold?country=" + countryCode + "&language=" + language}>{language === "ar" ? "ذكاء الذهب" : "Gold Intelligence"}</Link>
             <Link className="btn btn-primary" href="/login">الدخول</Link>
           </div>
         </div>
@@ -116,12 +116,12 @@ export default function SilverIntelligence({
       <main className="container stage1-main">
         <section className="gold-intro">
           <div>
-            <div className="eyebrow"><span className="live-dot" />ADVANCED SILVER INTELLIGENCE</div>
+            <div className="eyebrow"><span className="live-dot" />{language === "ar" ? "ذكاء الفضة المتقدم" : "ADVANCED SILVER INTELLIGENCE"}</div>
             <h1>الفضة كنظام بيانات، لا كسعر فقط.</h1>
             <p>الأونصة، الغرام، النقاوة، Spot/Bid/Ask، التاريخ والتنبيهات في مساحة واحدة للمتابعة اليومية.</p>
           </div>
           <div className="gold-live-card">
-            <span>999 / GRAM</span>
+            <span>999 / {language === "ar" ? "غرام" : "GRAM"}</span>
             <strong>{money(silver.perGram24k, currency)}</strong>
             <em>{silver.status}</em>
             <small>{silver.provider || "مصدر البيانات غير متاح"}</small>
@@ -130,16 +130,16 @@ export default function SilverIntelligence({
 
         <section className="gold-overview">
           <div className="gold-spot">
-            <span>SPOT / OUNCE</span>
+            <span>{language === "ar" ? "السعر الفوري / الأونصة" : "SPOT / OUNCE"}</span>
             <strong>{money(silver.spot, currency, 2)}</strong>
             <div className="gold-triple">
-              <div><span>BID</span><b>{money(silver.bid, currency, 2)}</b></div>
-              <div><span>ASK</span><b>{money(silver.ask, currency, 2)}</b></div>
-              <div><span>UNIT</span><b>GRAM / OUNCE</b></div>
+              <div><span>{language === "ar" ? "شراء" : "BID"}</span><b>{money(silver.bid, currency, 2)}</b></div>
+              <div><span>{language === "ar" ? "عرض" : "ASK"}</span><b>{money(silver.ask, currency, 2)}</b></div>
+              <div><span>{language === "ar" ? "الوحدة" : "UNIT"}</span><b>{language === "ar" ? "غرام / أونصة" : "GRAM / OUNCE"}</b></div>
             </div>
           </div>
           <div className="gold-purity-card">
-            <span className="micro-label">PURITY MATRIX</span>
+            <span className="micro-label">{language === "ar" ? "مصفوفة النقاوة" : "PURITY MATRIX"}</span>
             <div><span>999‰</span><b>{money(silver.purities["999"] ?? silver.perGram24k, currency)}</b></div>
             <div><span>الوحدة</span><b>غرام</b></div>
             <div><span>الأونصة</span><b>{money(silver.spot, currency, 2)}</b></div>
@@ -148,8 +148,8 @@ export default function SilverIntelligence({
 
         <section className="gold-history-card">
           <div className="terminal-card-head">
-            <div><span className="micro-label">PRICE HISTORY</span><strong>آخر 24 ساعة مسجلة</strong></div>
-            <div className="terminal-source">{history.length} observations · {silver.status}</div>
+            <div><span className="micro-label">{language === "ar" ? "سجل السعر" : "PRICE HISTORY"}</span><strong>آخر 24 ساعة مسجلة</strong></div>
+            <div className="terminal-source">{history.length} {language === "ar" ? "بيانات مسجلة" : "observations"} · {silver.status}</div>
           </div>
           <MiniChart points={history} currency={currency} />
         </section>
@@ -157,7 +157,7 @@ export default function SilverIntelligence({
         <section className="terminal-grid-two">
           <section className="terminal-card">
             <div className="terminal-card-head">
-              <div><span className="micro-label">MARKET SNAPSHOT</span><strong>قراءة الفضة</strong></div>
+              <div><span className="micro-label">{language === "ar" ? "لقطة السوق" : "MARKET SNAPSHOT"}</span><strong>قراءة الفضة</strong></div>
             </div>
             <div className="compare-grid">
               <div><span>24K / GRAM</span><b>{money(silver.perGram24k, currency)}</b></div>
@@ -170,7 +170,7 @@ export default function SilverIntelligence({
 
           <section className="terminal-card">
             <div className="terminal-card-head">
-              <div><span className="micro-label">ALERTS</span><strong>تنبيه سعر الفضة</strong></div>
+              <div><span className="micro-label">{language === "ar" ? "التنبيهات" : "ALERTS"}</span><strong>تنبيه سعر الفضة</strong></div>
             </div>
             <div className="alert-form">
               <label>نبّهني عندما يتجاوز XAG هذه القيمة
@@ -181,12 +181,12 @@ export default function SilverIntelligence({
             </div>
             <div className="terminal-footnote">التنبيهات تُسجل للحساب وتستخدم طبقة منع التكرار نفسها.</div>
             <div className="alert-rules-list">
-              <div className="micro-label">ACTIVE RULES</div>
+              <div className="micro-label">{language === "ar" ? "التنبيهات النشطة" : "ACTIVE RULES"}</div>
               {rules.filter((rule) => rule.instrument_code === "XAG" + currency).length === 0
                 ? <div className="terminal-empty">لا توجد تنبيهات محفوظة للفضة.</div>
                 : rules.filter((rule) => rule.instrument_code === "XAG" + currency).map((rule) => (
                   <div className="alert-rule-row" key={rule.id}>
-                    <div><strong>{rule.instrument_code}</strong><span>{rule.rule_type} · {rule.threshold ?? "—"} · cooldown {rule.cooldown_minutes}m</span></div>
+                    <div><strong>{rule.instrument_code}</strong><span>{rule.rule_type} · {rule.threshold ?? "—"} · {language === "ar" ? "مهلة" : "cooldown"} {rule.cooldown_minutes}{language === "ar" ? " د" : "m"}</span></div>
                     <span className="status">{rule.active ? "مفعّل" : "معطّل"}</span>
                   </div>
                 ))}
@@ -194,7 +194,7 @@ export default function SilverIntelligence({
           </section>
         </section>
 
-        <div className="terminal-footnote">Trust layer: لا تتم تسمية البيانات القديمة أو التقديرية LIVE، ويظهر المصدر والحالة بجانب بيانات السوق.</div>
+        <div className="terminal-footnote">{language === "ar" ? "طبقة الثقة: لا تتم تسمية البيانات القديمة أو التقديرية كمباشرة، ويظهر المصدر والحالة بجانب بيانات السوق." : "Trust layer: stale or estimated data is not labeled LIVE, and source and status remain visible."}</div>
       </main>
     </div>
   );
