@@ -8,7 +8,7 @@ type Line={listing:any;quantity:number};
 export default function MarketplacePage(){
   const AVAILABILITY_LABELS:Record<string,string>={in_stock:"متوفر",limited:"محدود",out_of_stock:"غير متوفر",on_request:"عند الطلب"};
   const [data,setData]=useState<any>({stores:[],listings:[]}),[search,setSearch]=useState(""),[cart,setCart]=useState<Line[]>([]),[buyer,setBuyer]=useState({name:"",phone:"",email:"",note:"",fulfillment_mode:"contact"}),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[message,setMessage]=useState("");
-  useEffect(()=>{fetch("/api/stage2?action=marketplace",{cache:"no-store"}).then(async r=>{const d=await r.json();if(!r.ok)throw new Error(d.error||"load_failed");setData(d)}).catch(e=>setMessage(e.message||"تعذر تحميل Marketplace")).finally(()=>setLoading(false))},[]);
+  useEffect(()=>{fetch("/api/stage2?action=marketplace",{cache:"no-store"}).then(async r=>{const d=await r.json();if(!r.ok)throw new Error(d.error||"load_failed");setData(d)}).catch(e=>setMessage(e.message||"تعذر تحميل السوق")).finally(()=>setLoading(false))},[]);
   function add(listing:any){setCart(c=>{if(c.length && c[0].listing.store_id!==listing.store_id){setMessage("السلة مرتبطة بمحل واحد. أرسل الطلب الحالي أولًا ثم اختر محلًا آخر.");return c;}const found=c.find(x=>x.listing.id===listing.id);return found?c.map(x=>x.listing.id===listing.id?{...x,quantity:x.quantity+1}:x):[...c,{listing,quantity:1}]})}
   const filteredListings=useMemo(()=>{const q=search.trim().toLowerCase();if(!q)return data.listings??[];return (data.listings??[]).filter((l:any)=>[l.title,l.description,l.store?.name].some((v:any)=>String(v??"").toLowerCase().includes(q)))},[data.listings,search]);
   const total=useMemo(()=>cart.reduce((s,x)=>s+Number(x.listing.price)*x.quantity,0),[cart]);
@@ -25,7 +25,7 @@ export default function MarketplacePage(){
       setCart([]);
     }catch(e){setMessage(e instanceof Error?e.message:"تعذر إرسال الطلب");}finally{setBusy(false);}
   }
-  return <main className="stage2-public">
+  return <main className="stage2-public" lang="ar" dir="rtl">
     <header className="stage2-public-head"><div><div className="eyebrow">السوق التجاري</div><h1>السوق</h1><p>منتجات وخدمات من محلات منشورة في دليل الذهب. الطلب هنا للتواصل/الحجز فقط؛ لا يوجد دفع إلكتروني في هذه المرحلة.</p></div><Link href="/directory" className="btn">دليل المحلات</Link></header>
     {message&&<div className="stage2-alert">{message}</div>}
     {loading?<div className="stage2-empty">جارٍ التحميل…</div>:<div className="stage2-market-layout"><section><div className="stage2-section-title"><div><h2>العروض المنشورة</h2><span>{filteredListings.length} من {data.listings.length} عرض</span></div><label className="stage2-market-search">بحث<input value={search} onChange={e=>setSearch(e.target.value)} placeholder="اسم المنتج أو المحل"/></label></div><div className="stage2-commerce-grid">{filteredListings.map((l:any)=><article className="stage2-product-card" key={l.id}><div className="stage2-product-top"><span>{l.store?.name||"المحل"}</span><b>{AVAILABILITY_LABELS[l.availability] ?? l.availability}</b></div><h3>{l.title}</h3><p>{l.description||"—"}</p><strong>{Number(l.price).toLocaleString("ar-OM",{minimumFractionDigits:3})} {l.currency}</strong><small>{l.listing_type==="service"?"خدمة":"منتج"} · {l.contact_mode==="request"?"طلب":"تواصل"}</small><button className="btn btn-primary" onClick={()=>add(l)}>إضافة للسلة</button></article>)}{!filteredListings.length&&<div className="stage2-empty">لا توجد نتائج مطابقة للبحث.</div>}</div></section>
