@@ -63,7 +63,14 @@ export default function SilverIntelligence({
   }
 
   useEffect(() => {
-    void loadRules().catch(() => undefined);
+    let cancelled = false;
+    fetch("/api/alerts/rules", { cache: "no-store" })
+      .then(async (response) => {
+        const data = await response.json().catch(() => null);
+        if (response.ok && !cancelled) setRules(data?.rules ?? []);
+      })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
   }, []);
 
   async function createAlert() {
