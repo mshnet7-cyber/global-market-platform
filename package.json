@@ -10,6 +10,7 @@
     "start": "next start",
     "start:vinext": "vinext start",
     "deploy:cloudflare": "vinext-cloudflare deploy",
+    "deploy:cloudflare:dry-run": "vinext-cloudflare deploy --dry-run",
     "lint": "eslint .",
     "verify": "node scripts/verify-project.mjs",
     "test": "node --test tests/merchant-workflows.test.mjs tests/stage1-core.test.mjs tests/stage2-core.test.mjs tests/stage3-core.test.mjs && npm run verify",
