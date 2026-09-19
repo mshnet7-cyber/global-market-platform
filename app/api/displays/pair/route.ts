@@ -38,9 +38,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: false, error: message }, { status: message === "request_body_too_large" ? 413 : 400, headers: noStore });
     }
   } else {
-    if (requestContentLengthExceeds(request, 64 * 1024)) return NextResponse.json({ ok: false, error: "request_body_too_large" }, { status: 413, headers: noStore });
-    const form = await request.formData();
-    code = String(form.get("code") ?? "").trim();
+    try {
+      const form = await readBoundedRequestFormData(request, 64 * 1024);
+      code = String(form.get("code") ?? "").trim();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "invalid_request";
+      return NextResponse.json({ ok: false, error: message }, { status: message === "request_body_too_large" ? 413 : 400, headers: noStore });
+    }
   }
   if (!/^\d{6}$/.test(code)) return NextResponse.json({ ok: false, error: "invalid_code" }, { status: 400, headers: noStore });
 
