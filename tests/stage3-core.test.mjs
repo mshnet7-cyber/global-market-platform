@@ -53,3 +53,16 @@ test("E-invoice webhook is monotonic and replay-safe",()=>{
  assert.match(src,/\.eq\("status", current\.status\)/);
  assert.match(src,/previous_status/);
 });
+
+
+test("Vercel cron handlers expose GET and remain secret protected",()=>{
+ const webhook=read("app/api/cron/webhooks/route.ts");
+ const whatsapp=read("app/api/cron/whatsapp/route.ts");
+ assert.match(webhook,/export async function GET/); assert.match(webhook,/authorization/); assert.match(webhook,/x-cron-secret/);
+ assert.match(whatsapp,/export async function GET/); assert.match(whatsapp,/authorization/); assert.match(whatsapp,/x-cron-secret/);
+});
+
+test("External payment and e-invoice calls have bounded execution and no redirects",()=>{
+ assert.match(read("lib/stage3/payments.ts"),/AbortController/); assert.match(read("lib/stage3/payments.ts"),/10_000/); assert.match(read("lib/stage3/payments.ts"),/redirect: "error"/);
+ assert.match(read("lib/stage3/einvoice.ts"),/AbortController/); assert.match(read("lib/stage3/einvoice.ts"),/10_000/); assert.match(read("lib/stage3/einvoice.ts"),/redirect:"error"/);
+});
