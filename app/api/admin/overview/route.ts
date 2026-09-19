@@ -2,10 +2,17 @@ import { readBoundedRequestJson } from "../../../../lib/bounded-body";
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "../../../../lib/supabase/server";
 import { createSupabaseAdminClient } from "../../../../lib/supabase/admin";
+import { getDemoSession } from "../../../../lib/demo-auth";
 
 const json=(data:unknown,status=200)=>NextResponse.json(data,{status,headers:{"cache-control":"no-store"}});
 
 async function guard(){
+  const demo = await getDemoSession();
+  if (demo?.role === "platform_admin") {
+    const admin = createSupabaseAdminClient();
+    if (!admin) throw new Error("not_configured");
+    return { supabase: admin, admin, user: { id: demo.account.userId, email: demo.account.email } };
+  }
   const supabase=await createSupabaseServerClient();
   if(!supabase)throw new Error("not_configured");
   const {data:{user}}=await supabase.auth.getUser();
