@@ -24,6 +24,14 @@ test("Public health endpoint does not expose environment variable names",()=>{co
 test("E-invoice webhook is monotonic and replay-safe",()=>{const src=read("app/api/stage3/webhooks/einvoice/route.ts");assert.match(src,/current\.status === status/);assert.match(src,/stale_or_invalid_status/);assert.match(src,/\.eq\("status", current\.status\)/);assert.match(src,/previous_status/);});
 test("Webhook retry claim uses a lease to prevent concurrent delivery",()=>{const migration=read("supabase/migrations/20260919012000_gmp_webhook_claim_lease.sql");const code=read("lib/webhooks.ts");assert.match(migration,/for update skip locked/);assert.match(migration,/next_attempt_at=now\(\)\+interval '5 minutes'/);assert.match(code,/next_attempt_at:new Date\(Date\.now\(\)\+5\*60_000\)/);});
 test("Provider response limits are streaming, not post-buffer checks",()=>{const helper=read("lib/stage3/provider-http.ts");for(const p of["lib/stage3/payments.ts","lib/stage3/ai.ts","lib/stage3/einvoice.ts","lib/stage3/whatsapp.ts"]){assert.match(read(p),/readBoundedText/);assert.doesNotMatch(read(p),/const raw = await response\.text\(\)/);}assert.match(helper,/getReader\(\)/);assert.match(helper,/value\.byteLength/);assert.match(helper,/1_000_000/);assert.match(helper,/Number\.isInteger\(maxBytes\)/);assert.match(helper,/reader\.cancel\(\)/);});
+test("WhatsApp webhook ignores stale regressions and rejects unknown provider statuses",()=>{
+  const src=read("app/api/stage3/webhooks/whatsapp/route.ts");
+  assert.match(src,/function canAdvance/);
+  assert.match(src,/from==="delivered"\)return to==="read"/);
+  assert.match(src,/invalid_event_status/);
+  assert.match(src,/\.eq\("status",current\.status\)/);
+  assert.match(src,/maybeSingle\(\)/);
+});
 test("Live payment, e-invoice, and WhatsApp states require complete inbound webhook configuration",()=>{
   for(const p of["lib/stage3/payments.ts","lib/stage3/einvoice.ts","lib/stage3/whatsapp.ts"]){
     const src=read(p);
