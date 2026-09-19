@@ -154,7 +154,7 @@ export default function Stage3Workspace({ documents, initialCountry, initialPlan
 
   return (
     <>
-      <nav className="stage3-tabs" aria-label="Stage 3">
+      <nav className="stage3-tabs" aria-label="تبويبات التكاملات">
         {tabs.map(([key, label]) => <button type="button" className={tab === key ? "active" : ""} onClick={() => setTab(key)} key={key}>{label}</button>)}
         <Link className="stage3-btn" href="/dashboard/api-keys">مفاتيح API</Link>
       </nav>
