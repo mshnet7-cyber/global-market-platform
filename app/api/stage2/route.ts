@@ -84,7 +84,7 @@ export async function GET(request: Request) {
         .eq("status", "published").order("published_at", { ascending: false }).limit(100);
       if (error) return json({ error: error.message }, 400);
       const ids = (rows ?? []).map(r => r.store_id);
-      const { data: stores } = ids.length ? await admin.from("gmp_stores").select("id,organization_id,name,slug,phone,whatsapp,logo_path,country_code,currency,timezone").in("id", ids) : { data: [] as any[] };
+      const { data: stores } = ids.length ? await admin.from("gmp_stores").select("id,name,slug,phone,whatsapp,logo_path,country_code,currency,timezone").in("id", ids) : { data: [] as any[] };
       const storeMap = new Map((stores ?? []).map(s => [s.id, s]));
       const data = (rows ?? []).map(r => ({ ...r, store: storeMap.get(r.store_id) ?? null })).filter(r => {
         const hay = JSON.stringify(r).toLowerCase();
@@ -102,7 +102,7 @@ export async function GET(request: Request) {
         .eq("slug", slug).limit(1);
       const store = stores?.[0];
       if (!store) return json({ error: "store_not_found" }, 404);
-      const { data: directory } = await admin.from("gmp_store_directory").select("*").eq("store_id", store.id).eq("status","published").maybeSingle();
+      const { data: directory } = await admin.from("gmp_store_directory").select("store_id,status,description,category,address,city,region,postal_code,latitude,longitude,website,services,hours,social_links,verified_at,published_at,created_at,updated_at").eq("store_id", store.id).eq("status","published").maybeSingle();
       if (!directory) return json({ error: "store_not_published" }, 404);
       const { data: listings } = await admin.from("gmp_marketplace_listings")
         .select("id,listing_type,title,description,category,price,currency,availability,contact_mode,image_path,metadata,updated_at")
@@ -510,14 +510,13 @@ export async function POST(request: Request) {
         marketplace_order:{table:"gmp_marketplace_orders",statuses:["new","contacted","confirmed","fulfilled","cancelled"]},
         dooh_campaign:{table:"gmp_ad_campaigns",statuses:["pending","approved","active","paused","completed","cancelled"]},
         dooh_placement:{table:"gmp_ad_placements",statuses:["scheduled","live","paused","completed","cancelled"]},
-        display_content:{table:"gmp_display_content",statuses:[]},
         repair:{table:"gmp_repair_orders",statuses:["received","in_repair","ready","delivered","cancelled"]},
       };
       const cfg=map[entity]; if(!cfg || (cfg.statuses.length && !cfg.statuses.includes(status)))return json({error:"invalid_status"},400);
       const query=access.supabase.from(cfg.table).update({status,updated_at:new Date().toISOString()}).eq("id",id);
       if(entity==="dooh_campaign" || entity==="dooh_placement")query.eq("organization_id",access.organization.id);
-      if(entity==="marketplace_order")query.eq("organization_id",access.organization.id);
-      if(entity==="repair")query.eq("organization_id",access.organization.id);
+      if(entity==="marketplace_order" || entity==="dooh_campaign" || entity==="dooh_placement" || entity==="display_content" || entity==="repair") query.eq("organization_id",access.organization.id);
+
       const {data,error}=await query.select("*").single();
       if(error)return json({error:error.message},400);return json({success:true,row:data});
     }
