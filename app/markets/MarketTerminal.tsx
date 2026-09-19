@@ -37,7 +37,7 @@ function Chart({ points, currency }: { points: PublicPricePoint[]; currency: str
     return (i ? "L" : "M") + " " + x.toFixed(2) + " " + y.toFixed(2);
   }).filter(Boolean).join(" ");
   return <div className="terminal-chart-wrap">
-    <svg viewBox={"0 0 " + width + " " + height} role="img" aria-label={language === "ar" ? "مخطط سجل الأسعار" : "Price history chart"}>
+    <svg viewBox={"0 0 " + width + " " + height} role="img" aria-label="مخطط سجل الأسعار">
       <path d={"M " + pad + " " + (height-pad) + " L " + (width-pad) + " " + (height-pad)} className="chart-axis" />
       <path d={path} className="chart-line" fill="none" />
     </svg>
