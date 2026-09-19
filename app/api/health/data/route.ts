@@ -4,18 +4,17 @@ import { fetchFrankfurterUsdLocal, fetchGoldApi } from "../../../../lib/free-dat
 export const runtime = "nodejs";
 
 const CACHE_TTL_MS = 15_000;
-let cached: {
-  expiresAt: number;
-  payload: {
-    ok: boolean;
-    checks: {
-      gold: { ok: boolean; priceUsdPerOunce: number | null; bidUsd: number | null; askUsd: number | null; timestamp: string | null };
-      silver: { ok: boolean; priceUsdPerOunce: number | null; timestamp: string | null };
-      usdToOmr: { ok: boolean; rate: number | null };
-    };
+
+type HealthPayload = {
+  ok: boolean;
+  checks: {
+    gold: { ok: boolean; priceUsdPerOunce: number | null; bidUsd: number | null; askUsd: number | null; timestamp: string | null };
+    silver: { ok: boolean; priceUsdPerOunce: number | null; timestamp: string | null };
+    usdToOmr: { ok: boolean; rate: number | null };
   };
-} | null = null;
-let inFlight: Promise<typeof cached.payload> | null = null;
+};
+let cached: { expiresAt: number; payload: HealthPayload } | null = null;
+let inFlight: Promise<HealthPayload> | null = null;
 
 async function readHealthData() {
   const [gold, silver, omrRate] = await Promise.all([
