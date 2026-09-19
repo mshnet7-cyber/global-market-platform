@@ -39,12 +39,21 @@ export function getPaymentStatus() {
 export async function createHostedCheckout(input: { planCode:string; billingPeriod:string; amount:number; currency:string; successUrl:string; cancelUrl:string; customerReference:string; }) {
   const c = cfg();
   if (!c.checkoutUrl || !c.apiKey || !c.approved) throw new Error("payments_not_configured");
-  const response = await fetch(c.checkoutUrl, {
-    method: "POST",
-    headers: { "content-type": "application/json", authorization: `Bearer ${c.apiKey}` },
-    body: JSON.stringify(input),
-    cache: "no-store",
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10_000);
+  let response: Response;
+  try {
+    response = await fetch(c.checkoutUrl, {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${c.apiKey}` },
+      body: JSON.stringify(input),
+      cache: "no-store",
+      signal: controller.signal,
+      redirect: "error",
+    });
+  } finally {
+    clearTimeout(timer);
+  }
   const raw = await response.text();
   let data: Record<string, unknown> = {};
   try { data = JSON.parse(raw) as Record<string, unknown>; } catch { data = { raw: raw.slice(0, 2000) }; }
