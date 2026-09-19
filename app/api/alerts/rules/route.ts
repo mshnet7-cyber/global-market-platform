@@ -1,3 +1,4 @@
+import { readBoundedRequestJson } from "../../../../lib/bounded-body";
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "../../../../lib/supabase/server";
 import { recordAuditEvent } from "../../../../lib/provider-observability";
@@ -27,7 +28,7 @@ export async function GET(){
 export async function POST(request:Request){
   try{
     const {supabase,user}=await context();
-    const body=await request.json().catch(()=>null) as Record<string,unknown>|null;
+    const body=await readBoundedRequestJson(request, 64 * 1024).catch(()=>null) as Record<string,unknown>|null;
     const instrument=String(body?.instrument_code??"").toUpperCase();
     const ruleType=String(body?.rule_type??"");
     const threshold=body?.threshold===null||body?.threshold===undefined?null:Number(body.threshold);
@@ -48,7 +49,7 @@ export async function POST(request:Request){
 export async function PATCH(request:Request){
   try{
     const {supabase,user}=await context();
-    const body=await request.json().catch(()=>null) as Record<string,unknown>|null;
+    const body=await readBoundedRequestJson(request, 64 * 1024).catch(()=>null) as Record<string,unknown>|null;
     const id=String(body?.id??"");
     if(!id) return NextResponse.json({error:"rule_id_required"},{status:400});
     const active=body?.active===undefined?undefined:Boolean(body.active);
