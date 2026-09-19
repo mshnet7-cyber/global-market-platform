@@ -90,6 +90,7 @@ test("Form and WhatsApp webhook payloads have explicit transport bounds",()=>{
   assert.ok(whatsapp.includes("256*1024"));
   assert.ok(whatsapp.includes("MAX_EVENTS=100"));
   assert.ok(whatsapp.includes("status:413"));
+  assert.ok(whatsapp.includes("invalid_event"));
   for(const p of["app/api/merchant/documents/route.ts","app/api/stores/create/route.ts","app/api/displays/create/route.ts","app/api/displays/revoke/route.ts"]){
     const src=read(p);
     assert.ok(src.includes("requestContentLengthExceeds"));
