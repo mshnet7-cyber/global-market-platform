@@ -31,3 +31,12 @@ export async function readBoundedRequestText(request: Request, maxBytes = DEFAUL
     reader.releaseLock();
   }
 }
+
+export async function readBoundedRequestJson<T = unknown>(request: Request, maxBytes = DEFAULT_MAX_BODY_BYTES): Promise<T> {
+  const raw = await readBoundedRequestText(request, maxBytes);
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    throw new Error("invalid_json");
+  }
+}
