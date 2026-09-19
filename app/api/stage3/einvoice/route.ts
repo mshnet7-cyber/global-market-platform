@@ -38,7 +38,7 @@ export async function POST(request:Request){
     }
     const saleId=String(body.sale_id??"");
     if(!saleId)return json({error:"sale_id_required"},400);
-    const canonicalEndpoint=canonicalUrl();
+    const canonicalEndpoint=canonicalUrl(request);
     const headers=new Headers({"content-type":"application/json"});
     const cookie=request.headers.get("cookie");if(cookie)headers.set("cookie",cookie);
     const queueBody={...body,action:"queue",idempotency_key:String(body.idempotency_key??("stage3:"+organization.id+":"+saleId+":"+String(body.country_code??"OM").toUpperCase()))};
