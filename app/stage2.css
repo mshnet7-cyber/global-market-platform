@@ -13,7 +13,7 @@
 .stage2-section-title h2,.stage2-panel h2{margin:0 0 8px;font-size:23px}
 .stage2-section-title p{margin:0;color:#74858f;font-size:12px}
 .stage2-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-.stage2-kpis>div{padding:18px;border:1px solid rgba(255,255,255,.075);border-radius:14px;background:linear-gradient(145deg,#101d26,#0b161e)}
+.stage2-kpis>div{padding:18px;border:1px solid rgba(255,255,255,.075);border-radius:14px;background:#0f1c24}
 .stage2-kpis span,.stage2-kpis small{display:block;color:#6f8089;font-size:9px;letter-spacing:.12em;text-transform:uppercase}
 .stage2-kpis strong{display:block;margin:8px 0;font-size:27px;line-height:1;font-variant-numeric:tabular-nums}
 .stage2-grid{display:grid;gap:12px}.stage2-grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}.stage2-grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}
