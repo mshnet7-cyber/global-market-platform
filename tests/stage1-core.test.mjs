@@ -53,5 +53,9 @@ test("auth state-changing routes enforce same-origin requests",()=>{
 });
 
 test("security headers are defined once with no conflicting duplicate policy blocks",()=>{
- const src=read("next.config.ts"); assert.equal((src.match(/source: \"\/\(\.\*\)\\"/g)||[]).length,1); assert.match(src,/X-Content-Type-Options/); assert.match(src,/X-Frame-Options/); assert.match(src,/Permissions-Policy/);
+ const src=read("next.config.ts");
+ assert.equal(src.split('source: "/(.*)"').length - 1, 1);
+ assert.match(src,/X-Content-Type-Options/);
+ assert.match(src,/X-Frame-Options/);
+ assert.match(src,/Permissions-Policy/);
 });
