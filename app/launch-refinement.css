@@ -76,6 +76,7 @@ input,select,textarea{accent-color:var(--launch-gold)}
 }
 
 @media(max-width:760px){
+  .dashboard-nav-main{display:none!important}
   .container,.wrap{width:calc(100% - 26px)!important}
   .nav,.dashboard-nav{min-height:64px}
   .site-nav{flex-wrap:wrap;row-gap:7px;padding-block:8px}
