@@ -54,8 +54,8 @@ export default function Stage3Workspace({ documents, initialCountry, initialPlan
   const [billingBusy, setBillingBusy] = useState(false);
   const [billingResult, setBillingResult] = useState("");
   const [country, setCountry] = useState(initialCountry);
-  const [region, setRegion] = useState<any>(null);
-  const [regionBusy, setRegionBusy] = useState(true);
+  const [region, setRegion] = useState<any>(undefined);
+  
 
   const selectedDocument = useMemo(() => documents.find((item) => item.id === documentId) ?? null, [documents, documentId]);
 
