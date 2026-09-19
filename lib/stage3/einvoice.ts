@@ -36,14 +36,21 @@ export async function submitInvoice(payload: Record<string,unknown>) {
   try { providerUrl = new URL(c.baseUrl); } catch { throw new Error("einvoice_endpoint_invalid"); }
   if (providerUrl.protocol !== "https:" || providerUrl.username || providerUrl.password) throw new Error("einvoice_endpoint_invalid");
   const requestHash=createHash("sha256").update(JSON.stringify(payload)).digest("hex");
-  const response=await fetch(`${c.baseUrl}/invoices`,{method:"POST",headers:{"content-type":"application/json",authorization:`Bearer ${c.apiKey}`,"x-gmp-request-hash":requestHash,"idempotency-key":requestHash},body:JSON.stringify(payload),cache:"no-store",signal:controller.signal,redirect:"error"});
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),10_000);
+  let response:Response;
+  try {
+    response=await fetch(`${providerUrl.toString().replace(/\/$/,"")}/invoices`,{method:"POST",headers:{"content-type":"application/json",authorization:`Bearer ${c.apiKey}`,"x-gmp-request-hash":requestHash,"idempotency-key":requestHash},body:JSON.stringify(payload),cache:"no-store",signal:controller.signal,redirect:"error"});
   } finally {
     clearTimeout(timer);
   }
   const contentLength=Number(response.headers.get("content-length")??0);
   if(contentLength>1_000_000)throw new Error("einvoice_provider_response_too_large");
   const raw=await response.text();
-  if(raw.length>1_000_000)throw new Error("einvoice_provider_response_too_large"); let data:Record<string,unknown>={}; try{data=JSON.parse(raw) as Record<string,unknown>}catch{data={raw:raw.slice(0,4000)}} if(!response.ok)throw new Error(`einvoice_provider_http_${response.status}`);
+  if(raw.length>1_000_000)throw new Error("einvoice_provider_response_too_large");
+  let data:Record<string,unknown>={};
+  try{data=JSON.parse(raw) as Record<string,unknown>}catch{data={raw:raw.slice(0,4000)}}
+  if(!response.ok)throw new Error(`einvoice_provider_http_${response.status}`);
   return {requestHash,data};
 }
 
