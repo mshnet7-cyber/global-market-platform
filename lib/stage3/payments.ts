@@ -58,10 +58,7 @@ export async function createHostedCheckout(input: { planCode:string; billingPeri
   } finally {
     clearTimeout(timer);
   }
-  const contentLength = Number(response.headers.get("content-length") ?? 0);
-  if (contentLength > 1_000_000) throw new Error("payment_provider_response_too_large");
-  const raw = await response.text();
-  if (raw.length > 1_000_000) throw new Error("payment_provider_response_too_large");
+  const raw = await readBoundedText(response);
   let data: Record<string, unknown> = {};
   try { data = JSON.parse(raw) as Record<string, unknown>; } catch { data = { raw: raw.slice(0, 2000) }; }
   if (!response.ok) throw new Error(`payment_provider_http_${response.status}`);
