@@ -9,7 +9,6 @@
     "build:vinext": "vinext build",
     "start": "next start",
     "start:vinext": "vinext start",
-    "preview:cloudflare": "vinext build && wrangler dev --config dist/server/wrangler.json",
     "deploy:cloudflare": "vinext-cloudflare deploy",
     "lint": "eslint .",
     "verify": "node scripts/verify-project.mjs",
