@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, stage3-ai-integrations-global]
   pull_request:
 
 permissions:
