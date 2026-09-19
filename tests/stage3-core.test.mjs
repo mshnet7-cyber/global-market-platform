@@ -19,6 +19,12 @@ test("Operational WhatsApp notifications are idempotent",()=>{const n=read("lib/
 test("P1 operational WhatsApp notifications are integration-ready",()=>{const n=read("lib/operational-notifications.ts");assert.match(n,/sale/);assert.match(n,/invoice/);assert.match(n,/repair_ready/);assert.match(n,/payment_reminder/);assert.match(n,/order/);});
 test("Security headers and payment provider isolation are enforced",()=>{const config=read("next.config.ts");const payment=read("app/api/stage3/webhooks/payments/route.ts");assert.match(config,/X-Content-Type-Options/);assert.match(config,/Referrer-Policy/);assert.match(config,/X-Frame-Options/);assert.match(config,/Permissions-Policy/);assert.match(payment,/eq\("provider",\s*provider\)/);});
 test("P1 API v1/v2 market endpoints support currency and telemetry",()=>{assert.match(read("app/api/v1/markets/route.ts"),/recordApiUsage/);assert.match(read("app/api/v2/market/markets/route.ts"),/recordApiUsage/);assert.match(read("app/api/v2/market/markets/route.ts"),/currency/);});
+test("Billing webhook updates subscription conditionally on the verified prior state",()=>{
+  const src=read("app/api/stage3/webhooks/payments/route.ts");
+  assert.match(src,/\.eq\("status", subscription\.status\)/);
+  assert.match(src,/concurrent_subscription_state_change/);
+  assert.match(src,/latestSubscription/);
+});
 test("Payment webhook classifies failure before renewal and guards reactivation",()=>{
   const src=read("app/api/stage3/webhooks/payments/route.ts");
   assert.match(src,/includes\("failed"\)/);
