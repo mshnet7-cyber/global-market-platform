@@ -18,10 +18,6 @@ type DisplayPayload = {
   ads?: Array<{placement:{id:string;weight:number};campaign?:{title:string;body?:string|null;image_path?:string|null;target_url?:string|null;advertiser_name?:string|null};creative?:{name:string;creative_type:string;asset_path?:string|null;target_url?:string|null}}>;
 };
 
-function formatNumber(value: number | null, digits = 3) {
-  return value == null || !Number.isFinite(value) ? "—" : new Intl.NumberFormat("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(value);
-}
-
 export default function ScreenPage() {
   const [session, setSession] = useState<string | null>(null);
   const [code, setCode] = useState("");
