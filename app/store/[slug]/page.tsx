@@ -41,13 +41,14 @@ export default async function StorePage({ params, searchParams }: { params: Prom
         <Link href={"/silver?country=" + country.code + "&language=" + language}>{messages.silver}</Link>
         <Link href={"/markets?country=" + country.code + "&language=" + language}>{messages.markets}</Link>
         <Link href={"/stocks?country=" + country.code + "&language=" + language}>{messages.stocks}</Link>
+        <Link href={"/currencies?country=" + country.code + "&language=" + language}>{messages.currencies}</Link>
         <Link href={"/news?country=" + country.code + "&language=" + language}>{messages.news}</Link>
         <Link href="/directory">{language === "ar" ? "المحلات" : "Stores"}</Link>
       </nav>
       <div className="nav-actions"><Link href="/login" className="btn btn-ghost">{messages.login}</Link><Link href="/pricing" className="btn btn-primary">{messages.plans}</Link></div>
     </div></header>
     <main className="store-page wrap section" lang={language}>
-    <div className="eyebrow"><span className="live-dot" />STORE REFERENCE</div>
+    <div className="eyebrow"><span className="live-dot" />{language === "ar" ? "مرجع المحل" : "STORE REFERENCE"}</div>
     <h1>{title}</h1>
     <p className="hero-copy">{messages.referenceOnly}</p><div className="meta store-reference-meta">{countryName} · {currency}</div>
     <section className="gold-card">
