@@ -1,5 +1,79 @@
 import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes, randomUUID } from "crypto";
+import { lookup } from "dns/promises";
+import { isIP } from "net";
 import { createSupabaseAdminClient } from "./supabase/admin";
+
+function isPrivateIPv4(address: string) {
+  const parts = address.split(".").map(Number);
+  if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return true;
+  const [a, b] = parts;
+  return a === 0 || a === 10 || a === 127 || (a === 100 && b >= 64 && b <= 127) ||
+    (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && (b === 0 || b === 168)) || (a === 198 && (b === 18 || b === 19)) ||
+    (a === 203 && b === 0) || a >= 224;
+}
+
+function ipv6Words(address: string) {
+  const value = address.toLowerCase().split("%")[0];
+  if (!value.includes(":")) return null;
+  const halves = value.split("::");
+  if (halves.length > 2) return null;
+  const left = halves[0] ? halves[0].split(":") : [];
+  const right = halves.length === 2 && halves[1] ? halves[1].split(":") : [];
+  const expand = (parts: string[]) => {
+    const out: number[] = [];
+    for (const part of parts) {
+      if (part.includes(".")) {
+        const octets = part.split(".").map(Number);
+        if (octets.length !== 4 || octets.some((n) => !Number.isInteger(n) || n < 0 || n > 255)) return null;
+        out.push((octets[0] << 8) | octets[1], (octets[2] << 8) | octets[3]);
+      } else {
+        if (!/^[0-9a-f]{1,4}$/.test(part)) return null;
+        out.push(parseInt(part, 16));
+      }
+    }
+    return out;
+  };
+  const l = expand(left), r = expand(right);
+  if (!l || !r) return null;
+  const missing = 8 - l.length - r.length;
+  if (halves.length === 1 && missing !== 0) return null;
+  if (halves.length === 2 && missing < 1) return null;
+  return halves.length === 2 ? [...l, ...Array(missing).fill(0), ...r] : [...l, ...r];
+}
+
+function isPrivateIp(address: string) {
+  if (isIP(address) === 4) return isPrivateIPv4(address);
+  if (isIP(address) !== 6) return true;
+  const words = ipv6Words(address);
+  if (!words) return true;
+  if (words.every((word) => word === 0) || (words.slice(0, 7).every((word) => word === 0) && words[7] === 1)) return true;
+  const first = words[0];
+  if ((first & 0xfe00) === 0xfc00 || (first & 0xffc0) === 0xfe80 || (first & 0xff00) === 0xff00) return true;
+  if (words[0] === 0x2001 && words[1] === 0x0db8) return true;
+  const mapped = words.slice(0, 6).every((word, index) => word === (index === 5 ? 0xffff : 0));
+  if (mapped) return isPrivateIPv4(String((words[6] >> 8) & 255)+"."+String(words[6] & 255)+"."+String((words[7] >> 8) & 255)+"."+String(words[7] & 255));
+  return false;
+}
+
+export async function validateWebhookUrl(value: string) {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return false;
+  }
+  if (url.protocol !== "https:" || url.username || url.password || !url.hostname) return false;
+  const host = url.hostname.replace(/^\[|\]$/g, "").toLowerCase();
+  if (host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") || host.endsWith(".internal") || host === "metadata.google.internal") return false;
+  if (isIP(host)) return !isPrivateIp(host);
+  try {
+    const addresses = await lookup(host, { all: true, verbatim: true });
+    return addresses.length > 0 && addresses.every((entry) => !isPrivateIp(entry.address));
+  } catch {
+    return false;
+  }
+}
 
 function encryptionKey() {
   const value = process.env.GMP_WEBHOOK_ENCRYPTION_KEY;
@@ -59,19 +133,21 @@ export async function deliverWebhookAttempt(admin:any, delivery:any, body?:strin
   const payloadBody = body ?? JSON.stringify(delivery.payload ?? {});
   const ts = timestamp ?? String(Math.floor(Date.now()/1000));
   try {
+    const webhookUrl = String(delivery.url);
+    if (!(await validateWebhookUrl(webhookUrl))) throw new Error("webhook_destination_not_allowed");
     const secret=decryptWebhookSecret(String(delivery.secret_ciphertext));
     const controller=new AbortController();
     const timer=setTimeout(()=>controller.abort(),2500);
     let response:Response;
     try {
-      response=await fetch(String(delivery.url),{
+      response=await fetch(webhookUrl,{
         method:"POST",signal:controller.signal,
         headers:{
           "content-type":"application/json","x-gmp-event":String(delivery.event_type),
           "x-gmp-event-id":String(delivery.event_id),"x-gmp-timestamp":ts,
           "x-gmp-signature":webhookSignature(secret,ts,payloadBody),
         },
-        body:payloadBody,cache:"no-store",
+        body:payloadBody,cache:"no-store",redirect:"error",
       });
     } finally { clearTimeout(timer); }
     const attempt=Number(delivery.attempts??0)+1;
