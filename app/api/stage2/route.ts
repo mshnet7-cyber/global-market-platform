@@ -98,7 +98,7 @@ export async function GET(request: Request) {
       const admin = createSupabaseAdminClient();
       if (!admin) return json({ error: "not_configured" }, 503);
       const slug = text(url.searchParams.get("slug"), 100);
-      const { data: stores } = await admin.from("gmp_stores").select("id,organization_id,name,slug,phone,whatsapp,logo_path,country_code,currency,timezone")
+      const { data: stores } = await admin.from("gmp_stores").select("id,organization_id,branch_id,name,slug,phone,whatsapp,logo_path,country_code,currency,timezone")
         .eq("slug", slug).limit(1);
       const store = stores?.[0];
       if (!store) return json({ error: "store_not_found" }, 404);
@@ -107,8 +107,9 @@ export async function GET(request: Request) {
       const { data: listings } = await admin.from("gmp_marketplace_listings")
         .select("id,listing_type,title,description,category,price,currency,availability,contact_mode,image_path,updated_at")
         .eq("store_id", store.id).eq("status","active").order("updated_at",{ascending:false}).limit(200);
-      const { data: branches } = await admin.from("gmp_branches").select("id,name,code,city,address,phone,whatsapp,active")
-        .eq("organization_id", store.organization_id).eq("active",true).order("name").limit(50);
+      const { data: branches } = store.branch_id
+        ? await admin.from("gmp_branches").select("id,name,code,city,address,phone,whatsapp,active").eq("organization_id", store.organization_id).eq("id", store.branch_id).eq("active",true).limit(1)
+        : { data: [] };
       const publicStore = { id: store.id, name: store.name, slug: store.slug, phone: store.phone, whatsapp: store.whatsapp, logo_path: store.logo_path, country_code: store.country_code, currency: store.currency, timezone: store.timezone };
       return json({ store: publicStore, directory, listings: listings ?? [], branches: branches ?? [] });
     }
