@@ -64,7 +64,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
         </section>
 
         <section className="stage3-panel">
-          <div className="stage3-card-head"><h2>تشغيل Stage 3</h2><span className="stage3-status">{planCode || "لا توجد خطة فعالة"}</span></div>
+          <div className="stage3-card-head"><h2>تشغيل المرحلة 3</h2><span className="stage3-status">{planCode === "business" ? "الكاملة" : planCode === "pro" ? "الأعمال" : planCode || "لا توجد خطة فعالة"}</span></div>
           <p>الصلاحية الحالية: {role === "owner" ? "مالك" : role === "admin" ? "مدير" : "مشاهد"}. إجراءات AI وWhatsApp والفوترة الحساسة تتطلب المسار والصلاحية المناسبة.</p>
         </section>
 
