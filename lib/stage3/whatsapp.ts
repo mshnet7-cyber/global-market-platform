@@ -63,10 +63,13 @@ export async function sendWhatsAppMessage(input: WhatsAppMessageInput) {
       redirect: "error",
     });
     const raw = await readBoundedText(response);
-  let data: Record<string, unknown> = {};
-  try { data = JSON.parse(raw) as Record<string, unknown>; } catch { data = { raw: raw.slice(0, 2000) }; }
-  if (!response.ok) throw new Error(`whatsapp_provider_http_${response.status}`);
-  return data;
+    let data: Record<string, unknown> = {};
+    try { data = JSON.parse(raw) as Record<string, unknown>; } catch { data = { raw: raw.slice(0, 2000) }; }
+    if (!response.ok) throw new Error(`whatsapp_provider_http_${response.status}`);
+    return data;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export type WhatsAppTemplateMessage = {
