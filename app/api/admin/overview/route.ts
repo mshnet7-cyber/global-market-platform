@@ -8,7 +8,8 @@ const json=(data:unknown,status=200)=>NextResponse.json(data,{status,headers:{"c
 
 async function guard(){
   const demo = await getDemoSession();
-  if (demo?.role === "platform_admin") {
+  if (demo) {
+    if (demo.role !== "platform_admin") throw new Error("forbidden");
     const admin = createSupabaseAdminClient();
     if (!admin) throw new Error("not_configured");
     return { supabase: admin, admin, user: { id: demo.account.userId, email: demo.account.email } };
