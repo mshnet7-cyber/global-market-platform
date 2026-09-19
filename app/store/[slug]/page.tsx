@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { countries, isValidLanguage } from "../../../lib/config";
 import { getMessages, getDisplayName, isRtlLanguage } from "../../../lib/i18n";
 import { getSnapshot } from "../../../lib/providers";
@@ -13,15 +14,22 @@ export default async function StorePage({ params, searchParams }: { params: Prom
   const admin = createSupabaseAdminClient();
   let store: any = null;
   let settings: any = null;
+  let directory: any = null;
 
   if (admin) {
     const storeResult = await admin.from("gmp_stores").select("id,name,slug,phone,whatsapp,logo_path,country_code,currency,timezone").eq("slug", slug).maybeSingle();
     store = storeResult.data;
     if (store?.id) {
-      const settingsResult = await admin.from("gmp_store_settings").select("language,template,orientation").eq("store_id", store.id).maybeSingle();
+      const [settingsResult, directoryResult] = await Promise.all([
+        admin.from("gmp_store_settings").select("language,template,orientation").eq("store_id", store.id).maybeSingle(),
+        admin.from("gmp_store_directory").select("store_id,status").eq("store_id", store.id).eq("status","published").maybeSingle(),
+      ]);
       settings = settingsResult.data;
+      directory = directoryResult.data;
     }
   }
+
+  if (!store || !directory) notFound();
 
   const country = countries.find((c) => c.code === String(store?.country_code ?? "OM").toUpperCase()) ?? countries.find((c) => c.code === "OM") ?? countries[0];
   const language = query?.language && isValidLanguage(query.language) ? query.language.toLowerCase() : String(settings?.language ?? "ar").toLowerCase();
