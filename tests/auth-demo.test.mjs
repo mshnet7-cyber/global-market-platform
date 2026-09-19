@@ -26,7 +26,7 @@ test("login server action is bound to safe redirect targets and both auth modes"
   assert.match(action, /"use server"/);
   assert.match(action, /matchDemoCredentials/);
   assert.match(action, /signInWithPassword/);
-  assert.match(action, /demoRole === "platform_admin"/);
+  assert.match(action, /demoRole\\s*===\\s*"platform_admin"/);
   assert.match(action, /startsWith\("\/"\)/);
   assert.match(action, /!next\.startsWith\("\/\/"\)/);
   assert.match(action, /next\.length <= 2048/);
