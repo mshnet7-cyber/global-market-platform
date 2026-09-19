@@ -52,15 +52,14 @@ async function invoke(path: string, payload: Record<string, unknown>): Promise<A
       signal: controller.signal,
       redirect: "error",
     });
+    const raw = await readBoundedText(response);
+    let data: AiResponse = {};
+    try { data = JSON.parse(raw) as AiResponse; } catch { data = { text: raw.slice(0, 10000) }; }
+    if (!response.ok) throw new Error(`ai_provider_http_${response.status}`);
+    return data;
   } finally {
     clearTimeout(timer);
   }
-
-  const raw = await readBoundedText(response);
-  let data: AiResponse = {};
-  try { data = JSON.parse(raw) as AiResponse; } catch { data = { text: raw.slice(0, 10000) }; }
-  if (!response.ok) throw new Error(`ai_provider_http_${response.status}`);
-  return data;
 }
 
 export async function extractDocumentFields(input: {
