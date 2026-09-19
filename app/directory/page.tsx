@@ -6,7 +6,7 @@ import Link from "next/link";
 export default function DirectoryPage(){
   const [rows,setRows]=useState<any[]>([]),[selected,setSelected]=useState<any>(null),[q,setQ]=useState(""),[loading,setLoading]=useState(true),[message,setMessage]=useState("");
   const load=useCallback(async()=>{setLoading(true);try{const r=await fetch("/api/stage2?action=directory&q="+encodeURIComponent(q),{cache:"no-store"});const d=await r.json();if(!r.ok)throw new Error(d.error||"تعذر التحميل");setRows(d.rows||[]);}catch(e){setMessage(e instanceof Error?e.message:"تعذر التحميل");}finally{setLoading(false);}}
-  useEffect(()=>{const t=setTimeout(()=>void load(),180);return()=>clearTimeout(t)},[q]);
+  useEffect(()=>{const t=setTimeout(()=>void load(),180);return()=>clearTimeout(t)},[load]);
   async function openStore(slug:string){try{const r=await fetch("/api/stage2?action=store&slug="+encodeURIComponent(slug),{cache:"no-store"});const d=await r.json();if(!r.ok)throw new Error(d.error||"تعذر فتح الملف");setSelected(d);}catch(e){setMessage(e instanceof Error?e.message:"تعذر فتح الملف");}}
   return <div className="page-frame store-directory-page" lang="ar" dir="rtl">
     <header className="topbar"><div className="container nav site-nav">
