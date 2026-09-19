@@ -64,3 +64,10 @@ test("Public history endpoints are restricted to public instruments",()=>{
 test("E-invoice rejects unknown actions before queue/send side effects",()=>{
   assert.ok(read("app/api/stage3/einvoice/route.ts").includes('["validate","queue","send"].includes(action)'));
 });
+test("Merchant operational JSON APIs enforce bounded request parsing",()=>{
+  for(const p of["app/api/merchant/cameras/route.ts","app/api/merchant/compliance/route.ts","app/api/merchant/operations/route.ts","app/api/merchant/sales/route.ts","app/api/merchant/invoicing/route.ts"]){
+    const src=read(p);
+    assert.ok(src.includes("readBoundedRequestJson"));
+    assert.ok(src.includes("64 * 1024"));
+  }
+});
