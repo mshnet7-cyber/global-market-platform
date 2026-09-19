@@ -94,5 +94,13 @@ ok("health endpoint does not expose env names", !text("app/api/health/route.ts")
 ok("Cloudflare cron bridge is configured", text("worker/index.ts").includes("/api/cron/webhooks") && text("worker/index.ts").includes("/api/cron/whatsapp") && text("worker/index.ts").includes("controller.cron"));
 ok("Cloudflare Workers config uses Worker entry and daily crons", text("wrangler.jsonc").includes('"main": "./worker/index.ts"') && text("wrangler.jsonc").includes('"0 0 * * *"') && text("wrangler.jsonc").includes('"5 0 * * *"'));
 ok("OMR display uses inline vector", text("components/MoneyDisplay.tsx").includes("<svg className=\"omr-symbol\"") && text("components/MoneyDisplay.tsx").includes("currentColor"));
+const demoAuth=text("lib/demo-auth.ts");
+const loginRoute=text("app/api/auth/login/route.ts");
+const adminApi=text("app/api/admin/overview/route.ts");
+const logoutRoute=text("app/api/auth/logout/route.ts");
+ok("preview-only demo auth is implemented", demoAuth.includes('VERCEL_ENV === "preview"') && demoAuth.includes('DEMO_MODE === "true"') && demoAuth.includes("matchDemoCredentials"));
+ok("demo admin credentials route is wired", loginRoute.includes("matchDemoCredentials") && loginRoute.includes('demoRole === "platform_admin"') && adminApi.includes("getDemoSession"));
+ok("demo shop is wired to merchant context", text("lib/merchant-access.ts").includes('demo?.role === "shop_owner"') && text("lib/merchant-access.ts").includes('global-market-demo-shop'));
+ok("demo session is cleared on logout", logoutRoute.includes("clearDemoSession"));
 ok("OMR fallback stays ASCII-safe", text("lib/currency-display.ts").includes("OMR") && !text("lib/currency-display.ts").includes("⃄") && !text("lib/currency-display.ts").includes("\\u20C4"));
 console.log(`verify-project: ${checks.length} checks passed`);
