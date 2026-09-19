@@ -1,5 +1,6 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import type { IntegrationState } from "./types";
+import { readBoundedText } from "./provider-http";
 
 function cfg() {
   return {
@@ -13,7 +14,7 @@ function cfg() {
 
 export function getEInvoiceStatus() {
   const c = cfg();
-  const state: IntegrationState = c.provider && c.baseUrl && c.apiKey && c.approved ? "live" : "integration_ready";
+  const state: IntegrationState = c.provider && c.baseUrl && c.apiKey && c.webhookSecret && c.approved ? "live" : "integration_ready";
   return { state, provider: c.provider, reason: state === "live" ? undefined : "government_or_provider_credentials_and_approval_not_configured" };
 }
 
@@ -32,10 +33,23 @@ export function validateInvoicePayload(payload: Record<string,unknown>) {
 
 export async function submitInvoice(payload: Record<string,unknown>) {
   const c=cfg(); if(!c.baseUrl||!c.apiKey||!c.approved)throw new Error("einvoice_not_configured");
+  let providerUrl: URL;
+  try { providerUrl = new URL(c.baseUrl); } catch { throw new Error("einvoice_endpoint_invalid"); }
+  if (providerUrl.protocol !== "https:" || providerUrl.username || providerUrl.password) throw new Error("einvoice_endpoint_invalid");
   const requestHash=createHash("sha256").update(JSON.stringify(payload)).digest("hex");
-  const response=await fetch(`${c.baseUrl}/invoices`,{method:"POST",headers:{"content-type":"application/json",authorization:`Bearer ${c.apiKey}`,"x-gmp-request-hash":requestHash,"idempotency-key":requestHash},body:JSON.stringify(payload),cache:"no-store"});
-  const raw=await response.text(); let data:Record<string,unknown>={}; try{data=JSON.parse(raw) as Record<string,unknown>}catch{data={raw:raw.slice(0,4000)}} if(!response.ok)throw new Error(`einvoice_provider_http_${response.status}`);
-  return {requestHash,data};
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),10_000);
+  let response:Response;
+  try {
+    response=await fetch(`${providerUrl.toString().replace(/\/$/,"")}/invoices`,{method:"POST",headers:{"content-type":"application/json",authorization:`Bearer ${c.apiKey}`,"x-gmp-request-hash":requestHash,"idempotency-key":requestHash},body:JSON.stringify(payload),cache:"no-store",signal:controller.signal,redirect:"error"});
+    const raw=await readBoundedText(response);
+    let data:Record<string,unknown>={};
+    try{data=JSON.parse(raw) as Record<string,unknown>}catch{data={raw:raw.slice(0,4000)}}
+    if(!response.ok)throw new Error(`einvoice_provider_http_${response.status}`);
+    return {requestHash,data};
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export function verifyEInvoiceWebhook(body:string,signature:string|null) {

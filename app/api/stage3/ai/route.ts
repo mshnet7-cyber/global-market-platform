@@ -1,3 +1,4 @@
+import { readBoundedRequestJson } from "../../../../lib/bounded-body";
 import { NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 import { requireMerchantPlan } from "../../../../lib/merchant-access";
@@ -10,7 +11,7 @@ export async function GET(){try{await requireMerchantPlan(["business"]);return j
 export async function POST(request:Request){
  try{
   const {supabase,organization,user}=await requireMerchantPlan(["business"]);
-  const b=await request.json().catch(()=>null) as Record<string,unknown>|null;if(!b)return json({error:"invalid_json"},400);
+  const b=await readBoundedRequestJson(request, 64 * 1024).catch(()=>null) as Record<string,unknown>|null;if(!b)return json({error:"invalid_json"},400);
   const admin=createSupabaseAdminClient();if(!admin)return json({error:"service_not_configured"},503);
   const action=String(b.action||"");
   if(action==="ocr"){

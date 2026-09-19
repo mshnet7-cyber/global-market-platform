@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from "../../../../lib/supabase/server";
 import { isSameOriginRequest } from "../../../../lib/request-security";
 import { createSupabaseAdminClient } from "../../../../lib/supabase/admin";
 import { appConfig, countries } from "../../../../lib/config";
+import { readBoundedRequestFormData } from "../../../../lib/bounded-body";
 
 function slugify(value: string) {
   return value.toLowerCase().trim().replace(/[^a-z0-9\u0600-\u06ff]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "account";
@@ -18,7 +19,9 @@ function redirectWithError(request: Request, code: string, next = "/dashboard", 
 
 export async function POST(request: Request) {
   if (!isSameOriginRequest(request)) return new NextResponse(JSON.stringify({ error: "cross_site_request" }), { status: 403, headers: { "content-type": "application/json" } });
-  const form = await request.formData();
+  let form: FormData;
+  try { form = await readBoundedRequestFormData(request, 64 * 1024); }
+  catch (error) { return new NextResponse(error instanceof Error && error.message === "request_body_too_large" ? "Request body too large." : "Invalid request body.", { status: error instanceof Error && error.message === "request_body_too_large" ? 413 : 400 }); }
   const name = String(form.get("name") ?? "").trim().slice(0, 120);
   const email = String(form.get("email") ?? "").trim().toLowerCase();
   const password = String(form.get("password") ?? "");

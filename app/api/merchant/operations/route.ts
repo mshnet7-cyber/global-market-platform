@@ -1,3 +1,4 @@
+import { readBoundedRequestJson } from "../../../../lib/bounded-body";
 import { NextResponse } from "next/server";
 import { requireMerchantPlan } from "../../../../lib/merchant-access";
 import { queueCustomerWhatsApp } from "../../../../lib/operational-notifications";
@@ -56,7 +57,7 @@ type Row = Record<string, unknown>;
 
 export async function POST(request: Request) {
   try {
-    const body=await request.json().catch(()=>null) as Record<string,any>|null;
+    const body=await readBoundedRequestJson(request, 64 * 1024).catch(()=>null) as Record<string,any>|null;
     if (!body) return NextResponse.json({error:"invalid_json"},{status:400});
     const moduleName=String(body.module??""); const access=plans[moduleName]; if(!access)return NextResponse.json({error:"invalid_module"},{status:404});
     const {supabase,user,organization}=await requireMerchantPlan(access);

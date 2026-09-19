@@ -1,3 +1,4 @@
+import { readBoundedRequestJson } from "../../../../lib/bounded-body";
 import { NextResponse } from "next/server";
 import { getMerchantContext } from "../../../../lib/merchant-access";
 import { encryptWebhookSecret, validateWebhookUrl } from "../../../../lib/webhooks";
@@ -34,7 +35,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const { organization, admin } = await guard();
-    const body = await request.json().catch(() => null) as Record<string, unknown> | null;
+    const body = await readBoundedRequestJson(request, 64 * 1024).catch(() => null) as Record<string, unknown> | null;
     const url = String(body?.url ?? "").trim();
     const secret = String(body?.signing_secret ?? "");
     const events = Array.isArray(body?.event_types) ? body.event_types.map(String) : ["market.alert.triggered"];
@@ -61,7 +62,7 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   try {
     const { organization, admin } = await guard();
-    const body = await request.json().catch(() => null) as Record<string, unknown> | null;
+    const body = await readBoundedRequestJson(request, 64 * 1024).catch(() => null) as Record<string, unknown> | null;
     const id = String(body?.id ?? "");
     if (!id || typeof body?.enabled !== "boolean") return json({ error: "invalid_request" }, 400);
     const { data, error } = await admin.from("gmp_webhook_endpoints")

@@ -25,7 +25,7 @@ ok("document intelligence API exists", existsSync(join(root,"app/api/merchant/do
 ok("document intelligence dashboard exists", existsSync(join(root,"app/dashboard/documents/page.tsx")));
 ok("webhook retry endpoint exists", existsSync(join(root,"app/api/cron/webhooks/route.ts")));
 ok("WhatsApp retry endpoint exists", existsSync(join(root,"app/api/cron/whatsapp/route.ts")));
-const whatsappRetry=text("supabase/migrations/20260919005000_gmp_whatsapp_retry_claim.sql");
+const whatsappRetry=text("supabase/migrations/20260919004928_gmp_whatsapp_retry_claim.sql");
 ok("WhatsApp retry claim tracked", whatsappRetry.includes("for update skip locked") && whatsappRetry.includes("gmp_claim_due_whatsapp_messages"));
 const webhookApi=text("app/api/dashboard/webhooks/route.ts");
 ok("webhook destination validation wired", webhookApi.includes("validateWebhookUrl") && webhookApi.includes("invalid_webhook_destination"));
@@ -33,9 +33,20 @@ const webhooks=text("lib/webhooks.ts");
 ok("webhook SSRF guard", webhooks.includes("dns/promises") && webhooks.includes('redirect:"error"') && webhooks.includes("webhook_destination_not_allowed"));
 const storePage=text("app/store/[slug]/page.tsx");
 ok("public store requires publication", storePage.includes("notFound()") && storePage.includes('eq("status","published")'));
-const marketplaceLock=text("supabase/migrations/20260919000600_gmp_marketplace_rpc_security_hardening.sql");
+const marketplaceLock=text("supabase/migrations/20260918204610_gmp_marketplace_rpc_security_hardening_20260919.sql");
 ok("public marketplace RPC locked down", marketplaceLock.includes("revoke execute on function public.gmp_create_marketplace_order") && marketplaceLock.includes("from anon,authenticated"));
 const migrationFiles = execFileSync("git",["ls-files","supabase/migrations"],{encoding:"utf8"}).split("\n").filter(Boolean);
+const migrationVersionOwners = new Map();
+const duplicateMigrationVersions = [];
+for (const file of migrationFiles) {
+  const fileName = file.split("/").pop() ?? file;
+  const match = fileName.match(/^(\d+)_/);
+  if (!match) continue;
+  const previous = migrationVersionOwners.get(match[1]);
+  if (previous && previous !== file) duplicateMigrationVersions.push(`${match[1]}: ${previous} <> ${file}`);
+  migrationVersionOwners.set(match[1], file);
+}
+ok("migration filename versions are unique", duplicateMigrationVersions.length === 0, duplicateMigrationVersions.join("; "));
 ok("operational workflow migration tracked", migrationFiles.some(x=>x.includes("gmp_full_plan_operational_workflows_v1")));
 ok("camera endpoint migration tracked", migrationFiles.some(x=>x.includes("gmp_camera_endpoint_hardening_v1")));
 ok("invoicing hardening migration tracked", migrationFiles.some(x=>x.includes("gmp_harden_invoicing_rls_indexes_transitions_v1")));
@@ -53,7 +64,7 @@ const ci=text(".github/workflows/ci.yml");
 ok("CI runs tests", ci.includes("npm test"));
 ok("CI runs lint", ci.includes("npm run lint"));
 ok("CI runs build", ci.includes("npm run build"));
-const hardening=text("supabase/migrations/20260919000000_gmp_p0_p1_hardening.sql");
+const hardening=text("supabase/migrations/20260918204134_gmp_p0_p1_hardening_20260919.sql");
 ok("marketplace abuse protection tracked", hardening.includes("gmp_public_order_rate_limits") && hardening.includes("gmp_allow_public_marketplace_order"));
 
 ok("marketplace RPC execute lockdown tracked", marketplaceLock.includes("revoke execute on function public.gmp_create_marketplace_order") && marketplaceLock.includes("from anon,authenticated"));
@@ -61,11 +72,11 @@ ok("webhook retry hardening tracked", hardening.includes("gmp_claim_due_webhook_
 const launchIndexes=text("supabase/migrations/20260919004107_gmp_launch_fk_indexes.sql");
 const remainingIndexes=text("supabase/migrations/20260919004139_gmp_remaining_fk_indexes.sql");
 ok("Global Market FK index migrations tracked", launchIndexes.includes("gmp_ad_creatives_org_idx") && remainingIndexes.includes("gmp_display_content_screen_idx"));
-const screenFkIndex=text("supabase/migrations/20260919004300_gmp_display_content_screen_id_index.sql");
+const screenFkIndex=text("supabase/migrations/20260919010317_gmp_display_content_screen_id_index.sql");
 ok("display content screen FK index tracked", screenFkIndex.includes("gmp_display_content_screen_id_idx"));
-const billingClaim=text("supabase/migrations/20260919008100_gmp_billing_event_claim_v2.sql");
-const einvoiceClaim=text("supabase/migrations/20260919006000_gmp_einvoice_send_claim.sql");
-const complianceGuard=text("supabase/migrations/20260919007000_gmp_compliance_active_case_guard.sql");
+const billingClaim=text("supabase/migrations/20260919112835_gmp_billing_event_claim_v2.sql");
+const einvoiceClaim=text("supabase/migrations/20260919010816_gmp_einvoice_send_claim.sql");
+const complianceGuard=text("supabase/migrations/20260919112704_gmp_compliance_active_case_guard.sql");
 ok("billing claim migration tracked", billingClaim.includes("gmp_claim_billing_event") && billingClaim.includes("for update") && billingClaim.includes("revoke execute"));
 ok("e-invoice claim migration tracked", einvoiceClaim.includes("gmp_claim_einvoice_send") && einvoiceClaim.includes("for update") && einvoiceClaim.includes("revoke execute"));
 ok("compliance active-case guard tracked", complianceGuard.includes("gmp_compliance_active_entity_uniq"));

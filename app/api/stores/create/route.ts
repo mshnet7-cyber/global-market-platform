@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from "../../../../lib/supabase/server";
 import { createSupabaseAdminClient } from "../../../../lib/supabase/admin";
 import { getMerchantContext } from "../../../../lib/merchant-access";
 import { isValidCountry } from "../../../../lib/config";
+import { readBoundedRequestFormData } from "../../../../lib/bounded-body";
 
 function slugify(value: string) {
   return value.toLowerCase().trim().replace(/[^a-z0-9\u0600-\u06ff]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "store";
@@ -30,7 +31,11 @@ export async function POST(request: Request) {
   if (!user) return NextResponse.redirect(new URL("/login?next=/dashboard", request.url));
   if (!organization || !role || role === "viewer") return NextResponse.redirect(new URL("/dashboard?error=forbidden", request.url));
 
-  const form = await request.formData();
+  let form: FormData;
+  try { form = await readBoundedRequestFormData(request, 64 * 1024); }
+  catch (error) { return new NextResponse(error instanceof Error && error.message === "request_body_too_large" ? "Request body too large." : "Invalid request body.", { status: error instanceof Error && error.message === "request_body_too_large" ? 413 : 400 }); }
+
+
   const name = String(form.get("name") ?? "").trim().slice(0, 120);
   const countryCode = String(form.get("country_code") ?? "").trim().toUpperCase();
   const currency = String(form.get("currency") ?? "").trim().toUpperCase();

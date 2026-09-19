@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "../../../../lib/supabase/admin";
 import { getMerchantContext } from "../../../../lib/merchant-access";
+import { readBoundedRequestFormData } from "../../../../lib/bounded-body";
 
 function subscriptionIsUsable(subscription: { status: string; current_period_end: string | null } | null) {
   if (!subscription || !["active", "trialing", "grace_period"].includes(subscription.status)) return false;
@@ -17,7 +18,11 @@ export async function POST(request: Request) {
   }
   if (!admin) return new NextResponse("Display management is not configured.", { status: 503 });
 
-  const form = await request.formData();
+  let form: FormData;
+  try { form = await readBoundedRequestFormData(request, 64 * 1024); }
+  catch (error) { return new NextResponse(error instanceof Error && error.message === "request_body_too_large" ? "Request body too large." : "Invalid request body.", { status: error instanceof Error && error.message === "request_body_too_large" ? 413 : 400 }); }
+
+
   const storeId = String(form.get("store_id") ?? "").trim();
   const name = String(form.get("name") ?? "").trim().slice(0, 80);
   if (!storeId || !name) return NextResponse.redirect(new URL("/display?error=invalid", request.url));

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { appConfig, countries, isValidLanguage } from "../../../../lib/config";
 import { getSnapshot } from "../../../../lib/providers";
-import { getPublicPriceHistory, HISTORY_RANGES } from "../../../../lib/market-history";
+import { getPublicPriceHistory, HISTORY_RANGES, isPublicHistoryInstrument } from "../../../../lib/market-history";
 import { withTrustStatus } from "../../../../lib/market-trust";
 
 export async function GET(request: Request) {
@@ -18,7 +18,7 @@ export async function GET(request: Request) {
   const selected=requested||("XAU"+country.currency);
   const isGold=selected===("XAU"+country.currency)||selected==="XAUOMR"||selected==="XAUUSD";
   const selectedQuote=allQuotes.find(q=>q.symbol===selected||q.instrument===selected)||null;
-  const history=await getPublicPriceHistory(selected,validRange);
+  const history=isPublicHistoryInstrument(selected) ? await getPublicPriceHistory(selected,validRange) : [];
   return NextResponse.json({
     gold:snapshot.gold,
     silver:snapshot.silver,

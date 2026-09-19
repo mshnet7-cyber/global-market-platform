@@ -1,3 +1,4 @@
+import { readBoundedRequestJson } from "../../../../lib/bounded-body";
 import { NextResponse } from "next/server";
 import { requireMerchantPlan } from "../../../../lib/merchant-access";
 import { queueCustomerWhatsApp } from "../../../../lib/operational-notifications";
@@ -8,7 +9,7 @@ const PAYMENT_METHODS = new Set(["cash", "bank", "card", "wallet", "other"]);
 export async function POST(request: Request) {
   try {
     const { supabase, organization } = await requireMerchantPlan(["pro", "business"]);
-    const body = await request.json().catch(() => null) as Record<string, unknown> | null;
+    const body = await readBoundedRequestJson(request, 64 * 1024).catch(() => null) as Record<string, unknown> | null;
     if (!body) return NextResponse.json({ error: "invalid_json" }, { status: 400 });
     const storeId = body.store_id ? String(body.store_id) : null;
     const branchId = body.branch_id ? String(body.branch_id) : null;

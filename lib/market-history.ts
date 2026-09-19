@@ -1,3 +1,4 @@
+import { MARKET_INDEX_SYMBOLS, MARKET_SYMBOLS } from "./providers/market-data";
 import { createSupabaseAdminClient } from "./supabase/admin";
 
 export const HISTORY_RANGES = {
@@ -8,6 +9,16 @@ export const HISTORY_RANGES = {
 } as const;
 
 export type HistoryRange = keyof typeof HISTORY_RANGES;
+
+const PUBLIC_HISTORY_INSTRUMENTS = new Set([
+  "XAUUSD", "XAGUSD", "XAUOMR", "XAGOMR",
+  ...MARKET_SYMBOLS.map((item) => item.symbol),
+  ...MARKET_INDEX_SYMBOLS.map((item) => item.symbol),
+]);
+
+export function isPublicHistoryInstrument(instrumentCode: string) {
+  return PUBLIC_HISTORY_INSTRUMENTS.has(instrumentCode.toUpperCase());
+}
 
 export type PublicPricePoint = {
   instrument_code: string;
@@ -22,6 +33,8 @@ export type PublicPricePoint = {
 };
 
 export async function getPublicPriceHistory(instrumentCode: string, range: HistoryRange = "1D", limit = 240) {
+  const normalizedInstrument = instrumentCode.toUpperCase();
+  if (!isPublicHistoryInstrument(normalizedInstrument)) return [] as PublicPricePoint[];
   const admin = createSupabaseAdminClient();
   if (!admin) return [] as PublicPricePoint[];
   const maxAge = HISTORY_RANGES[range] ?? HISTORY_RANGES["1D"];
@@ -30,7 +43,7 @@ export async function getPublicPriceHistory(instrumentCode: string, range: Histo
   const { data, error } = await admin
     .from("gmp_price_quotes")
     .select("instrument_code,value,bid,ask,currency,unit,status,observed_at,provider")
-    .eq("instrument_code", instrumentCode.toUpperCase())
+    .eq("instrument_code", normalizedInstrument)
     .gte("observed_at", since)
     .order("observed_at", { ascending: true })
     .limit(safeLimit);

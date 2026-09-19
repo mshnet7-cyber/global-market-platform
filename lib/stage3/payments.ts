@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { IntegrationState } from "./types";
+import { readBoundedText } from "./provider-http";
 
 export const BILLING_STATUSES = ["created","payment_pending","active","past_due","grace_period","expired","canceled","suspended"] as const;
 export type BillingStatus = (typeof BILLING_STATUSES)[number];
@@ -32,24 +33,36 @@ function cfg() {
 
 export function getPaymentStatus() {
   const c = cfg();
-  const state: IntegrationState = c.checkoutUrl && c.apiKey && c.approved ? "live" : "integration_ready";
+  const state: IntegrationState = c.provider && c.checkoutUrl && c.apiKey && c.webhookSecret && c.approved ? "live" : "integration_ready";
   return { state, provider: c.provider, reason: state === "live" ? undefined : "provider_credentials_or_commercial_approval_not_configured" };
 }
 
 export async function createHostedCheckout(input: { planCode:string; billingPeriod:string; amount:number; currency:string; successUrl:string; cancelUrl:string; customerReference:string; }) {
   const c = cfg();
   if (!c.checkoutUrl || !c.apiKey || !c.approved) throw new Error("payments_not_configured");
-  const response = await fetch(c.checkoutUrl, {
-    method: "POST",
-    headers: { "content-type": "application/json", authorization: `Bearer ${c.apiKey}` },
-    body: JSON.stringify(input),
-    cache: "no-store",
-  });
-  const raw = await response.text();
-  let data: Record<string, unknown> = {};
-  try { data = JSON.parse(raw) as Record<string, unknown>; } catch { data = { raw: raw.slice(0, 2000) }; }
-  if (!response.ok) throw new Error(`payment_provider_http_${response.status}`);
-  return data;
+  let providerUrl: URL;
+  try { providerUrl = new URL(c.checkoutUrl); } catch { throw new Error("payment_endpoint_invalid"); }
+  if (providerUrl.protocol !== "https:" || providerUrl.username || providerUrl.password) throw new Error("payment_endpoint_invalid");
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10_000);
+  let response: Response;
+  try {
+    response = await fetch(providerUrl, {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${c.apiKey}` },
+      body: JSON.stringify(input),
+      cache: "no-store",
+      signal: controller.signal,
+      redirect: "error",
+    });
+    const raw = await readBoundedText(response);
+    let data: Record<string, unknown> = {};
+    try { data = JSON.parse(raw) as Record<string, unknown>; } catch { data = { raw: raw.slice(0, 2000) }; }
+    if (!response.ok) throw new Error(`payment_provider_http_${response.status}`);
+    return data;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export function verifyPaymentWebhook(body: string, signature: string | null) {

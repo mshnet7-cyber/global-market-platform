@@ -1,3 +1,4 @@
+import { readBoundedRequestJson } from "../../../../lib/bounded-body";
 import { NextResponse } from "next/server";
 import { requireMerchantPlan } from "../../../../lib/merchant-access";
 import { createSupabaseAdminClient } from "../../../../lib/supabase/admin";
@@ -32,7 +33,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const { supabase, user, organization } = await requireMerchantPlan(["business"]);
-    const body = await request.json().catch(() => null) as Record<string, any> | null;
+    const body = await readBoundedRequestJson(request, 64 * 1024).catch(() => null) as Record<string, any> | null;
     if (!body) return NextResponse.json({ error: "invalid_json" }, { status: 400 });
     if (body.action === "profile") {
       const countryCode = String(body.country_code ?? "").toUpperCase();
@@ -137,7 +138,7 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   try {
     const { supabase, organization } = await requireMerchantPlan(["business"]);
-    const body = await request.json().catch(() => null) as Record<string, any> | null;
+    const body = await readBoundedRequestJson(request, 64 * 1024).catch(() => null) as Record<string, any> | null;
     const id = String(body?.id ?? "");
     const status = String(body?.status ?? "");
     if (!body || !id || !statuses.has(status)) return NextResponse.json({ error: "invalid_submission_update" }, { status: 400 });

@@ -10,7 +10,7 @@ test("stage1 core files exist",()=>{
     "app/markets/page.tsx","app/markets/MarketTerminal.tsx","app/gold/page.tsx","app/gold/GoldIntelligence.tsx",
     "app/api/market/terminal/route.ts","app/api/gold/history/route.ts","app/api/alerts/rules/route.ts",
     "app/api/v1/gold/route.ts","app/api/v1/markets/route.ts","app/api/v1/keys/route.ts","app/api/v1/webhooks/route.ts","app/api/health/market/route.ts",
-    "supabase/migrations/20260918000000_gmp_market_core_stage1.sql"
+    "supabase/migrations/20260917230455_gmp_market_core_stage1.sql"
   ]) assert.equal(existsSync(path),true,path);
 });
 

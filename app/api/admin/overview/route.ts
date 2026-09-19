@@ -1,3 +1,4 @@
+import { readBoundedRequestJson } from "../../../../lib/bounded-body";
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "../../../../lib/supabase/server";
 import { createSupabaseAdminClient } from "../../../../lib/supabase/admin";
@@ -39,7 +40,7 @@ export async function GET(){
 export async function POST(request:Request){
   try{
     const {admin,user}=await guard();
-    const b=await request.json().catch(()=>null) as Record<string,unknown>|null;
+    const b=await readBoundedRequestJson(request, 64 * 1024).catch(()=>null) as Record<string,unknown>|null;
     if(!b)return json({error:"invalid_json"},400);
     const action=String(b.action||"");
     const id=String(b.id||"");

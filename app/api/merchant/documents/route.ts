@@ -4,10 +4,20 @@ import { requireMerchantPlan } from "../../../../lib/merchant-access";
 import { createSupabaseAdminClient } from "../../../../lib/supabase/admin";
 import { extractDocumentFields, getAiStatus } from "../../../../lib/stage3/ai";
 import { recordAuditEvent } from "../../../../lib/provider-observability";
+import { readBoundedRequestFormData } from "../../../../lib/bounded-body";
 
 const BUCKET=process.env.GMP_DOCUMENTS_BUCKET?.trim() || "gmp-documents";
 const MAX_BYTES=10*1024*1024;
 const TYPES=new Set(["application/pdf","image/jpeg","image/png","image/webp"]);
+
+function matchesFileSignature(type:string, bytes:Uint8Array) {
+  if (type === "application/pdf") return bytes.length >= 5 && String.fromCharCode(...bytes.slice(0,5)) === "%PDF-";
+  if (type === "image/jpeg") return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  if (type === "image/png") return bytes.length >= 8 && bytes.slice(0,8).every((value,index) => value === [0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a][index]);
+  if (type === "image/webp") return bytes.length >= 12 && String.fromCharCode(...bytes.slice(0,4)) === "RIFF" && String.fromCharCode(...bytes.slice(8,12)) === "WEBP";
+  return false;
+}
+
 const json=(data:unknown,status=200)=>NextResponse.json(data,{status,headers:{"cache-control":"no-store"}});
 
 export async function GET(){
@@ -23,7 +33,13 @@ export async function POST(request:Request){
   try{
     const {supabase,organization,user}=await requireMerchantPlan(["business"]);
     const admin=createSupabaseAdminClient(); if(!admin)return json({error:"service_not_configured"},503);
-    const form=await request.formData();
+    let form: FormData;
+    try {
+      form = await readBoundedRequestFormData(request, MAX_BYTES + 256 * 1024);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "invalid_request";
+      return json({error:message==="request_body_too_large"?"request_body_too_large":"invalid_request_body"},message==="request_body_too_large"?413:400);
+    }
     const action=String(form.get("action")??"upload");
     if(action==="upload"){
       const file=form.get("file");
@@ -35,6 +51,7 @@ export async function POST(request:Request){
       const branchId=String(form.get("branch_id")??"").trim()||null;
       if(branchId){const {data:branch}=await supabase.from("gmp_branches").select("id").eq("id",branchId).eq("organization_id",organization.id).maybeSingle();if(!branch)return json({error:"branch_not_found"},400);}
       const bytes=new Uint8Array(await file.arrayBuffer());
+      if (!matchesFileSignature(file.type, bytes)) return json({error:"file_signature_invalid"},400);
       const hash=createHash("sha256").update(bytes).digest("hex");
       const ext=(file.name.split(".").pop()||"bin").toLowerCase().replace(/[^a-z0-9]/g,"");
       const path=`${organization.id}/${new Date().toISOString().slice(0,10)}/${randomUUID()}.${ext||"bin"}`;
