@@ -62,7 +62,7 @@ export async function GET(request: Request) {
       if (!storeIds.length) return json({ stores: [], listings: [] });
       const [{ data: stores }, { data: listings, error }] = await Promise.all([
         admin.from("gmp_stores").select("id,name,slug,phone,whatsapp,logo_path,country_code,currency,timezone").in("id",storeIds),
-        admin.from("gmp_marketplace_listings").select("id,store_id,listing_type,title,description,category,price,currency,availability,contact_mode,image_path,metadata,updated_at").in("store_id",storeIds).eq("status","active").order("updated_at",{ascending:false}).limit(500)
+        admin.from("gmp_marketplace_listings").select("id,store_id,listing_type,title,description,category,price,currency,availability,contact_mode,image_path,updated_at").in("store_id",storeIds).eq("status","active").order("updated_at",{ascending:false}).limit(500)
       ]);
       if(error) return json({error:error.message},400);
       const dirMap=new Map((directory??[]).map((d:any)=>[d.store_id,d]));
@@ -105,7 +105,7 @@ export async function GET(request: Request) {
       const { data: directory } = await admin.from("gmp_store_directory").select("store_id,status,description,category,address,city,region,postal_code,latitude,longitude,website,services,hours,social_links,verified_at,published_at,created_at,updated_at").eq("store_id", store.id).eq("status","published").maybeSingle();
       if (!directory) return json({ error: "store_not_published" }, 404);
       const { data: listings } = await admin.from("gmp_marketplace_listings")
-        .select("id,listing_type,title,description,category,price,currency,availability,contact_mode,image_path,metadata,updated_at")
+        .select("id,listing_type,title,description,category,price,currency,availability,contact_mode,image_path,updated_at")
         .eq("store_id", store.id).eq("status","active").order("updated_at",{ascending:false}).limit(200);
       const { data: branches } = await admin.from("gmp_branches").select("id,name,code,city,address,phone,whatsapp,active")
         .eq("organization_id", store.organization_id).eq("active",true).order("name").limit(50);
@@ -127,7 +127,7 @@ export async function GET(request: Request) {
       const { data: directory } = await admin.from("gmp_store_directory").select("store_id,status").eq("store_id",target).eq("status","published").maybeSingle();
       if (!directory) return json({ error: "store_not_published" }, 404);
       const { data, error } = await admin.from("gmp_marketplace_listings")
-        .select("id,listing_type,title,description,category,price,currency,availability,contact_mode,image_path,metadata,updated_at")
+        .select("id,listing_type,title,description,category,price,currency,availability,contact_mode,image_path,updated_at")
         .eq("store_id",target).eq("status","active").order("updated_at",{ascending:false}).limit(200);
       if (error) return json({ error: error.message },400);
       return json({ rows:data ?? [] });
