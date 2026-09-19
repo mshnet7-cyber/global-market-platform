@@ -102,5 +102,8 @@ ok("preview-only demo auth is implemented", demoAuth.includes('VERCEL_ENV === "p
 ok("demo admin credentials route is wired", loginRoute.includes("matchDemoCredentials") && loginRoute.includes('demoRole === "platform_admin"') && adminApi.includes("getDemoSession"));
 ok("demo shop is wired to merchant context", text("lib/merchant-access.ts").includes('demo?.role === "shop_owner"') && text("lib/merchant-access.ts").includes('global-market-demo-shop'));
 ok("demo session is cleared on logout", logoutRoute.includes("clearDemoSession"));
+const demoLoginRoute=text("app/api/auth/demo-login/route.ts");
+const loginPage=text("app/login/page.tsx");
+ok("one-click demo login is preview-only and role-bound", demoLoginRoute.includes("isDemoEnvironment") && demoLoginRoute.includes("platform_admin") && demoLoginRoute.includes("shop_owner") && demoLoginRoute.includes("setDemoSession") && loginPage.includes("/api/auth/demo-login"));
 ok("OMR fallback stays ASCII-safe", text("lib/currency-display.ts").includes("OMR") && !text("lib/currency-display.ts").includes("⃄") && !text("lib/currency-display.ts").includes("\\u20C4"));
 console.log(`verify-project: ${checks.length} checks passed`);
