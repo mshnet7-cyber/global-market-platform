@@ -13,7 +13,7 @@
     "deploy:cloudflare:dry-run": "vinext-cloudflare deploy --dry-run",
     "lint": "eslint .",
     "verify": "node scripts/verify-project.mjs",
-    "test": "node --test tests/merchant-workflows.test.mjs tests/stage1-core.test.mjs tests/stage2-core.test.mjs tests/stage3-core.test.mjs && npm run verify",
+    "test": "node --test tests/auth-demo.test.mjs tests/merchant-workflows.test.mjs tests/stage1-core.test.mjs tests/stage2-core.test.mjs tests/stage3-core.test.mjs && npm run verify",
     "check:vinext": "vinext check"
   },
   "dependencies": {
