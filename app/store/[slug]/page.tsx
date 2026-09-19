@@ -7,6 +7,7 @@ import { createSupabaseAdminClient } from "../../../lib/supabase/admin";
 import { formatMoneyDisplay } from "../../../lib/currency-display";
 
 function formatMoney(value: number | null, locale: string, currency: string, maximumFractionDigits = 3) { return formatMoneyDisplay(value, currency, locale, maximumFractionDigits); }
+function safeWebsite(value: unknown) { const raw=String(value??"").trim(); return /^https?:\/\//i.test(raw) ? raw : null; }
 
 export default async function StorePage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams?: Promise<{ language?: string }> }) {
   const { slug } = await params;
