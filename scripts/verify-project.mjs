@@ -61,4 +61,6 @@ ok("webhook retry hardening tracked", hardening.includes("gmp_claim_due_webhook_
 const launchIndexes=text("supabase/migrations/20260919004107_gmp_launch_fk_indexes.sql");
 const remainingIndexes=text("supabase/migrations/20260919004139_gmp_remaining_fk_indexes.sql");
 ok("Global Market FK index migrations tracked", launchIndexes.includes("gmp_ad_creatives_org_idx") && remainingIndexes.includes("gmp_display_content_screen_idx"));
+const screenFkIndex=text("supabase/migrations/20260919004300_gmp_display_content_screen_id_index.sql");
+ok("display content screen FK index tracked", screenFkIndex.includes("gmp_display_content_screen_id_idx"));
 console.log(`verify-project: ${checks.length} checks passed`);
