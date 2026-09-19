@@ -3,21 +3,12 @@ import { readBoundedJson } from "../../../../lib/stage3/provider-http";
 import { NextResponse } from "next/server";
 import { requireMerchantPlan } from "../../../../lib/merchant-access";
 import { buildInvoicePayload, getEInvoiceStatus, validateInvoicePayload } from "../../../../lib/stage3/einvoice";
+import { getTrustedAppOrigin } from "../../../../lib/trusted-origin";
 
 const json=(data:unknown,status=200)=>NextResponse.json(data,{status,headers:{"cache-control":"no-store","x-gmp-einvoice-canonical":"merchant-invoicing"}});
 
-function canonicalUrl(request: Request) {
-  const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim() || process.env.GMP_APP_URL?.trim();
-  const vercelHost = process.env.VERCEL_URL?.trim();
-  const requestOrigin = new URL(request.url);
-  const localFallback = ["localhost", "127.0.0.1", "::1"].includes(requestOrigin.hostname) ? requestOrigin.origin : "";
-  const origin = configured || (vercelHost ? `https://${vercelHost}` : localFallback);
-  if (!origin) throw new Error("canonical_origin_not_configured");
-  const url = new URL(origin);
-  if (url.protocol !== "https:" && !["localhost", "127.0.0.1", "::1"].includes(url.hostname)) {
-    throw new Error("canonical_origin_invalid");
-  }
-  return new URL("/api/merchant/invoicing", url);
+function canonicalUrl() {
+  return new URL("/api/merchant/invoicing", getTrustedAppOrigin());
 }
 
 export async function GET(){
@@ -47,28 +38,20 @@ export async function POST(request:Request){
     }
     const saleId=String(body.sale_id??"");
     if(!saleId)return json({error:"sale_id_required"},400);
-    const canonicalEndpoint=canonicalUrl(request);
+    const canonicalEndpoint=canonicalUrl();
     const headers=new Headers({"content-type":"application/json"});
     const cookie=request.headers.get("cookie");if(cookie)headers.set("cookie",cookie);
     const queueBody={...body,action:"queue",idempotency_key:String(body.idempotency_key??("stage3:"+organization.id+":"+saleId+":"+String(body.country_code??"OM").toUpperCase()))};
     const queued=await fetch(canonicalEndpoint,{method:"POST",headers,body:JSON.stringify(queueBody),cache:"no-store"});
     let queuedData: Record<string, any>;
-    try {
-      queuedData = await readBoundedJson<Record<string, any>>(queued);
-    } catch {
-      queuedData = { error: "canonical_invoice_api_invalid_response" };
-    }
+    try { queuedData = await readBoundedJson<Record<string, any>>(queued); } catch { queuedData = { error: "canonical_invoice_api_invalid_response" }; }
     if(!queued.ok)return json({...queuedData,canonical_endpoint:"/api/merchant/invoicing"},queued.status);
     if(action==="queue")return json({...queuedData,canonical_endpoint:"/api/merchant/invoicing"},queued.status);
     const submissionId=String(queuedData.row?.id??queuedData.submission_id??"");
     if(!submissionId)return json({error:"canonical_submission_missing"},502);
     const sent=await fetch(canonicalEndpoint,{method:"POST",headers,body:JSON.stringify({action:"send",submission_id:submissionId}),cache:"no-store"});
     let sentData: Record<string, any>;
-    try {
-      sentData = await readBoundedJson<Record<string, any>>(sent);
-    } catch {
-      sentData = { error: "canonical_invoice_send_invalid_response" };
-    }
+    try { sentData = await readBoundedJson<Record<string, any>>(sent); } catch { sentData = { error: "canonical_invoice_send_invalid_response" }; }
     return json({...sentData,submission_id:submissionId,canonical_endpoint:"/api/merchant/invoicing"},sent.status);
   }catch(e){
     const m=e instanceof Error?e.message:"unexpected_error";
