@@ -1,6 +1,7 @@
 name: CI
 
 on:
+  workflow_dispatch:
   push:
     branches: [main, stage3-ai-integrations-global, stage3-deep-hardening-20260919]
   pull_request:
