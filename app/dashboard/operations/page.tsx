@@ -14,6 +14,17 @@ const tabs = [
 ] as const;
 const money=(v:any)=>v==null||!Number.isFinite(Number(v))?"—":Number(v).toLocaleString("en-OM",{minimumFractionDigits:3,maximumFractionDigits:3});
 const num=(v:any)=>Number.isFinite(Number(v))?Number(v):0;
+const ROLE_LABELS:Record<string,string>={owner:"مالك",admin:"مدير",viewer:"مشاهد"};
+const STATUS_LABELS:Record<string,string>={draft:"مسودة",published:"منشور",suspended:"موقوف",new:"جديد",contacted:"تم التواصل",confirmed:"مؤكد",fulfilled:"مكتمل",cancelled:"ملغى",failed:"فشل",queued:"في الطابور",sending:"جارٍ الإرسال",submitted:"تم الإرسال",accepted:"مقبولة",rejected:"مرفوضة",active:"مفعّل",inactive:"غير مفعّل",LIVE:"مباشر",planned:"مخطط",ready:"جاهز",configured:"مُهيأ",disabled:"معطل"};
+const AVAILABILITY_LABELS:Record<string,string>={in_stock:"متوفر",out_of_stock:"غير متوفر",backorder:"طلب مسبق"};
+function displayValue(column:string,value:any){
+  if(value==null)return "—";
+  if(column==="status")return STATUS_LABELS[String(value)]??String(value);
+  if(column==="availability")return AVAILABILITY_LABELS[String(value)]??String(value);
+  if(column==="active" || column.endsWith("_enabled"))return value===true||value==="true"?"نعم":value===false||value==="false"?"لا":String(value);
+  if(column==="risk_level")return ({normal:"عادي",medium:"متوسط",high:"مرتفع",low:"منخفض"} as Record<string,string>)[String(value)]??String(value);
+  return String(value);
+}
 
 export default function OperationsPage(){
   const [tab,setTab]=useState("overview"),[data,setData]=useState<Data|null>(null),[loading,setLoading]=useState(true),[message,setMessage]=useState(""),[busy,setBusy]=useState(false);
@@ -46,8 +57,8 @@ export default function OperationsPage(){
 
   return <main className="stage2-page">
     <header className="stage2-page-head">
-      <div><div className="eyebrow">تشغيل التاجر المتقدم</div><h1>مركز تشغيل التاجر</h1><p>ERP + Marketplace + Displays + DOOH في مساحة عمل واحدة، مع صلاحيات على مستوى المؤسسة.</p></div>
-      <div className="stage2-head-actions"><Link href="/directory" className="btn">دليل المحلات</Link><Link href="/marketplace" className="btn">Marketplace</Link></div>
+      <div><div className="eyebrow">تشغيل التاجر المتقدم</div><h1>مركز تشغيل التاجر</h1><p>المبيعات والمخزون والسوق والشاشات والإعلانات الرقمية في مساحة عمل واحدة، مع صلاحيات على مستوى المؤسسة.</p></div>
+      <div className="stage2-head-actions"><Link href="/directory" className="btn">دليل المحلات</Link><Link href="/marketplace" className="btn">السوق</Link></div>
     </header>
     <nav className="stage2-tabs">{tabs.map(function(x){return <button key={x[0]} className={tab===x[0]?"active":""} onClick={()=>setTab(x[0])}>{x[1]}</button>})}</nav>
     {message&&<div className="stage2-alert">{message}</div>}
@@ -124,19 +135,19 @@ export default function OperationsPage(){
     </section>}
 
     {tab==="directory"&&<section className="stage2-section">
-      <div className="stage2-grid two">{data.stores.map(s=>{const d=directory.find(x=>x.store_id===s.id)||{};return <article className="stage2-panel" key={s.id}><h2>{s.name}</h2><label>الحالة<select id={"dir-status-"+s.id} defaultValue={d.status||"draft"}><option>draft</option><option>published</option><option>suspended</option></select></label><label>الفئة<input id={"dir-cat-"+s.id} defaultValue={d.category||""}/></label><label>الوصف<textarea id={"dir-desc-"+s.id} defaultValue={d.description||""}/></label><label>العنوان<input id={"dir-address-"+s.id} defaultValue={d.address||""}/></label><label>المدينة<input id={"dir-city-"+s.id} defaultValue={d.city||""}/></label><label>المنطقة<input id={"dir-region-"+s.id} defaultValue={d.region||""}/></label><label>الخدمات<input id={"dir-services-"+s.id} defaultValue={Array.isArray(d.services)?d.services.join(", "):""}/></label><button className="btn btn-primary" onClick={()=>void act({action:"directory",store_id:s.id,status:submitField("dir-status-"+s.id),category:submitField("dir-cat-"+s.id),description:submitField("dir-desc-"+s.id),address:submitField("dir-address-"+s.id),city:submitField("dir-city-"+s.id),region:submitField("dir-region-"+s.id),services:submitField("dir-services-"+s.id).split(",").map(x=>x.trim()).filter(Boolean)})}>حفظ الملف</button></article>})}</div>
+      <div className="stage2-grid two">{data.stores.map(s=>{const d=directory.find(x=>x.store_id===s.id)||{};return <article className="stage2-panel" key={s.id}><h2>{s.name}</h2><label>الحالة<select id={"dir-status-"+s.id} defaultValue={d.status||"draft"}><option value="draft">مسودة</option><option value="published">منشور</option><option value="suspended">موقوف</option></select></label><label>الفئة<input id={"dir-cat-"+s.id} defaultValue={d.category||""}/></label><label>الوصف<textarea id={"dir-desc-"+s.id} defaultValue={d.description||""}/></label><label>العنوان<input id={"dir-address-"+s.id} defaultValue={d.address||""}/></label><label>المدينة<input id={"dir-city-"+s.id} defaultValue={d.city||""}/></label><label>المنطقة<input id={"dir-region-"+s.id} defaultValue={d.region||""}/></label><label>الخدمات<input id={"dir-services-"+s.id} defaultValue={Array.isArray(d.services)?d.services.join(", "):""}/></label><button className="btn btn-primary" onClick={()=>void act({action:"directory",store_id:s.id,status:submitField("dir-status-"+s.id),category:submitField("dir-cat-"+s.id),description:submitField("dir-desc-"+s.id),address:submitField("dir-address-"+s.id),city:submitField("dir-city-"+s.id),region:submitField("dir-region-"+s.id),services:submitField("dir-services-"+s.id).split(",").map(x=>x.trim()).filter(Boolean)})}>حفظ الملف</button></article>})}</div>
     </section>}
 
     {tab==="marketplace"&&<section className="stage2-section">
       <SimpleForm title="عرض جديد في السوق" fields={["store_id","product_id","title","description","category","price","availability","status"]} submit={async f=>act({action:"listing",store_id:f.store_id,product_id:f.product_id||null,title:f.title,description:f.description,category:f.category,price:num(f.price),availability:f.availability||"in_stock",status:f.status||"draft"})}/>
       <Table rows={data.marketplaceListings.slice(0,100)} columns={["title","store_id","price","availability","status","updated_at"]} labels={["العرض","المتجر","السعر","التوفر","الحالة","التحديث"]}/>
-      <div className="stage2-table-wrap"><table><thead><tr><th>الطلب</th><th>المشتري</th><th>الإجمالي</th><th>الحالة</th><th>التغيير</th></tr></thead><tbody>{data.marketplaceOrders.slice(0,100).map((o:any)=><tr key={o.id}><td>#{o.order_no}</td><td>{o.buyer_name}<br/><small>{o.buyer_phone}</small></td><td>{money(o.subtotal)} {o.currency}</td><td>{o.status}</td><td><select value={o.status} onChange={e=>void act({action:"status",entity:"marketplace_order",id:o.id,status:e.target.value})}><option value="new">جديد</option><option value="contacted">تم التواصل</option><option value="confirmed">مؤكد</option><option value="fulfilled">مكتمل</option><option value="cancelled">ملغى</option></select></td></tr>)}</tbody></table></div>
+      <div className="stage2-table-wrap"><table><thead><tr><th>الطلب</th><th>المشتري</th><th>الإجمالي</th><th>الحالة</th><th>التغيير</th></tr></thead><tbody>{data.marketplaceOrders.slice(0,100).map((o:any)=><tr key={o.id}><td>#{o.order_no}</td><td>{o.buyer_name}<br/><small>{o.buyer_phone}</small></td><td>{money(o.subtotal)} {o.currency}</td><td>{STATUS_LABELS[o.status] ?? o.status}</td><td><select value={o.status} onChange={e=>void act({action:"status",entity:"marketplace_order",id:o.id,status:e.target.value})}><option value="new">جديد</option><option value="contacted">تم التواصل</option><option value="confirmed">مؤكد</option><option value="fulfilled">مكتمل</option><option value="cancelled">ملغى</option></select></td></tr>)}</tbody></table></div>
     </section>}
 
     {tab==="staff"&&<section className="stage2-section"><div className="stage2-grid two">{(team?.members||[]).map((m:any)=>{const p=(team?.profiles||[]).find((x:any)=>x.id===m.user_id);const perms=(team?.permissions||[]).find((x:any)=>x.user_id===m.user_id)?.permissions||{};return <article className="stage2-panel" key={m.user_id}><div className="stage2-panel-head"><h2>{p?.display_name||m.user_id.slice(0,8)}</h2><span className="stage2-badge">{m.role}</span></div><div className="permission-grid">{["directory.write","marketplace.write","erp.write","pos.write","inventory.write","staff.write","displays.write","dooh.write"].map(k=><label key={k}><input type="checkbox" id={"perm-"+m.user_id+"-"+k} defaultChecked={perms[k]!==undefined?perms[k]:m.role!=="viewer"}/>{PERMISSION_LABELS[k] ?? k}</label>)}</div><button className="btn btn-primary" onClick={()=>{const o:Record<string,boolean>={};["directory.write","marketplace.write","erp.write","pos.write","inventory.write","staff.write","displays.write","dooh.write"].forEach(k=>{const el=document.getElementById("perm-"+m.user_id+"-"+k) as HTMLInputElement|null;o[k]=Boolean(el?.checked)});void act({action:"permission",user_id:m.user_id,permissions:o})}}>حفظ</button></article>})}</div></section>}
 
     {tab==="displays"&&<section className="stage2-section">
-      <div className="stage2-grid two">{(displayData?.screens||[]).map((s:any)=><article className="stage2-panel" key={s.id}><div className="stage2-panel-head"><h2>{s.name}</h2><span className="stage2-badge">{s.status}</span></div><p>{displayData?.stores?.find((x:any)=>x.id===s.store_id)?.name}</p><small>آخر ظهور: {s.last_seen_at?new Date(s.last_seen_at).toLocaleString("ar-OM"):"—"} · آخر لقطة: {s.last_snapshot_at?new Date(s.last_snapshot_at).toLocaleString("ar-OM"):"—"}</small></article>)}</div>
+      <div className="stage2-grid two">{(displayData?.screens||[]).map((s:any)=><article className="stage2-panel" key={s.id}><div className="stage2-panel-head"><h2>{s.name}</h2><span className="stage2-badge">{STATUS_LABELS[s.status] ?? s.status}</span></div><p>{displayData?.stores?.find((x:any)=>x.id===s.store_id)?.name}</p><small>آخر ظهور: {s.last_seen_at?new Date(s.last_seen_at).toLocaleString("ar-OM"):"—"} · آخر لقطة: {s.last_snapshot_at?new Date(s.last_snapshot_at).toLocaleString("ar-OM"):"—"}</small></article>)}</div>
       <SimpleForm title="محتوى الشاشة" fields={["store_id","screen_id","content_type","title","body","priority"]} submit={async f=>act({action:"display_content",store_id:f.store_id,screen_id:f.screen_id,content_type:f.content_type||"text",title:f.title,body:f.body,priority:num(f.priority)})}/>
       <Table rows={displayData?.content||[]} columns={["title","content_type","active","priority"]} labels={["العنوان","النوع","نشط","الأولوية"]}/>
     </section>}
@@ -154,7 +165,7 @@ export default function OperationsPage(){
 }
 
 function Table({rows,columns,labels}:{rows:any[];columns:string[];labels:string[]}){
-  return <div className="stage2-table-wrap"><table><thead><tr>{labels.map(l=><th key={l}>{l}</th>)}</tr></thead><tbody>{rows.map((r:any,i:number)=><tr key={r.id||i}>{columns.map(c=><td key={c}>{c.endsWith("_at")&&r[c]?new Date(r[c]).toLocaleString("ar-OM"):String(r[c]??"—")}</td>)}</tr>)}</tbody></table></div>;
+  return <div className="stage2-table-wrap"><table><thead><tr>{labels.map(l=><th key={l}>{l}</th>)}</tr></thead><tbody>{rows.map((r:any,i:number)=><tr key={r.id||i}>{columns.map(c=><td key={c}>{c.endsWith("_at")&&r[c]?new Date(r[c]).toLocaleString("ar-OM"):displayValue(c,r[c])}</td>)}</tr>)}</tbody></table></div>;
 }
 const PERMISSION_LABELS: Record<string,string> = {"directory.write":"تعديل دليل المحلات","marketplace.write":"إدارة السوق","erp.write":"إدارة التشغيل","pos.write":"نقطة البيع","inventory.write":"إدارة المخزون","staff.write":"إدارة الموظفين","displays.write":"إدارة الشاشات","dooh.write":"الإعلانات الرقمية"};
 const FIELD_LABELS: Record<string,string> = {
