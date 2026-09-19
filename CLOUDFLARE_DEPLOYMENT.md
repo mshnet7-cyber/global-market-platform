@@ -28,4 +28,6 @@ Before production adoption:
 
 `npm run build:vinext`
 
-The current Cloudflare branch has passed all of these checks in GitHub Actions. A real production deployment still requires the Cloudflare account credentials above.
+`npm run deploy:cloudflare:dry-run`
+
+The dry-run generates and validates the Cloudflare deployment configuration without publishing the Worker. The current Cloudflare branch has passed all of these checks in GitHub Actions. A real production deployment still requires the Cloudflare account credentials above.
