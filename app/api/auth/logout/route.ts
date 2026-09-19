@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "../../../../lib/supabase/server";
 import { isSameOriginRequest } from "../../../../lib/request-security";
+import { clearDemoSession } from "../../../../lib/demo-auth";
 
 export async function POST(request: Request) {
   await clearDemoSession();
