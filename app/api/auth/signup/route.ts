@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "../../../../lib/supabase/server";
+import { isSameOriginRequest } from "../../../../lib/request-security";
 import { createSupabaseAdminClient } from "../../../../lib/supabase/admin";
 import { appConfig, countries } from "../../../../lib/config";
 
@@ -16,6 +17,7 @@ function redirectWithError(request: Request, code: string, next = "/dashboard", 
 }
 
 export async function POST(request: Request) {
+  if (!isSameOriginRequest(request)) return new NextResponse(JSON.stringify({ error: "cross_site_request" }), { status: 403, headers: { "content-type": "application/json" } });
   const form = await request.formData();
   const name = String(form.get("name") ?? "").trim().slice(0, 120);
   const email = String(form.get("email") ?? "").trim().toLowerCase();
