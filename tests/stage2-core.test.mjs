@@ -61,7 +61,7 @@ test("Repair lifecycle matches database statuses",()=>{
 
 test("Public APIs do not expose internal marketplace metadata or organization IDs",()=>{ const api=read("app/api/stage2/route.ts"); assert.match(api,/gmp_marketplace_listings.*select\("id,store_id,listing_type,title,description,category,price,currency,availability,contact_mode,image_path,updated_at"\)/s); assert.doesNotMatch(api,/action === "marketplace"[\s\S]{0,2500}organization_id/); });
 
-test("Public store profiles require publication",()=>{ const src=read("app/store/[slug]/page.tsx"); assert.match(src,/notFound\(\)/); assert.match(src,/eq\("status","published"\)/); });
+test("Public store profiles require publication",()=>{ const src=read("app/store/[slug]/page.tsx"); assert.match(src,/notFound\(\)/); assert.match(src,/eq\("status","published"\)/); assert.match(src,/safeWebsite/); });
 
 test("Public marketplace order RPC is server-only",()=>{ const m=read("supabase/migrations/20260919000600_gmp_marketplace_rpc_security_hardening.sql"); assert.match(m,/revoke execute on function public\.gmp_create_marketplace_order/); assert.match(m,/from anon,authenticated/); });
 
