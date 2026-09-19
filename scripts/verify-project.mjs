@@ -91,6 +91,6 @@ ok("compliance active-case guard tracked", complianceGuard.includes("gmp_complia
 ok("health endpoint does not expose env names", !text("app/api/health/route.ts").includes("missingEnvironmentVariables"));
 ok("Cloudflare cron bridge is configured", text("worker/index.ts").includes("/api/cron/webhooks") && text("worker/index.ts").includes("/api/cron/whatsapp") && text("worker/index.ts").includes("controller.cron"));
 ok("Cloudflare Workers config uses Worker entry and daily crons", text("wrangler.jsonc").includes('"main": "./worker/index.ts"') && text("wrangler.jsonc").includes('"0 0 * * *"') && text("wrangler.jsonc").includes('"5 0 * * *"'));
-ok("OMR display uses vector mask", text("components/MoneyDisplay.tsx").includes("omr-symbol") && text("app/ux-overrides.css").includes("mask:url(\"/omr-symbol.svg\""));
+ok("OMR display uses inline vector", text("components/MoneyDisplay.tsx").includes("<svg className=\"omr-symbol\"") && text("components/MoneyDisplay.tsx").includes("currentColor"));
 ok("OMR fallback stays ASCII-safe", text("lib/currency-display.ts").includes("OMR") && !text("lib/currency-display.ts").includes("⃄") && !text("lib/currency-display.ts").includes("\\u20C4"));
 console.log(`verify-project: ${checks.length} checks passed`);
