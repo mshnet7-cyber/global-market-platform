@@ -3,6 +3,8 @@ import { useState } from "react";
 
 type Notification={id:string;type:string;title:string;body:string|null;read_at:string|null;created_at:string};
 
+const typeLabels: Record<string,string> = { market_alert: "تنبيه سوق", price_alert: "تنبيه سعر", system: "النظام", invoice: "فاتورة", subscription: "اشتراك", marketplace: "السوق" };
+
 export default function NotificationsWorkspace({initialNotifications}:{initialNotifications:Notification[]}){
   const [items,setItems]=useState(initialNotifications);
   const [busy,setBusy]=useState<string|null>(null);
@@ -17,7 +19,7 @@ export default function NotificationsWorkspace({initialNotifications}:{initialNo
   return <section className="section">
     <div className="grid">{items.map(item=><article className="card" key={item.id} style={{borderColor:item.read_at?undefined:"rgba(216,178,92,.35)"}}>
       <div className="card-top"><strong>{item.title}</strong><span className="status">{item.read_at?"مقروء":"جديد"}</span></div>
-      <div className="meta" style={{marginTop:7}}>{item.type} · {new Date(item.created_at).toLocaleString("ar-OM")}</div>
+      <div className="meta" style={{marginTop:7}}>{typeLabels[item.type] ?? item.type} · {new Date(item.created_at).toLocaleString("ar-OM")}</div>
       {item.body&&<p className="hero-copy">{item.body}</p>}
       {!item.read_at&&<button type="button" className="btn" disabled={busy===item.id} onClick={()=>void markRead(item.id)}>{busy===item.id?"جارٍ الحفظ…":"تحديد كمقروء"}</button>}
     </article>)}</div>
