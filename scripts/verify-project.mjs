@@ -27,7 +27,7 @@ ok("webhook retry endpoint exists", existsSync(join(root,"app/api/cron/webhooks/
 const webhookApi=text("app/api/dashboard/webhooks/route.ts");
 ok("webhook destination validation wired", webhookApi.includes("validateWebhookUrl") && webhookApi.includes("invalid_webhook_destination"));
 const webhooks=text("lib/webhooks.ts");
-ok("webhook SSRF guard", webhooks.includes("dns/promises") && webhooks.includes("redirect:"error"") && webhooks.includes("webhook_destination_not_allowed"));
+ok("webhook SSRF guard", webhooks.includes("dns/promises") && webhooks.includes('redirect:"error"') && webhooks.includes("webhook_destination_not_allowed"));
 const storePage=text("app/store/[slug]/page.tsx");
 ok("public store requires publication", storePage.includes("notFound()") && storePage.includes('eq("status","published")'));
 const marketplaceLock=text("supabase/migrations/20260919000600_gmp_marketplace_rpc_security_hardening.sql");
@@ -52,7 +52,7 @@ ok("CI runs lint", ci.includes("npm run lint"));
 ok("CI runs build", ci.includes("npm run build"));
 const hardening=text("supabase/migrations/20260919000000_gmp_p0_p1_hardening.sql");
 ok("marketplace abuse protection tracked", hardening.includes("gmp_public_order_rate_limits") && hardening.includes("gmp_allow_public_marketplace_order"));
-const marketplaceLock=text("supabase/migrations/20260919000600_gmp_marketplace_rpc_security_hardening.sql");
+
 ok("marketplace RPC execute lockdown tracked", marketplaceLock.includes("revoke execute on function public.gmp_create_marketplace_order") && marketplaceLock.includes("from anon,authenticated"));
 ok("webhook retry hardening tracked", hardening.includes("gmp_claim_due_webhook_deliveries") && hardening.includes("dead_lettered"));
 const launchIndexes=text("supabase/migrations/20260919004107_gmp_launch_fk_indexes.sql");
