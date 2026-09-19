@@ -15,12 +15,12 @@ test("camera workflow is business-gated and credential-safe",()=>{
 test("compliance workflow has duplicate protection and event idempotency",()=>{
  const src=read("app/api/merchant/compliance/route.ts");
  assert.match(src,/active_case_exists/);
- assert.match(src,/idempotency_key/); assert.match(src,/gmp_claim_einvoice_send/);
+ assert.match(src,/idempotency_key/);
  assert.match(src,/requireMerchantPlan\(\["business"\]\)/);
 });
 
 test("e-invoice queue is fail-closed",()=>{
- const src=read("app/api/merchant/invoicing/route.ts");
+ const src=read("app/api/merchant/invoicing/route.ts"); assert.match(src,/gmp_claim_einvoice_send/);
  assert.match(src,/sale\.status !== "issued"/);
  assert.match(src,/connector\.status !== "active"/);
  assert.match(src,/idempotency_key/);
