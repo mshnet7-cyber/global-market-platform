@@ -33,7 +33,14 @@ export function validateInvoicePayload(payload: Record<string,unknown>) {
 export async function submitInvoice(payload: Record<string,unknown>) {
   const c=cfg(); if(!c.baseUrl||!c.apiKey||!c.approved)throw new Error("einvoice_not_configured");
   const requestHash=createHash("sha256").update(JSON.stringify(payload)).digest("hex");
-  const response=await fetch(`${c.baseUrl}/invoices`,{method:"POST",headers:{"content-type":"application/json",authorization:`Bearer ${c.apiKey}`,"x-gmp-request-hash":requestHash,"idempotency-key":requestHash},body:JSON.stringify(payload),cache:"no-store"});
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),10_000);
+  let response:Response;
+  try {
+    response=await fetch(`${c.baseUrl}/invoices`,{method:"POST",headers:{"content-type":"application/json",authorization:`Bearer ${c.apiKey}`,"x-gmp-request-hash":requestHash,"idempotency-key":requestHash},body:JSON.stringify(payload),cache:"no-store",signal:controller.signal,redirect:"error"});
+  } finally {
+    clearTimeout(timer);
+  }
   const raw=await response.text(); let data:Record<string,unknown>={}; try{data=JSON.parse(raw) as Record<string,unknown>}catch{data={raw:raw.slice(0,4000)}} if(!response.ok)throw new Error(`einvoice_provider_http_${response.status}`);
   return {requestHash,data};
 }
