@@ -88,5 +88,6 @@ export default function DocumentsPage(){
         </div></td>
       </tr>)}</tbody></table></div>}
     </section>
-  </main>;
+  </main>
+  </div>;
 }
