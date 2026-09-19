@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 
 type Doc=any;
 
@@ -57,7 +58,7 @@ export default function DocumentsPage(){
   }
 
   return <div className="dashboard-shell" dir="rtl" lang="ar">
-    <header className="topbar"><div className="container nav site-nav"><a href="/dashboard" className="brand"><span className="brand-mark">GM</span><span>GLOBAL <b>MARKET</b></span></a><nav className="nav-links" aria-label="تنقل لوحة المحل"><a href="/dashboard">الرئيسية</a><a href="/dashboard/sales">المبيعات</a><a href="/dashboard/inventory">المخزون</a><a href="/dashboard/reports">التقارير</a><a href="/dashboard/integrations">التكاملات</a></nav><div className="nav-actions"><a className="btn btn-ghost" href="/dashboard">لوحة التحكم</a></div></div></header>
+    <header className="topbar"><div className="container nav site-nav"><Link href="/dashboard" className="brand"><span className="brand-mark">GM</span><span>GLOBAL <b>MARKET</b></span></Link><nav className="nav-links" aria-label="تنقل لوحة المحل"><Link href="/dashboard">الرئيسية</Link><Link href="/dashboard/sales">المبيعات</Link><Link href="/dashboard/inventory">المخزون</Link><Link href="/dashboard/reports">التقارير</Link><Link href="/dashboard/integrations">التكاملات</Link></nav><div className="nav-actions"><Link className="btn btn-ghost" href="/dashboard">لوحة التحكم</Link></div></div></header>
   <main className="wrap section dashboard-module-page">
     <header className="stage2-page-head">
       <div><div className="eyebrow">ذكاء المستندات</div><h1>المستندات و OCR</h1><p>رفع آمن → سجل مستند → OCR → مراجعة → اعتماد/رفض. المستندات خاصة وليست عامة.</p></div>
