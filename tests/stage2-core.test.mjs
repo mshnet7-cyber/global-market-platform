@@ -5,11 +5,11 @@ import { readFileSync } from "node:fs";
 const read=(p)=>readFileSync(p,"utf8");
 
 test("Stage 2 core surfaces exist",()=>{
-  assert.match(read("app/dashboard/operations/page.tsx"),/MMarketplace|Marketplace/);
+  assert.match(read("app/dashboard/operations/page.tsx"),/السوق|marketplace/i);
   assert.match(read("app/directory/page.tsx"),/دليل محلات الذهب/);
   assert.match(read("app/marketplace/page.tsx"),/no paid checkout|بدون دفع/i);
   assert.match(read("app/store/[slug]/page.tsx"),/status.*published/);
-  assert.match(read("app/admin/page.tsx"),/MASTER ADMIN/);
+  assert.match(read("app/admin/page.tsx"),/إدارة المنصة/);
 });
 
 test("Stage 2 API keeps tenant boundaries and uses existing pricing/transaction primitives",()=>{
