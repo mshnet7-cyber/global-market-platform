@@ -54,3 +54,13 @@ test("Authenticated JSON APIs also enforce bounded request parsing",()=>{
     assert.ok(src.includes("64 * 1024"));
   }
 });
+test("Public history endpoints are restricted to public instruments",()=>{
+  const helper=read("lib/market-history.ts");
+  assert.ok(helper.includes("PUBLIC_HISTORY_INSTRUMENTS"));
+  assert.ok(helper.includes("isPublicHistoryInstrument"));
+  assert.ok(read("app/api/gold/history/route.ts").includes("instrument_not_public"));
+  assert.ok(read("app/api/market/terminal/route.ts").includes("instrument_not_public"));
+});
+test("E-invoice rejects unknown actions before queue/send side effects",()=>{
+  assert.ok(read("app/api/stage3/einvoice/route.ts").includes('["validate","queue","send"].includes(action)'));
+});
