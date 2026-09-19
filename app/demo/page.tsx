@@ -39,6 +39,7 @@ export default async function DemoPage({
             <Link href={"/silver?country=" + country.code + "&language=" + language}>{messages.silver}</Link>
             <Link href={"/markets?country=" + country.code + "&language=" + language}>{messages.markets}</Link>
             <Link href={"/stocks?country=" + country.code + "&language=" + language}>{messages.stocks}</Link>
+            <Link href={"/currencies?country=" + country.code + "&language=" + language}>{messages.currencies}</Link>
             <Link href={"/news?country=" + country.code + "&language=" + language}>{messages.news}</Link>
             <Link href="/pricing">{messages.plans}</Link>
           </nav>
