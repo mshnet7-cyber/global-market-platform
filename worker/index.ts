@@ -1,4 +1,5 @@
 import handler from "vinext/server/fetch-handler";
+import type { ExecutionContext, ScheduledController } from "@cloudflare/workers-types";
 
 const CRON_ROUTES: Record<string, string> = {
   "0 0 * * *": "/api/cron/webhooks",
