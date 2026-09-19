@@ -7,8 +7,8 @@ import { getTrustedAppOrigin } from "../../../../lib/trusted-origin";
 
 const json=(data:unknown,status=200)=>NextResponse.json(data,{status,headers:{"cache-control":"no-store","x-gmp-einvoice-canonical":"merchant-invoicing"}});
 
-function canonicalUrl() {
-  return new URL("/api/merchant/invoicing", getTrustedAppOrigin());
+function canonicalUrl(request: Request) {
+  return new URL("/api/merchant/invoicing", getTrustedAppOrigin(request));
 }
 
 export async function GET(){
