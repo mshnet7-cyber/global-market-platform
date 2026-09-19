@@ -27,6 +27,12 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         <form className="login-form" action="/api/auth/login" method="post"><input type="hidden" name="next" value={next} /><label className="label">البريد الإلكتروني<input className="select" type="email" name="email" autoComplete="email" inputMode="email" required /></label><label className="label">كلمة المرور<input className="select" type="password" name="password" autoComplete="current-password" required /></label><button className="btn btn-primary" type="submit">دخول إلى لوحة المحل</button></form>
         <div className="actions" style={{marginTop:14}}><Link className="btn" href={"/signup?next=" + encodeURIComponent(next)}>إنشاء حساب جديد</Link><Link className="btn btn-ghost" href="/pricing">مشاهدة الباقات</Link></div>
         {process.env.VERCEL_ENV === "preview" && <div className="notice" style={{marginTop:16}}>
+          <strong>الدخول السريع للتجربة</strong>
+          <div className="actions" style={{marginTop:10}}>
+            <form action="/api/auth/demo-login" method="post"><input type="hidden" name="role" value="platform_admin" /><button className="btn btn-primary" type="submit">دخول إدارة المنصة</button></form>
+            <form action="/api/auth/demo-login" method="post"><input type="hidden" name="role" value="shop_owner" /><button className="btn" type="submit">دخول المحل التجريبي</button></form>
+          </div>
+          <div style={{marginTop:10,fontSize:13}}>أو استخدم بيانات الحساب أدناه.</div>
           <strong>بيانات التجربة للمعاينة</strong>
           <div style={{marginTop:8}}>إدارة المنصة: <code>admin@accounts.omangold.local</code> / <code>GMP-Demo-Admin-2026!</code></div>
           <div style={{marginTop:4}}>المحل: <code>sharaf@accounts.omangold.local</code> / <code>GMP-Demo-Shop-2026!</code></div>
