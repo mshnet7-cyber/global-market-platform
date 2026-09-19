@@ -1,6 +1,7 @@
 const DEFAULT_MAX_RESPONSE_BYTES = 1_000_000;
 
 export async function readBoundedText(response: Response, maxBytes = DEFAULT_MAX_RESPONSE_BYTES): Promise<string> {
+  if (!Number.isInteger(maxBytes) || maxBytes <= 0) throw new Error("invalid_response_limit");
   const contentLength = Number(response.headers.get("content-length") ?? 0);
   if (Number.isFinite(contentLength) && contentLength > maxBytes) throw new Error("provider_response_too_large");
   if (!response.body) {
@@ -8,6 +9,7 @@ export async function readBoundedText(response: Response, maxBytes = DEFAULT_MAX
     if (Buffer.byteLength(raw, "utf8") > maxBytes) throw new Error("provider_response_too_large");
     return raw;
   }
+
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let total = 0;
@@ -22,6 +24,9 @@ export async function readBoundedText(response: Response, maxBytes = DEFAULT_MAX
     }
     raw += decoder.decode();
     return raw;
+  } catch (error) {
+    try { await reader.cancel(); } catch {}
+    throw error;
   } finally {
     reader.releaseLock();
   }
