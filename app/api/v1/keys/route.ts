@@ -1,3 +1,4 @@
+import { readBoundedRequestJson } from "../../../../lib/bounded-body";
 import { NextResponse } from "next/server";
 import { requireMerchantPlan } from "../../../../lib/merchant-access";
 import { API_SCOPES, createApiKeyMaterial } from "../../../../lib/api-keys";
@@ -15,7 +16,7 @@ export async function GET(){
 export async function POST(request:Request){
   try{
     const {supabase,user,organization}=await requireMerchantPlan(["pro","business"]);
-    const body=await request.json().catch(()=>null) as Record<string,unknown>|null;
+    const body=await readBoundedRequestJson(request, 64 * 1024).catch(()=>null) as Record<string,unknown>|null;
     const name=String(body?.name??"Integration key").trim().slice(0,80);
     const requested=Array.isArray(body?.scopes)?body.scopes.map(String):[...API_SCOPES];
     const scopes=requested.filter((scope):scope is (typeof API_SCOPES)[number]=>API_SCOPES.includes(scope as any));
