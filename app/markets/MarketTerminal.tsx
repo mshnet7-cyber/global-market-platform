@@ -37,7 +37,7 @@ function Chart({ points, currency }: { points: PublicPricePoint[]; currency: str
     return (i ? "L" : "M") + " " + x.toFixed(2) + " " + y.toFixed(2);
   }).filter(Boolean).join(" ");
   return <div className="terminal-chart-wrap">
-    <svg viewBox={"0 0 " + width + " " + height} role="img" aria-label="Price history chart">
+    <svg viewBox={"0 0 " + width + " " + height} role="img" aria-label={language === "ar" ? "مخطط سجل الأسعار" : "Price history chart"}>
       <path d={"M " + pad + " " + (height-pad) + " L " + (width-pad) + " " + (height-pad)} className="chart-axis" />
       <path d={path} className="chart-line" fill="none" />
     </svg>
@@ -133,14 +133,14 @@ export default function MarketTerminal({ language, countryCode, countryName, cur
           {filter === "watchlist" && rows.length === 0 ? <div className="terminal-empty">لا توجد رموز في القائمة.</div> : null}
         </aside>
         <section className="terminal-content">
-          <div className="terminal-toolbar"><div><span className="micro-label">{selectedIsGold ? "XAU" : selectedIsSilver ? "XAG" : selectedQuote?.exchange ?? "GLOBAL"}</span><h2>{selectedIsGold ? "Gold Spot" : selectedIsSilver ? "Silver Spot" : selectedQuote?.instrument ?? selected}</h2></div><div className="range-tabs">{(["1D","1W","1M","1Y"] as const).map((r) => <button type="button" className={range === r ? "active" : ""} onClick={() => setRange(r)} key={r}>{r}</button>)}</div></div>
+          <div className="terminal-toolbar"><div><span className="micro-label">{selectedIsGold ? "XAU" : selectedIsSilver ? "XAG" : selectedQuote?.exchange ?? "GLOBAL"}</span><h2>{selectedIsGold ? (language === "ar" ? "الذهب الفوري" : "Gold Spot") : selectedIsSilver ? (language === "ar" ? "الفضة الفورية" : "Silver Spot") : selectedQuote?.instrument ?? selected}</h2></div><div className="range-tabs">{(["1D","1W","1M","1Y"] as const).map((r) => <button type="button" className={range === r ? "active" : ""} onClick={() => setRange(r)} key={r}>{r}</button>)}</div></div>
           <div className="terminal-primary-metrics"><div><span>السعر</span><strong>{fmt(currentValue, selectedCurrency)}</strong></div><div><span>التغير</span><b className={Number(derivedPercent) > 0 ? "up" : Number(derivedPercent) < 0 ? "down" : ""}>{fmt(derivedChange, selectedCurrency)} · {pct(derivedPercent)}</b></div><div><span>الأعلى</span><strong>{fmt(high, selectedCurrency)}</strong></div><div><span>الأدنى</span><strong>{fmt(low, selectedCurrency)}</strong></div></div>
           <div className="terminal-chart-card"><div className="terminal-card-head"><div><span className="micro-label">التاريخ</span><strong>{data.history.length ? (data.history.length + " قراءة") : "لا يوجد تاريخ"}</strong></div><div className="terminal-source">{selectedIsGold ? data.gold.provider : selectedIsSilver ? data.silver.provider : selectedQuote?.provider ?? "UNAVAILABLE"} · {selectedIsGold ? data.gold.status : selectedIsSilver ? data.silver.status : selectedQuote?.status ?? "UNAVAILABLE"}</div></div><Chart points={data.history} currency={selectedCurrency} /></div>
           <div className="terminal-grid-two">
             <section className="terminal-card"><div className="terminal-card-head"><div><span className="micro-label">موثوقية المصدر</span><strong>سجل المصدر والحالة</strong></div></div><div className="trust-list"><div><span>المصدر</span><b>{selectedIsGold ? data.gold.provider : selectedIsSilver ? data.silver.provider : selectedQuote?.provider ?? "—"}</b></div><div><span>الحالة</span><b>{selectedIsGold ? data.gold.status : selectedIsSilver ? data.silver.status : selectedQuote?.status ?? "—"}</b></div><div><span>آخر تحديث</span><b>{selectedIsGold ? (data.gold.timestamp ? new Date(data.gold.timestamp).toLocaleString() : "—") : selectedIsSilver ? (data.silver.timestamp ? new Date(data.silver.timestamp).toLocaleString() : "—") : (selectedQuote?.timestamp ? new Date(selectedQuote.timestamp).toLocaleString() : "—")}</b></div><div><span>آخر فحص</span><b>{now ? new Date(now).toLocaleString() : "—"}</b></div></div></section>
             <section className="terminal-card"><div className="terminal-card-head"><div><span className="micro-label">مقارنة</span><strong>مقارنة سريعة</strong></div></div><div className="compare-grid"><div><span>الفوري</span><b>{fmt(currentValue, selectedCurrency)}</b></div><div><span>الأعلى</span><b>{fmt(high, selectedCurrency)}</b></div><div><span>الأدنى</span><b>{fmt(low, selectedCurrency)}</b></div><div><span>التغير</span><b>{pct(derivedPercent)}</b></div></div></section>
           </div>
-          <div className="terminal-footnote">Fail-closed: البيانات غير الموثوقة أو القديمة لا تُعرض كـLIVE.</div>
+          <div className="terminal-footnote">{language === "ar" ? "حماية الثقة: البيانات غير الموثوقة أو القديمة لا تُعرض كمباشرة." : "Fail-closed: untrusted or stale data is not shown as LIVE."}</div>
         </section>
       </section>
     </main>
