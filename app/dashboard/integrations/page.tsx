@@ -8,7 +8,7 @@ import { getEInvoiceStatus } from "../../../lib/stage3/einvoice";
 import { getRegionalProfile } from "../../../lib/stage3/regional";
 import Stage3Workspace from "./Stage3Workspace";
 
-const label = (state: string) => state === "live" ? "LIVE" : state === "integration_ready" ? "INTEGRATION-READY" : "NOT CONFIGURED";
+const label = (state: string) => state === "live" ? "مباشر" : state === "integration_ready" ? "جاهز للتكامل" : "غير مهيأ";
 
 export default async function IntegrationsPage({ searchParams }: { searchParams: Promise<{ plan?: string }> }) {
   const params = await searchParams;
@@ -30,12 +30,12 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
   const region = getRegionalProfile(process.env.NEXT_PUBLIC_GMP_DEFAULT_COUNTRY || "OM");
 
   const cards = [
-    ["AI Copilot + OCR", label(ai.state), ai.provider || "Adapter", "Copilot والأسئلة التشغيلية واستخراج المستندات ومراجعة الثقة."],
-    ["WhatsApp", label(wa.state), wa.provider || "Adapter", "Templates، نصوص، مستندات، delivery status والتحقق من Webhook."],
-    ["Payments", label(pay.state), pay.provider || "Adapter", "Checkout ودورة الاشتراك والفشل والفترة السماحية والإلغاء."],
-    ["E-Invoicing", label(ei.state), ei.provider || "Adapter", "Validation والطابور والإرسال والتدقيق وإعادة المحاولة عند توفر الموصل الرسمي."],
-    ["Globalization", "LIVE", region.countryCode, region.currency + " · " + region.timezone + " · " + region.locale],
-    ["Developer Platform", "LIVE", "API v2", "API keys، request IDs، rate limits، usage telemetry."],
+    ["المساعد الذكي + OCR", label(ai.state), ai.provider || "موصل", "Copilot والأسئلة التشغيلية واستخراج المستندات ومراجعة الثقة."],
+    ["WhatsApp", label(wa.state), wa.provider || "موصل", "Templates، نصوص، مستندات، delivery status والتحقق من Webhook."],
+    ["المدفوعات", label(pay.state), pay.provider || "موصل", "Checkout ودورة الاشتراك والفشل والفترة السماحية والإلغاء."],
+    ["الفوترة الإلكترونية", label(ei.state), ei.provider || "موصل", "Validation والطابور والإرسال والتدقيق وإعادة المحاولة عند توفر الموصل الرسمي."],
+    ["الإعدادات الإقليمية", "مباشر", region.countryCode, region.currency + " · " + region.timezone + " · " + region.locale],
+    ["منصة المطورين", "مباشر", "API v2", "API keys، request IDs، rate limits، usage telemetry."],
   ];
 
   return (
@@ -43,9 +43,9 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
       <div className="stage3-shell">
         <header className="stage3-header">
           <div>
-            <div className="stage3-eyebrow">STAGE 3 · INTEGRATIONS</div>
+            <div className="stage3-eyebrow">المرحلة 3 · التكاملات</div>
             <h1>طبقات التشغيل العليا داخل المنصة.</h1>
-            <p>هذه الصفحة تربط واجهات Stage 3 بالوظائف الفعلية، مع فصل واضح بين Live وIntegration-ready.</p>
+            <p>هذه الصفحة تربط واجهات Stage 3 بالوظائف الفعلية، مع فصل واضح بين Live وجاهز للتكامل.</p>
           </div>
           <div className="actions">
             <Link href="/dashboard" className="stage3-btn">لوحة التحكم</Link>
