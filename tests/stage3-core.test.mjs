@@ -96,7 +96,7 @@ test("Form and WhatsApp webhook payloads have explicit transport bounds",()=>{
   for(const p of["app/api/merchant/documents/route.ts","app/api/stores/create/route.ts","app/api/displays/create/route.ts","app/api/displays/revoke/route.ts","app/api/auth/login/route.ts","app/api/auth/signup/route.ts","app/api/displays/pair/route.ts"]){
     const src=read(p);
     assert.ok(src.includes("readBoundedRequestFormData"));
+    assert.ok(!src.includes("request.formData()"));
     assert.ok(src.includes("413"));
-    assert.ok(src.includes("request.formData()"));
   }
 });
