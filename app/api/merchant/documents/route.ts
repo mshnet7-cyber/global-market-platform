@@ -31,7 +31,6 @@ export async function GET(){
 
 export async function POST(request:Request){
   try{
-    if(requestContentLengthExceeds(request, MAX_BYTES + 256 * 1024)) return json({error:"request_body_too_large",max_bytes:MAX_BYTES},413);
     const {supabase,organization,user}=await requireMerchantPlan(["business"]);
     const admin=createSupabaseAdminClient(); if(!admin)return json({error:"service_not_configured"},503);
     let form: FormData;
