@@ -72,14 +72,11 @@ test("Merchant operational JSON APIs enforce bounded request parsing",()=>{
     assert.ok(src.includes("64 * 1024"));
   }
 });
-test("E-invoice canonical facade refuses untrusted request origins",()=>{
+test("E-invoice canonical facade uses trusted application origin",()=>{
   const src=read("app/api/stage3/einvoice/route.ts");
-  assert.ok(src.includes("NEXT_PUBLIC_SITE_URL"));
-  assert.ok(src.includes("GMP_APP_URL"));
-  assert.ok(src.includes("VERCEL_URL"));
-  assert.ok(src.includes("canonical_origin_not_configured"));
-  assert.ok(src.includes("canonical_origin_invalid"));
-  assert.ok(src.includes("localhost"));
+  const helper=read("lib/trusted-origin.ts");
+  assert.ok(src.includes("getTrustedAppOrigin"));
+  for(const key of["NEXT_PUBLIC_SITE_URL","GMP_APP_URL","VERCEL_URL","canonical_origin_not_configured","canonical_origin_invalid","localhost"]) assert.ok(helper.includes(key));
 });
 
 test("Form and WhatsApp webhook payloads have explicit transport bounds",()=>{
