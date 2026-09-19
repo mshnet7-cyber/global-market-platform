@@ -71,7 +71,7 @@ export default async function CurrenciesPage({
 
         <section className="hero-panel currency-hero-panel">
           <div>
-            <div className="micro-label">{language === "ar" ? "العملة المستهدفة" : "العملة المستهدفة"}</div>
+            <div className="micro-label">{language === "ar" ? "العملة المستهدفة" : "Target currency"}</div>
             <div className="panel-value">{country.currency}</div>
             <div className="panel-meta">{countryName}</div>
           </div>
