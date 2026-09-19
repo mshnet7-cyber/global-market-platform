@@ -46,13 +46,28 @@ export async function sendWhatsAppMessage(input: WhatsAppMessageInput) {
   if (input.messageType === "template") body.template = { name: input.templateName, language: input.languageCode ?? "ar", parameters: input.parameters ?? [] };
   if (input.messageType === "document") body.document = { url: input.documentUrl, filename: input.fileName ?? "invoice.pdf", caption: input.caption ?? "" };
   if (input.messageType === "text") body.text = input.text;
-  const response = await fetch(c.messagesUrl, {
-    method: "POST",
-    headers: { "content-type": "application/json", authorization: `Bearer ${c.accessToken}` },
-    body: JSON.stringify(body),
-    cache: "no-store",
-  });
+  let providerUrl: URL;
+  try { providerUrl = new URL(c.messagesUrl); } catch { throw new Error("whatsapp_endpoint_invalid"); }
+  if (providerUrl.protocol !== "https:" || providerUrl.username || providerUrl.password) throw new Error("whatsapp_endpoint_invalid");
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10_000);
+  let response: Response;
+  try {
+    response = await fetch(providerUrl, {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${c.accessToken}` },
+      body: JSON.stringify(body),
+      cache: "no-store",
+      signal: controller.signal,
+      redirect: "error",
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+  const contentLength = Number(response.headers.get("content-length") ?? 0);
+  if (contentLength > 1_000_000) throw new Error("whatsapp_provider_response_too_large");
   const raw = await response.text();
+  if (raw.length > 1_000_000) throw new Error("whatsapp_provider_response_too_large");
   let data: Record<string, unknown> = {};
   try { data = JSON.parse(raw) as Record<string, unknown>; } catch { data = { raw: raw.slice(0, 2000) }; }
   if (!response.ok) throw new Error(`whatsapp_provider_http_${response.status}`);
