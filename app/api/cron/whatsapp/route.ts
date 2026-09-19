@@ -14,7 +14,7 @@ function retryDelay(attempt: number) {
   return Math.min(24 * 60 * 60_000, Math.pow(2, Math.max(0, attempt - 1)) * 30_000 + Math.floor(Math.random() * 5_000));
 }
 
-export async function POST(request: Request) {
+async function run(request: Request) {
   const secret = process.env.CRON_SECRET?.trim() || process.env.GMP_CRON_SECRET?.trim();
   const provided = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") || request.headers.get("x-cron-secret");
   if (!secret || !provided || provided !== secret) return json({ error: "unauthorized" }, 401);
@@ -75,3 +75,7 @@ export async function POST(request: Request) {
 
   return json({ success: true, processed, sent, failed: processed - sent });
 }
+
+
+export async function GET(request: Request) { return run(request); }
+export async function POST(request: Request) { return run(request); }
