@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "../../../../lib/supabase/admin";
 import { getMerchantContext } from "../../../../lib/merchant-access";
+import { requestContentLengthExceeds } from "../../../../lib/bounded-body";
 
 export async function POST(request: Request) {
   const context = await getMerchantContext();
@@ -10,6 +11,8 @@ export async function POST(request: Request) {
     return NextResponse.redirect(new URL("/display?error=forbidden", request.url));
   }
   if (!admin) return NextResponse.redirect(new URL("/display?error=not_configured", request.url));
+
+  if (requestContentLengthExceeds(request, 64 * 1024)) return new NextResponse("Request body too large.", { status: 413 });
 
   const form = await request.formData();
   const screenId = String(form.get("screen_id") ?? "").trim();
