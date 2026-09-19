@@ -14,7 +14,7 @@ function MiniChart({ points, currency }: { points: PublicPricePoint[]; currency:
   if (values.length < 2) return <div className="gold-history-empty">لا توجد بيانات تاريخية كافية.</div>;
   const width=900, height=260, pad=22, min=Math.min(...values), max=Math.max(...values), span=Math.max(max-min, Math.abs(max)*1e-9, 1e-9);
   const d=points.map((p,i)=>{const v=typeof p.value==="number"&&Number.isFinite(p.value)?p.value:null;if(v==null)return null;const x=pad+(i/Math.max(1,points.length-1))*(width-pad*2);const y=height-pad-((v-min)/span)*(height-pad*2);return (i?"L":"M")+" "+x.toFixed(2)+" "+y.toFixed(2);}).filter(Boolean).join(" ");
-  return <div className="gold-history"><svg viewBox={"0 0 "+width+" "+height} role="img" aria-label="Gold price history"><path d={d} className="chart-line" fill="none"/></svg><div><span>{money(min,currency)}</span><span>{money(max,currency)}</span></div></div>;
+  return <div className="gold-history"><svg viewBox={"0 0 "+width+" "+height} role="img" aria-label="سجل سعر الذهب"><path d={d} className="chart-line" fill="none"/></svg><div><span>{money(min,currency)}</span><span>{money(max,currency)}</span></div></div>;
 }
 
 export default function GoldIntelligence({ language, countryCode, countryName, currency, gold, silver, history }: {
@@ -67,7 +67,7 @@ export default function GoldIntelligence({ language, countryCode, countryName, c
     <main className="container stage1-main">
       <section className="gold-intro"><div><div className="eyebrow"><span className="live-dot"/>ذكاء الذهب المتقدم</div><h1>الذهب كنظام بيانات، لا كسعر فقط.</h1><p>الأونصة، الغرام، العيارات، Spot/Bid/Ask، التاريخ، والتحويلات المرتبطة بمحرك تسعير واحد.</p></div><div className="gold-live-card"><span>24K / GRAM</span><strong>{money(gold.perGram24k,currency)}</strong><em>{gold.status}</em><small>{gold.provider}</small></div></section>
       <section className="gold-overview"><div className="gold-spot"><span>السعر الفوري / الأونصة</span><strong>{money(gold.spot,currency,2)}</strong><div className="gold-triple"><div><span>شراء</span><b>{money(gold.bid,currency,2)}</b></div><div><span>عرض</span><b>{money(gold.ask,currency,2)}</b></div><div><span>الفضة</span><b>{money(silver.perGram24k,currency,3)}</b></div></div></div><div className="gold-purity-card"><span className="micro-label">مصفوفة النقاوة</span>{GOLD_KARATS.map((k)=><div key={k}><span>{k}K</span><b>{money(gold.purities[String(k)+"K"]??null,currency)}</b></div>)}</div></section>
-      <section className="gold-history-card"><div className="terminal-card-head"><div><span className="micro-label">سجل السعر</span><strong>آخر 24 ساعة مسجلة</strong></div><div className="terminal-source">{history.length} observations · {gold.status}</div></div><MiniChart points={history} currency={currency}/></section>
+      <section className="gold-history-card"><div className="terminal-card-head"><div><span className="micro-label">سجل السعر</span><strong>آخر 24 ساعة مسجلة</strong></div><div className="terminal-source">{history.length} بيانات مسجلة · {gold.status}</div></div><MiniChart points={history} currency={currency}/></section>
       <section className="gold-lower-grid">
         <section className="terminal-card"><div className="terminal-card-head"><div><span className="micro-label">محرك التسعير</span><strong>محرك تسعير الذهب</strong></div></div><div className="pricing-form-grid">
           <label>الاتجاه<select value={direction} onChange={e=>setDirection(e.target.value as "buy"|"sell")}><option value="sell">بيع للعميل</option><option value="buy">شراء من العميل</option></select></label>
@@ -83,7 +83,7 @@ export default function GoldIntelligence({ language, countryCode, countryName, c
             <div className="micro-label">التنبيهات النشطة</div>
             {alerts.length===0 ? <div className="terminal-empty">لا توجد تنبيهات محفوظة لهذا الحساب.</div> : alerts.map(rule=>
               <div className="alert-rule-row" key={rule.id}>
-                <div><strong>{rule.instrument_code}</strong><span>{rule.rule_type} · {rule.threshold ?? "—"} · cooldown {rule.cooldown_minutes}m</span></div>
+                <div><strong>{rule.instrument_code}</strong><span>{rule.rule_type} · {rule.threshold ?? "—"} · مهلة {rule.cooldown_minutes} د</span></div>
                 <div className="actions">
                   <button type="button" className="btn" disabled={alertsBusy} onClick={async()=>{setAlertsBusy(true);try{const r=await fetch("/api/alerts/rules",{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({id:rule.id,active:!rule.active})});if(r.ok){setAlerts((current)=>current.map(x=>x.id===rule.id?{...x,active:!x.active}:x));}}finally{setAlertsBusy(false)}}}>{rule.active?"تعطيل":"تفعيل"}</button>
                   <button type="button" className="btn" disabled={alertsBusy} onClick={async()=>{setAlertsBusy(true);try{const r=await fetch("/api/alerts/rules?id="+encodeURIComponent(rule.id),{method:"DELETE"});if(r.ok)setAlerts((current)=>current.filter(x=>x.id!==rule.id));}finally{setAlertsBusy(false)}}}>إلغاء</button>
