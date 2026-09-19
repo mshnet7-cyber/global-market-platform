@@ -30,7 +30,7 @@ type BillingState = {
 const planNames: Record<string, string> = { starter: "الشاشة", pro: "الأعمال", business: "الكاملة" };
 const periods = [["monthly", "شهري"], ["six_month", "6 أشهر"], ["yearly", "سنوي"]] as const;
 
-function statusLabel(value: string) { return value === "live" ? "LIVE" : value === "integration_ready" ? "INTEGRATION-READY" : value.replaceAll("_", " ").toUpperCase(); }
+function statusLabel(value: string) { return value === "live" ? "مباشر" : value === "integration_ready" ? "جاهز للتكامل" : "غير مهيأ"; }
 
 function printable(value: unknown) {
   if (typeof value === "string") return value;
@@ -156,7 +156,7 @@ export default function Stage3Workspace({ documents, initialCountry, initialPlan
     <>
       <nav className="stage3-tabs" aria-label="Stage 3">
         {tabs.map(([key, label]) => <button type="button" className={tab === key ? "active" : ""} onClick={() => setTab(key)} key={key}>{label}</button>)}
-        <Link className="stage3-btn" href="/dashboard/api-keys">API Keys</Link>
+        <Link className="stage3-btn" href="/dashboard/api-keys">مفاتيح API</Link>
       </nav>
 
       {tab === "ai" && <section className="stage3-grid">
@@ -170,7 +170,7 @@ export default function Stage3Workspace({ documents, initialCountry, initialPlan
         <article className="stage3-card">
           <div className="stage3-card-head"><h2>استخراج المستندات OCR</h2><span className="stage3-status">{selectedDocument?.review_status === "approved" ? "معتمد" : selectedDocument?.review_status === "rejected" ? "مرفوض" : "بانتظار المراجعة"}</span></div>
           <p>اختر مستندًا داخل المؤسسة. النتيجة منخفضة الثقة تنتقل إلى المراجعة قبل الاعتماد.</p>
-          {documents.length ? <><label className="stage3-field">المستند<select value={documentId} onChange={(event) => setDocumentId(event.target.value)}>{documents.map((doc) => <option key={doc.id} value={doc.id}>{doc.document_type || "Document"} · {new Date(doc.created_at).toLocaleDateString()}</option>)}</select></label><div className="stage3-meta">{selectedDocument?.content_type || "—"} · {selectedDocument?.language || "—"}</div></> : <div className="stage3-empty">لا توجد مستندات جاهزة لمسار OCR.</div>}
+          {documents.length ? <><label className="stage3-field">المستند<select value={documentId} onChange={(event) => setDocumentId(event.target.value)}>{documents.map((doc) => <option key={doc.id} value={doc.id}>{doc.document_type || "مستند"} · {new Date(doc.created_at).toLocaleDateString("ar-OM")}</option>)}</select></label><div className="stage3-meta">{selectedDocument?.content_type || "—"} · {selectedDocument?.language || "—"}</div></> : <div className="stage3-empty">لا توجد مستندات جاهزة لمسار OCR.</div>}
           <div className="actions"><button type="button" className="stage3-btn stage3-btn-primary" disabled={ocrBusy || !documentId || aiState !== "live"} onClick={() => void runOcr()}>{ocrBusy ? "جارٍ الاستخراج…" : "تشغيل OCR"}</button></div>
           {ocrResult && <pre className="stage3-result" role="status">{ocrResult}</pre>}
         </article>
@@ -179,14 +179,14 @@ export default function Stage3Workspace({ documents, initialCountry, initialPlan
       {tab === "whatsapp" && <section className="stage3-card">
         <div className="stage3-card-head"><h2>WhatsApp</h2><span className="stage3-status">{statusLabel(whatsappState)}</span></div>
         <div className="stage3-form-grid">
-          <label className="stage3-field">النوع<select value={wa.type} onChange={(event) => setWa({ ...wa, type: event.target.value })}><option value="template">Template</option><option value="text">Text</option><option value="document">Document</option></select></label>
+          <label className="stage3-field">النوع<select value={wa.type} onChange={(event) => setWa({ ...wa, type: event.target.value })}><option value="template">قالب</option><option value="text">نص</option><option value="document">مستند</option></select></label>
           <label className="stage3-field">المستلم<input value={wa.to} onChange={(event) => setWa({ ...wa, to: event.target.value })} placeholder="+968..." /></label>
           <label className="stage3-field">اسم القالب<input value={wa.template} onChange={(event) => setWa({ ...wa, template: event.target.value })} /></label>
           <label className="stage3-field">رابط المستند<input value={wa.documentUrl} onChange={(event) => setWa({ ...wa, documentUrl: event.target.value })} /></label>
           <label className="stage3-field stage3-field-wide">المعاملات<input value={wa.parameters} onChange={(event) => setWa({ ...wa, parameters: event.target.value })} placeholder="value1, value2" /></label>
           <label className="stage3-field stage3-field-wide">النص<textarea rows={4} value={wa.text} onChange={(event) => setWa({ ...wa, text: event.target.value })} /></label>
         </div>
-        <div className="actions"><button type="button" className="stage3-btn stage3-btn-primary" disabled={waBusy} onClick={() => void sendWhatsApp()}>{waBusy ? "جارٍ الإرسال…" : "إرسال"}</button></div>
+        <div className="actions"><button type="button" className="stage3-btn stage3-btn-primary" disabled={waBusy || whatsappState !== "live"} onClick={() => void sendWhatsApp()}>{waBusy ? "جارٍ الإرسال…" : "إرسال"}</button></div>
         {waResult && <div className="stage3-result" role="status">{waResult}</div>}
       </section>}
 
@@ -194,7 +194,7 @@ export default function Stage3Workspace({ documents, initialCountry, initialPlan
         <article className="stage3-card">
           <div className="stage3-card-head"><h2>الاشتراك</h2><span className="stage3-status">{statusLabel(billing.subscription?.status || paymentState)}</span></div>
           <p>{billing.integration?.state === "live" ? "الدفع متصل." : "الدفع Integration-ready؛ لا يتم وصفه بأنه Live قبل التفعيل الفعلي."}</p>
-          {billing.subscription ? <div className="stage3-kv"><div><span>Provider</span><b>{billing.subscription.provider || "—"}</b></div><div><span>ينتهي</span><b>{billing.subscription.current_period_end ? new Date(billing.subscription.current_period_end).toLocaleDateString() : "—"}</b></div><div><span>إلغاء بنهاية الفترة</span><b>{billing.subscription.cancel_at_period_end ? "نعم" : "لا"}</b></div></div> : <div className="stage3-empty">لا يوجد اشتراك محفوظ.</div>}
+          {billing.subscription ? <div className="stage3-kv"><div><span>المزوّد</span><b>{billing.subscription.provider || "—"}</b></div><div><span>ينتهي</span><b>{billing.subscription.current_period_end ? new Date(billing.subscription.current_period_end).toLocaleDateString() : "—"}</b></div><div><span>إلغاء بنهاية الفترة</span><b>{billing.subscription.cancel_at_period_end ? "نعم" : "لا"}</b></div></div> : <div className="stage3-empty">لا يوجد اشتراك محفوظ.</div>}
         </article>
         <article className="stage3-card">
           <div className="stage3-card-head"><h2>الباقة والفترة</h2><span className="stage3-status">{statusLabel(paymentState)}</span></div>
@@ -202,14 +202,14 @@ export default function Stage3Workspace({ documents, initialCountry, initialPlan
             <label className="stage3-field">الباقة<select value={selectedPlan} onChange={(event) => setSelectedPlan(event.target.value)}>{(billing.plans || [{id:"starter",code:"starter",name:"الشاشة"},{id:"pro",code:"pro",name:"الأعمال"},{id:"business",code:"business",name:"الكاملة"}]).map((plan) => <option key={plan.code} value={plan.code}>{planNames[plan.code] || plan.name}</option>)}</select></label>
             <label className="stage3-field">الفترة<select value={period} onChange={(event) => setPeriod(event.target.value)}>{periods.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
           </div>
-          <div className="actions"><button type="button" className="stage3-btn stage3-btn-primary" disabled={billingBusy} onClick={() => void checkout()}>{billingBusy ? "جارٍ التجهيز…" : "متابعة الاشتراك"}</button><Link className="stage3-btn" href="/pricing">تفاصيل الباقات</Link></div>
+          <div className="actions"><button type="button" className="stage3-btn stage3-btn-primary" disabled={billingBusy || paymentState !== "live"} onClick={() => void checkout()}>{billingBusy ? "جارٍ التجهيز…" : "متابعة الاشتراك"}</button><Link className="stage3-btn" href="/pricing">تفاصيل الباقات</Link></div>
           {billingResult && <div className="stage3-result" role="status">{billingResult}</div>}
         </article>
       </section>}
 
       {tab === "einvoice" && <section className="stage3-card"><div className="stage3-card-head"><h2>الفوترة الإلكترونية</h2><span className="stage3-status">{statusLabel(einvoiceState)}</span></div><p>ملفات الدولة والطابور وحالات الفشل موجودة في مساحة الفوترة، مع فصل واضح بين المهيأ والموصل الرسمي المفعّل.</p><div className="actions"><Link className="stage3-btn stage3-btn-primary" href="/dashboard/invoicing">فتح مساحة الفوترة</Link></div></section>}
 
-      {tab === "regional" && <section className="stage3-grid"><article className="stage3-card"><div className="stage3-card-head"><h2>الملف الإقليمي</h2><span className="stage3-status">{region === undefined ? "جارٍ التحميل" : region === null ? "غير متاح" : "جاهز"}</span></div><label className="stage3-field">الدولة<select value={country} onChange={(event) => { setRegion(undefined); setCountry(event.target.value); }}><option value="OM">عُمان</option><option value="SA">السعودية</option><option value="AE">الإمارات</option></select></label>{region ? <div className="stage3-kv"><div><span>Locale</span><b>{region.locale || "—"}</b></div><div><span>Currency</span><b>{region.currency || "—"}</b></div><div><span>Timezone</span><b>{region.timezone || "—"}</b></div><div><span>Tax</span><b>{region.taxModel || "—"}</b></div><div><span>Direction</span><b>{region.direction || "—"}</b></div></div> : <div className="stage3-empty">تعذر تحميل الملف الإقليمي.</div>}</article><article className="stage3-card"><h2>منصة المطورين</h2><p>التوثيق العام منفصل عن إدارة مفاتيح API. المفتاح الخام لا يُخزن.</p><div className="actions"><Link className="stage3-btn stage3-btn-primary" href="/dashboard/api-keys">إدارة المفاتيح</Link><Link className="stage3-btn" href="/developers">الوثائق</Link></div></article></section>}
+      {tab === "regional" && <section className="stage3-grid"><article className="stage3-card"><div className="stage3-card-head"><h2>الملف الإقليمي</h2><span className="stage3-status">{region === undefined ? "جارٍ التحميل" : region === null ? "غير متاح" : "جاهز"}</span></div><label className="stage3-field">الدولة<select value={country} onChange={(event) => { setRegion(undefined); setCountry(event.target.value); }}><option value="OM">عُمان</option><option value="SA">السعودية</option><option value="AE">الإمارات</option></select></label>{region ? <div className="stage3-kv"><div><span>الإعدادات المحلية</span><b>{region.locale || "—"}</b></div><div><span>العملة</span><b>{region.currency || "—"}</b></div><div><span>المنطقة الزمنية</span><b>{region.timezone || "—"}</b></div><div><span>الضريبة</span><b>{region.taxModel || "—"}</b></div><div><span>اتجاه الواجهة</span><b>{region.direction || "—"}</b></div></div> : <div className="stage3-empty">تعذر تحميل الملف الإقليمي.</div>}</article><article className="stage3-card"><h2>منصة المطورين</h2><p>التوثيق العام منفصل عن إدارة مفاتيح API. المفتاح الخام لا يُخزن.</p><div className="actions"><Link className="stage3-btn stage3-btn-primary" href="/dashboard/api-keys">إدارة المفاتيح</Link><Link className="stage3-btn" href="/developers">الوثائق</Link></div></article></section>}
 
       {tab === "pwa" && <section className="stage3-grid"><PwaInstallPrompt/><PwaNotificationPrompt/><article className="stage3-card"><div className="stage3-card-head"><h2>أمان العمل دون اتصال</h2><span className="stage3-status live">محمي</span></div><p>يخزن Service Worker الواجهة والملفات اللازمة فقط، ولا يخزن مسارات API أو عمليات الدفع والبيع.</p></article></section>}
     </>
