@@ -117,7 +117,7 @@ export async function POST(request: Request) {
         await admin.from("gmp_einvoice_submissions").update({status:"failed",error_code:"provider_error",error_message:message,updated_at:new Date().toISOString()}).eq("id",submission.id).eq("organization_id",organization.id);
         await admin.from("gmp_einvoice_attempts").update({status:"failed",error_code:"provider_error",error_message:message}).eq("id",claim.attempt_id).eq("submission_id",submission.id);
         return NextResponse.json({error:"einvoice_provider_failed",retryable:true,submission_id:submission.id,attempt_no:attemptNo},{status:502});
-      }}
+      }
     }
     return NextResponse.json({ error: "unsupported_action" }, { status: 400 });
   } catch (error) {
