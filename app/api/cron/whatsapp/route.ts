@@ -3,6 +3,7 @@ import { createSupabaseAdminClient } from "../../../../lib/supabase/admin";
 import { getWhatsAppStatus, sendWhatsAppMessage } from "../../../../lib/stage3/whatsapp";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 const json = (data: unknown, status = 200) => NextResponse.json(data, {
   status,
