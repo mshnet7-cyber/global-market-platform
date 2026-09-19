@@ -47,3 +47,10 @@ test("Document uploads validate real file signatures after MIME checks",()=>{
   assert.ok(src.includes('"WEBP"'));
   assert.ok(src.includes("file_signature_invalid"));
 });
+test("Authenticated JSON APIs also enforce bounded request parsing",()=>{
+  for(const p of["app/api/alerts/rules/route.ts","app/api/notifications/route.ts","app/api/stage3/ai/route.ts","app/api/stage3/billing/route.ts","app/api/stage3/einvoice/route.ts","app/api/stage3/whatsapp/route.ts","app/api/v1/webhooks/route.ts","app/api/v1/keys/route.ts","app/api/admin/overview/route.ts","app/api/dashboard/webhooks/route.ts"]){
+    const src=read(p);
+    assert.ok(src.includes("readBoundedRequestJson"));
+    assert.ok(src.includes("64 * 1024"));
+  }
+});
