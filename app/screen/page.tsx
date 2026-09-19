@@ -1,3 +1,5 @@
+/* eslint-disable @next/next/no-img-element -- kiosk assets are dynamic storage/provider URLs. */
+
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
