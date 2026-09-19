@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { appConfig, countries, isValidLanguage } from "../../../../lib/config";
 import { getSnapshot } from "../../../../lib/providers";
-import { getPublicPriceHistory, HISTORY_RANGES } from "../../../../lib/market-history";
+import { getPublicPriceHistory, HISTORY_RANGES, isPublicHistoryInstrument } from "../../../../lib/market-history";
 import { withTrustStatus } from "../../../../lib/market-trust";
 
 export async function GET(request: Request) {
@@ -16,6 +16,7 @@ export async function GET(request: Request) {
   const validRange=Object.prototype.hasOwnProperty.call(HISTORY_RANGES,range)?range:"1D";
   const allQuotes=[...snapshot.markets,...snapshot.stocks].map(withTrustStatus);
   const selected=requested||("XAU"+country.currency);
+  if(!isPublicHistoryInstrument(selected)) return NextResponse.json({error:"instrument_not_public"},{status:400,headers:{"cache-control":"no-store"}});
   const isGold=selected===("XAU"+country.currency)||selected==="XAUOMR"||selected==="XAUUSD";
   const selectedQuote=allQuotes.find(q=>q.symbol===selected||q.instrument===selected)||null;
   const history=await getPublicPriceHistory(selected,validRange);
