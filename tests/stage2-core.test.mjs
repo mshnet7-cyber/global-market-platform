@@ -8,6 +8,7 @@ test("Stage 2 core surfaces exist",()=>{
   assert.match(read("app/dashboard/operations/page.tsx"),/MMarketplace|Marketplace/);
   assert.match(read("app/directory/page.tsx"),/دليل محلات الذهب/);
   assert.match(read("app/marketplace/page.tsx"),/no paid checkout|بدون دفع/i);
+  assert.match(read("app/store/[slug]/page.tsx"),/status.*published/);
   assert.match(read("app/admin/page.tsx"),/MASTER ADMIN/);
 });
 
@@ -57,6 +58,8 @@ test("Repair lifecycle matches database statuses",()=>{
   assert.match(read("app/api/stage2/route.ts"),/in_repair/);
   assert.doesNotMatch(read("app/api/stage2/route.ts"),/statuses:\["received","in_progress"/);
 });
+
+test("Public store profiles require publication",()=>{ const src=read("app/store/[slug]/page.tsx"); assert.match(src,/notFound\(\)/); assert.match(src,/eq\("status","published"\)/); });
 
 test("No Stage 2 paid checkout or external Stage 3 features",()=>{
   const src=read("app/marketplace/page.tsx");
