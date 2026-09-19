@@ -7,7 +7,8 @@ export type MerchantRole = "owner" | "admin" | "viewer";
 
 export async function getMerchantContext() {
   const demo = await getDemoSession();
-  if (demo?.role === "shop_owner") {
+  if (demo) {
+    if (demo.role !== "shop_owner") return { supabase: null, user: null, organization: null, role: null as MerchantRole | null, planCode: null as MerchantPlanCode | null };
     const admin = createSupabaseAdminClient();
     if (!admin) return { supabase: null, user: null, organization: null, role: null as MerchantRole | null, planCode: null as MerchantPlanCode | null };
     const { data: organization } = await admin.from("gmp_organizations").select("id,name,slug,owner_id").eq("slug","global-market-demo-shop").maybeSingle();
