@@ -19,10 +19,10 @@ export default async function ApiKeysPage() {
     <div className="dashboard-shell">
       <DashboardHeader organizationName={organization.name} role={role} planName={planCode === "business" ? "الكاملة" : "الأعمال"} />
       <main className="wrap section dashboard-module-page">
-        <div className="eyebrow">DEVELOPER PLATFORM</div>
+        <div className="eyebrow">منصة المطورين</div>
         <h1>مفاتيح API</h1>
         <p className="hero-copy">أنشئ مفاتيح للوصول إلى API v1/v2. المفتاح الخام يظهر مرة واحدة فقط؛ النظام يحتفظ بالـhash.</p>
-        <div className="module-context"><span>الخطة: {planCode}</span><span>صلاحية: {role === "owner" ? "مالك" : "مدير"}</span><span>Rate limit: 120/min</span></div>
+        <div className="module-context"><span>الخطة: {planCode === "business" ? "الكاملة" : planCode === "pro" ? "الأعمال" : planCode || "غير محددة"}</span><span>صلاحية: {role === "owner" ? "مالك" : "مدير"}</span><span>حد الطلبات: 120/دقيقة</span></div>
         <ApiKeysWorkspace initialKeys={data ?? []} />
         <div style={{ marginTop: 18 }}><WebhooksWorkspace /></div>
       </main>
