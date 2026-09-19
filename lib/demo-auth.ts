@@ -20,7 +20,7 @@ const DEMO_USERS: Record<DemoRole, { email: string; password: string; userId: st
 const DEMO_COOKIE = "gmp_demo_role";
 
 export function isDemoEnvironment() {
-  return process.env.DEMO_MODE === "true" || process.env.VERCEL_ENV === "preview";
+  return process.env.VERCEL_ENV === "preview";
 }
 
 export function getDemoCredentials(role: DemoRole) {
