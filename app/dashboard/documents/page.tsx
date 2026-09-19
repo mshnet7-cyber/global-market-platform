@@ -56,15 +56,17 @@ export default function DocumentsPage(){
     finally{setBusy(false)}
   }
 
-  return <main className="stage2-page">
+  return <div className="dashboard-shell" dir="rtl" lang="ar">
+    <header className="topbar"><div className="container nav site-nav"><a href="/dashboard" className="brand"><span className="brand-mark">GM</span><span>GLOBAL <b>MARKET</b></span></a><nav className="nav-links" aria-label="تنقل لوحة المحل"><a href="/dashboard">الرئيسية</a><a href="/dashboard/sales">المبيعات</a><a href="/dashboard/inventory">المخزون</a><a href="/dashboard/reports">التقارير</a><a href="/dashboard/integrations">التكاملات</a></nav><div className="nav-actions"><a className="btn btn-ghost" href="/dashboard">لوحة التحكم</a></div></div></header>
+  <main className="wrap section dashboard-module-page">
     <header className="stage2-page-head">
-      <div><div className="eyebrow">DOCUMENT INTELLIGENCE</div><h1>المستندات و OCR</h1><p>رفع آمن → سجل مستند → OCR → مراجعة → اعتماد/رفض. المستندات خاصة وليست Public.</p></div>
-      <span className="stage2-badge">{integration?.state==="live"?"OCR LIVE":"OCR INTEGRATION-READY"}</span>
+      <div><div className="eyebrow">ذكاء المستندات</div><h1>المستندات و OCR</h1><p>رفع آمن → سجل مستند → OCR → مراجعة → اعتماد/رفض. المستندات خاصة وليست Public.</p></div>
+      <span className="stage2-badge">{integration?.state==="live"?"OCR مباشر":"OCR جاهز للتكامل"}</span>
     </header>
 
     <section className="stage2-panel">
       <h2>رفع مستند</h2>
-      <p>PDF أو JPG أو PNG أو WEBP، حتى 10MB. لا يتم اعتبار OCR Live دون مزود فعلي.</p>
+      <p>PDF أو JPG أو PNG أو WEBP حتى 10MB. لا تُعتبر معالجة OCR مباشرة دون مزود فعلي.</p>
       <div className="stage2-form-grid">
         <label>نوع المستند<select value={type} onChange={e=>setType(e.target.value)}><option value="supplier_invoice">فاتورة مورد</option><option value="expense_receipt">إيصال مصروف</option><option value="identity">هوية</option><option value="repair_photo">صورة إصلاح</option><option value="other">أخرى</option></select></label>
         <label>الملف<input id="doc-file" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" onChange={e=>setFile(e.target.files?.[0]??null)} disabled={busy}/></label>
@@ -78,7 +80,7 @@ export default function DocumentsPage(){
       <div className="stage2-panel-head"><h2>سجل المستندات</h2><span>{docs.length}</span></div>
       {!docs.length?<div className="stage2-empty">لا توجد مستندات بعد.</div>:
       <div className="stage2-table-wrap"><table><thead><tr><th>النوع</th><th>الحالة</th><th>الثقة</th><th>OCR</th><th>الإجراء</th></tr></thead><tbody>{docs.map(d=><tr key={d.id}>
-        <td>{d.document_type}</td><td>{d.review_status}</td><td>{d.ai_confidence==null?"—":Math.round(Number(d.ai_confidence)*100)+"%"}</td>
+        <td>{({supplier_invoice:"فاتورة مورد",expense_receipt:"إيصال مصروف",identity:"هوية",repair_photo:"صورة إصلاح",other:"أخرى"} as Record<string,string>)[d.document_type] ?? d.document_type ?? "—"}</td><td>{({pending:"بانتظار المراجعة",approved:"معتمد",rejected:"مرفوض"} as Record<string,string>)[d.review_status] ?? d.review_status ?? "—"}</td><td>{d.ai_confidence==null?"—":Math.round(Number(d.ai_confidence)*100)+"%"}</td>
         <td><details><summary>عرض الاستخراج</summary><pre style={{whiteSpace:"pre-wrap",maxWidth:520}}>{JSON.stringify(d.ai_extracted_data??{},null,2)}</pre></details></td>
         <td><div className="stage2-actions">
           <button className="btn" disabled={busy} onClick={()=>void action(d.id,"ocr")}>إعادة OCR</button>
