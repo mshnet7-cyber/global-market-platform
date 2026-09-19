@@ -76,8 +76,16 @@ export async function POST(request: Request) {
         documentPayload = (doc.ai_extracted_data && typeof doc.ai_extracted_data === "object") ? doc.ai_extracted_data as Record<string,unknown> : {};
       }
       const key = String(body.idempotency_key ?? `${saleId}:${countryCode}`).slice(0, 200);
-      const { data, error } = await supabase.from("gmp_einvoice_submissions").upsert({ organization_id: organization.id, store_id: sale.store_id, sale_id: sale.id, connector_id: profile.connector_id, country_code: countryCode, status: "queued", idempotency_key: key, source_document_id: documentId, payload: documentPayload, created_by: user.id }, { onConflict: "organization_id,idempotency_key" }).select("*").single();
-      if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+      const { data: existing } = await supabase.from("gmp_einvoice_submissions").select("*").eq("organization_id", organization.id).eq("idempotency_key", key).maybeSingle();
+      if (existing) return NextResponse.json({ success: true, queued: false, idempotent: true, row: existing }, { status: 200 });
+      const { data, error } = await supabase.from("gmp_einvoice_submissions").insert({ organization_id: organization.id, store_id: sale.store_id, sale_id: sale.id, connector_id: profile.connector_id, country_code: countryCode, status: "queued", idempotency_key: key, source_document_id: documentId, payload: documentPayload, created_by: user.id }).select("*").single();
+      if (error) {
+        if (String(error.code) === "23505") {
+          const { data: raced } = await supabase.from("gmp_einvoice_submissions").select("*").eq("organization_id", organization.id).eq("idempotency_key", key).maybeSingle();
+          if (raced) return NextResponse.json({ success: true, queued: false, idempotent: true, row: raced }, { status: 200 });
+        }
+        return NextResponse.json({ error: error.message }, { status: 400 });
+      }
       return NextResponse.json({ success: true, queued: true, row: data }, { status: 201 });
     }
     if (body.action === "send") {
