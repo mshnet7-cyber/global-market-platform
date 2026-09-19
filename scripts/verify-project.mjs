@@ -63,4 +63,11 @@ const remainingIndexes=text("supabase/migrations/20260919004139_gmp_remaining_fk
 ok("Global Market FK index migrations tracked", launchIndexes.includes("gmp_ad_creatives_org_idx") && remainingIndexes.includes("gmp_display_content_screen_idx"));
 const screenFkIndex=text("supabase/migrations/20260919004300_gmp_display_content_screen_id_index.sql");
 ok("display content screen FK index tracked", screenFkIndex.includes("gmp_display_content_screen_id_idx"));
+const billingClaim=text("supabase/migrations/20260919008100_gmp_billing_event_claim_v2.sql");
+const einvoiceClaim=text("supabase/migrations/20260919006000_gmp_einvoice_send_claim.sql");
+const complianceGuard=text("supabase/migrations/20260919007000_gmp_compliance_active_case_guard.sql");
+ok("billing claim migration tracked", billingClaim.includes("gmp_claim_billing_event") && billingClaim.includes("for update") && billingClaim.includes("revoke execute"));
+ok("e-invoice claim migration tracked", einvoiceClaim.includes("gmp_claim_einvoice_send") && einvoiceClaim.includes("for update") && einvoiceClaim.includes("revoke execute"));
+ok("compliance active-case guard tracked", complianceGuard.includes("gmp_compliance_active_entity_uniq"));
+ok("health endpoint does not expose env names", !text("app/api/health/route.ts").includes("missingEnvironmentVariables"));
 console.log(`verify-project: ${checks.length} checks passed`);
