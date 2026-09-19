@@ -8,5 +8,6 @@ export function isSameOriginRequest(request: Request) {
   if (referer) {
     try { return new URL(referer).origin === expected; } catch { return false; }
   }
-  return false;
+  const fetchSite = request.headers.get("sec-fetch-site")?.trim().toLowerCase();
+  return fetchSite === "same-origin" || fetchSite === "same-site";
 }
