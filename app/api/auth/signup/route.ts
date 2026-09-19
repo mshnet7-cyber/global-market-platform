@@ -7,8 +7,12 @@ function slugify(value: string) {
   return value.toLowerCase().trim().replace(/[^a-z0-9\u0600-\u06ff]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "account";
 }
 
-function redirectWithError(request: Request, code: string) {
-  return NextResponse.redirect(new URL(`/signup?error=${encodeURIComponent(code)}`, request.url));
+function safeNext(value: unknown) { const next = String(value ?? "").trim(); return next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard"; }
+
+function redirectWithError(request: Request, code: string, next = "/dashboard", plan = "") {
+  const params = new URLSearchParams({ error: code, next });
+  if (plan) params.set("plan", plan);
+  return NextResponse.redirect(new URL(`/signup?${params.toString()}`, request.url));
 }
 
 export async function POST(request: Request) {
@@ -16,7 +20,10 @@ export async function POST(request: Request) {
   const name = String(form.get("name") ?? "").trim().slice(0, 120);
   const email = String(form.get("email") ?? "").trim().toLowerCase();
   const password = String(form.get("password") ?? "");
-  if (!name || !email || password.length < 10) return redirectWithError(request, "invalid");
+  const next = safeNext(form.get("next"));
+  const requestedPlan = String(form.get("plan") ?? "").trim();
+  const plan = ["starter", "pro", "business"].includes(requestedPlan) ? requestedPlan : "";
+  if (!name || !email || password.length < 10) return redirectWithError(request, "invalid", next, plan);
 
   const supabase = await createSupabaseServerClient();
   const admin = createSupabaseAdminClient();
@@ -27,8 +34,8 @@ export async function POST(request: Request) {
     password,
     options: { data: { display_name: name } },
   });
-  if (error) return redirectWithError(request, "signup");
-  if (!data.user) return NextResponse.redirect(new URL("/login?created=1", request.url));
+  if (error) return redirectWithError(request, "signup", next, plan);
+  if (!data.user) return NextResponse.redirect(new URL("/login?created=1&next=" + encodeURIComponent(next), request.url));
 
   const country = countries.find((c) => c.code === appConfig.defaultCountry) ?? countries[0];
   const orgSlug = `${slugify(name)}-${data.user.id.slice(0, 8)}`;
@@ -46,10 +53,11 @@ export async function POST(request: Request) {
 
   if (bootstrapError) {
     await admin.auth.admin.deleteUser(data.user.id);
-    return redirectWithError(request, "account_setup");
+    return redirectWithError(request, "account_setup", next, plan);
   }
 
+  const continuation = plan ? next + (next.includes("?") ? "&" : "?") + "plan=" + encodeURIComponent(plan) : next;
   return data.session
-    ? NextResponse.redirect(new URL("/dashboard", request.url))
-    : NextResponse.redirect(new URL("/login?created=1", request.url));
+    ? NextResponse.redirect(new URL(continuation, request.url))
+    : NextResponse.redirect(new URL("/login?created=1&next=" + encodeURIComponent(continuation), request.url));
 }

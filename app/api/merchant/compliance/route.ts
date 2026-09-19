@@ -71,7 +71,13 @@ export async function POST(request: Request) {
       if (existing?.length) return NextResponse.json({ error: "active_case_exists", case_id: existing[0].id }, { status: 409 });
     }
     const { data, error } = await supabase.from("gmp_compliance_cases").insert({ organization_id: organization.id, branch_id: branchId, entity_type: entityType, entity_id: body.entity_id ? String(body.entity_id) : null, case_type: caseType, status: "open", connector_id: body.connector_id ? String(body.connector_id) : null, government_reference: body.government_reference ? String(body.government_reference).slice(0, 200) : null, notes: body.notes ? String(body.notes).slice(0, 4000) : null, created_by: user.id }).select("*").single();
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    if (error) {
+      if (String(error.code) === "23505" && String(error.message).includes("gmp_compliance_active_entity_uniq")) {
+        const { data: active } = await supabase.from("gmp_compliance_cases").select("id").eq("organization_id", organization.id).eq("entity_type", entityType).eq("entity_id", String(body.entity_id)).in("status", ["open", "under_review", "submitted"]).limit(1);
+        return NextResponse.json({ error: "active_case_exists", case_id: active?.[0]?.id ?? null }, { status: 409 });
+      }
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
     return NextResponse.json({ success: true, row: data }, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "unexpected_error";

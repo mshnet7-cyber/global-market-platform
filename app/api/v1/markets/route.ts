@@ -4,6 +4,7 @@ import { appConfig, isValidLanguage } from "../../../../lib/config";
 import { getSnapshot } from "../../../../lib/providers";
 import { withTrustStatus } from "../../../../lib/market-trust";
 import { randomUUID } from "crypto";
+import { recordApiUsage } from "../../../../lib/stage3/developer-api";
 
 function errorResponse(error: unknown) {
   const message=error instanceof Error?error.message:"api_error";
@@ -12,15 +13,16 @@ function errorResponse(error: unknown) {
 }
 export async function OPTIONS(){return new NextResponse(null,{status:204,headers:apiCorsHeaders()});}
 export async function GET(request:Request){
+  const start=Date.now();
   try{
-    await authenticateApiKey(request,"market:read");
+    const key=await authenticateApiKey(request,"market:read");
     const url=new URL(request.url);
     const languageParam=url.searchParams.get("language")?.toLowerCase()??appConfig.defaultLanguage;
     const language=isValidLanguage(languageParam)?languageParam:appConfig.defaultLanguage;
     const kind=url.searchParams.get("kind")==="stocks"?"stocks":"markets";
     const instrument=url.searchParams.get("instrument")?.toUpperCase()??null;
-    const snapshot=await getSnapshot("USD",language,false,true);
+    const country=url.searchParams.get("country")?.toUpperCase()||appConfig.defaultCountry; const currency=(url.searchParams.get("currency")?.toUpperCase()||"USD"); if(!/^[A-Z]{3}$/.test(currency)) return NextResponse.json({error:"invalid_currency",request_id:randomUUID()},{status:400,headers:apiCorsHeaders()}); const snapshot=await getSnapshot(currency,language,false,true);
     const quotes=(kind==="stocks"?snapshot.stocks:snapshot.markets).map(withTrustStatus).filter(q=>!instrument||q.symbol===instrument||q.instrument.toUpperCase().includes(instrument));
-    return NextResponse.json({api_version:"1",request_id:randomUUID(),generated_at:snapshot.generatedAt,kind,count:quotes.length,data:quotes}, {headers:apiCorsHeaders()});
+    const requestId=randomUUID(); await recordApiUsage({apiKeyId:key.id,organizationId:key.organizationId,requestId,route:"/api/v1/markets",method:"GET",statusCode:200,latencyMs:Date.now()-start,apiVersion:"1"}); return NextResponse.json({api_version:"1",request_id:requestId,generated_at:snapshot.generatedAt,kind,country,count:quotes.length,data:quotes}, {headers:apiCorsHeaders()});
   }catch(error){return errorResponse(error);}
 }

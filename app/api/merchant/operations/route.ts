@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireMerchantPlan } from "../../../../lib/merchant-access";
+import { queueCustomerWhatsApp } from "../../../../lib/operational-notifications";
 
 const plans: Record<string, ("pro" | "business")[]> = { purchases: ["pro", "business"], expenses: ["pro", "business"], repairs: ["business"], "buy-gold": ["business"], inventory: ["business"], accounting: ["pro", "business"], tax: ["business"] };
 const methods = new Set(["cash", "bank", "card", "wallet", "other"]);
@@ -76,7 +77,7 @@ export async function POST(request: Request) {
         const transitions: Record<string,string[]> = { received:["in_repair","cancelled"], in_repair:["ready","cancelled"], ready:["delivered","in_repair","cancelled"], delivered:[], cancelled:[] };
         if (current.status !== status && !transitions[current.status]?.includes(status)) return NextResponse.json({error:"invalid_repair_transition"},{status:409});
         const patch:Record<string,unknown>={status,updated_at:new Date().toISOString()}; if(status==="ready")patch.ready_at=new Date().toISOString(); if(status==="delivered"){patch.delivered_at=new Date().toISOString();patch.delivered_by=user.id;}
-        const {data,error}=await supabase.from("gmp_repair_orders").update(patch).eq("id",id).eq("organization_id",organization.id).select("*").single(); if(error)return NextResponse.json({error:error.message},{status:400}); return NextResponse.json({success:true,row:data});
+        const {data,error}=await supabase.from("gmp_repair_orders").update(patch).eq("id",id).eq("organization_id",organization.id).select("*").single(); if(error)return NextResponse.json({error:error.message},{status:400}); if(status==="ready"&&data?.customer_id){const {data:customer}=await supabase.from("gmp_customers").select("phone").eq("id",data.customer_id).eq("organization_id",organization.id).maybeSingle(); void queueCustomerWhatsApp({organizationId:organization.id,recipient:customer?.phone,kind:"repair_ready",parameters:[String(data.repair_no??"")],metadata:{repair_id:data.id}});} return NextResponse.json({success:true,row:data});
       }
       const description=String(body.item_description??"").trim(),weight=num(body.weight_received_grams),expectedDays=num(body.expected_days),amount=num(body.amount??0); if(!description||weight===null||weight<0||expectedDays===null&&body.expected_days!=null||expectedDays!=null&&(!Number.isInteger(expectedDays)||expectedDays<0)||amount===null||amount<0)return NextResponse.json({error:"invalid_repair"},{status:400});
       if (!(await validateBranch(supabase, organization.id, body.branch_id))) return NextResponse.json({error:"branch_not_found"},{status:400});

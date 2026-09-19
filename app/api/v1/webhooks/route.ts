@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { authenticateApiKey, apiCorsHeaders } from "../../../../lib/api-keys";
-import { encryptWebhookSecret } from "../../../../lib/webhooks";
+import { encryptWebhookSecret, validateWebhookUrl } from "../../../../lib/webhooks";
 import { createSupabaseAdminClient } from "../../../../lib/supabase/admin";
 import { randomUUID } from "crypto";
 
+const EVENT_TYPES = ["market.alert.triggered"] as const;
 function failure(error:unknown){const message=error instanceof Error?error.message:"webhook_error";const status=message==="api_key_required"||message==="api_key_invalid"?401:message==="api_scope_denied"?403:message==="api_rate_limited"?429:message==="webhook_encryption_not_configured"?503:400;return NextResponse.json({error:message,request_id:randomUUID()},{status,headers:apiCorsHeaders()});}
 export async function OPTIONS(){return new NextResponse(null,{status:204,headers:apiCorsHeaders()});}
 
@@ -24,7 +25,7 @@ export async function POST(request:Request){
     const target=String(body?.url??"").trim();
     const secret=String(body?.signing_secret??"");
     const events=Array.isArray(body?.event_types)?body.event_types.map(String).slice(0,20):["market.alert.triggered"];
-    if(!/^https:\/\/[A-Za-z0-9.-]+(?::\d+)?(?:\/.*)?$/.test(target)||secret.length<16||!events.length)throw new Error("invalid_webhook");
+    if(!(await validateWebhookUrl(target))||secret.length<16||secret.length>512||!events.length||events.some(event=>!EVENT_TYPES.includes(event as typeof EVENT_TYPES[number])))throw new Error("invalid_webhook");
     const admin=createSupabaseAdminClient();if(!admin)throw new Error("api_unavailable");
     const encrypted=encryptWebhookSecret(secret);
     const record={organization_id:key.organizationId,url:target,event_types:events,secret_ciphertext:encrypted,secret_hint:secret.slice(-4),enabled:true};

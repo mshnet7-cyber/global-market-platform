@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { MetalSnapshot, Quote } from "../../lib/types";
 import type { PublicPricePoint } from "../../lib/market-history";
 import Link from "next/link";
+import { formatMoneyDisplay } from "../../lib/currency-display";
 
 type TerminalData = {
   gold: MetalSnapshot;
@@ -16,11 +17,7 @@ type TerminalData = {
   selectedInstrument: string;
 };
 
-function fmt(value: number | null | undefined, currency: string, digits = 2) {
-  if (value == null || !Number.isFinite(value)) return "—";
-  try { return new Intl.NumberFormat("en-US", { style: "currency", currency, minimumFractionDigits: digits, maximumFractionDigits: digits }).format(value); }
-  catch { return value.toFixed(digits) + " " + currency; }
-}
+function fmt(value: number | null | undefined, currency: string, digits = 2) { return formatMoneyDisplay(value, currency, "en-US", digits); }
 function pct(value: number | null | undefined) {
   if (value == null || !Number.isFinite(value)) return "—";
   return (value > 0 ? "+" : "") + value.toFixed(2) + "%";
@@ -40,7 +37,7 @@ function Chart({ points, currency }: { points: PublicPricePoint[]; currency: str
     return (i ? "L" : "M") + " " + x.toFixed(2) + " " + y.toFixed(2);
   }).filter(Boolean).join(" ");
   return <div className="terminal-chart-wrap">
-    <svg viewBox={"0 0 " + width + " " + height} role="img" aria-label="Price history chart">
+    <svg viewBox={"0 0 " + width + " " + height} role="img" aria-label="مخطط سجل الأسعار">
       <path d={"M " + pad + " " + (height-pad) + " L " + (width-pad) + " " + (height-pad)} className="chart-axis" />
       <path d={path} className="chart-line" fill="none" />
     </svg>
@@ -48,12 +45,13 @@ function Chart({ points, currency }: { points: PublicPricePoint[]; currency: str
   </div>;
 }
 
-export default function MarketTerminal({ language, countryCode, countryName, currency, initial }: {
+export default function MarketTerminal({ language, countryCode, countryName, currency, initial, focus = "all" }: {
   language: string;
   countryCode: string;
   countryName: string;
   currency: string;
   initial: TerminalData;
+  focus?: "all" | "stocks" | "markets";
 }) {
   const rtl = ["ar", "fa", "he", "ur"].includes(language);
   const [data, setData] = useState(initial);
@@ -90,15 +88,18 @@ export default function MarketTerminal({ language, countryCode, countryName, cur
   }, [countryCode, language, selected, range]);
 
   const allQuotes = useMemo(() => [...data.markets, ...data.stocks], [data.markets, data.stocks]);
-  const selectedQuote = allQuotes.find((q) => q.symbol === selected || q.instrument === selected) ?? null;
+  const focusQuotes = useMemo(() => focus === "stocks" ? data.stocks : focus === "markets" ? data.markets : allQuotes, [focus, data.markets, data.stocks, allQuotes]);
+  const selectedQuote = focusQuotes.find((q) => q.symbol === selected || q.instrument === selected) ?? null;
   const selectedIsGold = selected === ("XAU" + currency) || selected === "XAUOMR" || selected === "XAUUSD";
-  const currentValue = selectedIsGold ? data.gold.spot : selectedQuote?.spot ?? null;
+  const selectedIsSilver = selected === ("XAG" + currency) || selected === "XAGOMR" || selected === "XAGUSD";
+  const selectedCurrency = selectedIsGold || selectedIsSilver ? currency : selectedQuote?.currency ?? "USD";
+  const currentValue = selectedIsGold ? data.gold.spot : selectedIsSilver ? data.silver.spot : selectedQuote?.spot ?? null;
   const historyValues = data.history.map((p) => p.value).filter((v): v is number => typeof v === "number" && Number.isFinite(v));
   const high = historyValues.length ? Math.max(...historyValues) : null;
   const low = historyValues.length ? Math.min(...historyValues) : null;
-  const derivedChange = historyValues.length >= 2 ? historyValues[historyValues.length - 1] - historyValues[0] : selectedQuote?.change ?? null;
-  const derivedPercent = historyValues.length >= 2 && historyValues[0] ? (derivedChange! / historyValues[0]) * 100 : selectedQuote?.changePercent ?? null;
-  const rows = allQuotes.filter((q) => filter === "all" || watchlist.includes(q.symbol ?? q.instrument));
+  const derivedChange = historyValues.length >= 2 ? historyValues[historyValues.length - 1] - historyValues[0] : selectedIsGold ? data.gold.change ?? null : selectedIsSilver ? data.silver.change ?? null : selectedQuote?.change ?? null;
+  const derivedPercent = historyValues.length >= 2 && historyValues[0] ? (derivedChange! / historyValues[0]) * 100 : selectedIsGold ? data.gold.changePercent ?? null : selectedIsSilver ? data.silver.changePercent ?? null : selectedQuote?.changePercent ?? null;
+  const rows = focusQuotes.filter((q) => filter === "all" || watchlist.includes(q.symbol ?? q.instrument));
 
   function toggleWatch(code: string) {
     setWatchlist((current) => {
@@ -111,7 +112,7 @@ export default function MarketTerminal({ language, countryCode, countryName, cur
   return <div className="stage1-shell" dir={rtl ? "rtl" : "ltr"} lang={language}>
     <header className="topbar"><div className="container nav stage1-nav">
       <Link href="/" className="brand"><span className="brand-mark">GM</span><span>GLOBAL <b>MARKET</b></span></Link>
-      <div className="stage1-nav-title"><span className="eyebrow">MARKET INTELLIGENCE</span><strong>{countryName} · {currency}</strong></div>
+      <div className="stage1-nav-title"><span className="eyebrow">ذكاء السوق</span><strong>{countryName} · {currency}</strong></div>
       <div className="nav-actions"><Link className="btn btn-ghost" href={"/gold?country=" + countryCode + "&language=" + language}>الذهب المتقدم</Link><Link className="btn btn-primary" href="/login">الدخول</Link></div>
     </div></header>
     <main className="container stage1-main">
@@ -121,24 +122,25 @@ export default function MarketTerminal({ language, countryCode, countryName, cur
       </section>
       <section className="terminal-layout">
         <aside className="terminal-sidebar">
-          <div className="terminal-sidebar-head"><strong>WATCHLIST</strong><button type="button" className="terminal-filter" onClick={() => setFilter(filter === "all" ? "watchlist" : "all")}>{filter === "all" ? "ALL" : "WATCHLIST"}</button></div>
-          <button type="button" className={"terminal-instrument " + (selectedIsGold ? "active" : "")} onClick={() => setSelected("XAU" + currency)}><span>Au</span><div><strong>Gold 24K</strong><small>{fmt(data.gold.perGram24k, currency, 3)} / g</small></div></button>
+          <div className="terminal-sidebar-head"><strong>قائمة المتابعة</strong><button type="button" className="terminal-filter" onClick={() => setFilter(filter === "all" ? "watchlist" : "all")}>{filter === "all" ? "الكل" : "قائمة المتابعة"}</button></div>
+          <button type="button" className={"terminal-instrument " + (selectedIsGold ? "active" : "")} onClick={() => setSelected("XAU" + currency)}><span>Au</span><div><strong>ذهب 24K</strong><small>{fmt(data.gold.perGram24k, currency, 3)} / g</small></div></button>
+          <button type="button" className={"terminal-instrument " + (selectedIsSilver ? "active" : "")} onClick={() => setSelected("XAG" + currency)}><span>Ag</span><div><strong>فضة 999</strong><small>{fmt(data.silver.perGram24k, currency, 3)} / g</small></div></button>
           {rows.map((q) => {
             const code = q.symbol ?? q.instrument;
             const active = selected === code;
-            return <button type="button" className={"terminal-instrument " + (active ? "active" : "")} key={code} onClick={() => setSelected(code)}><span>{(q.symbol ?? "MK").slice(0,3)}</span><div><strong>{q.symbol ?? q.instrument}</strong><small>{fmt(q.spot, q.currency)} · {pct(q.changePercent)}</small></div><i onClick={(e) => { e.stopPropagation(); toggleWatch(code); }}>{watchlist.includes(code) ? "★" : "☆"}</i></button>;
+            return <div className="terminal-instrument-row" key={code}><button type="button" className={"terminal-instrument " + (active ? "active" : "")} onClick={() => setSelected(code)}><span>{(q.symbol ?? "MK").slice(0,3)}</span><div><strong>{q.symbol ?? q.instrument}</strong><small>{fmt(q.spot, q.currency)} · {pct(q.changePercent)}</small></div></button><button type="button" className="terminal-watch-toggle" aria-label={(watchlist.includes(code) ? "إزالة " : "إضافة ") + "من قائمة المتابعة " + code} onClick={() => toggleWatch(code)}>{watchlist.includes(code) ? "★" : "☆"}</button></div>;
           })}
           {filter === "watchlist" && rows.length === 0 ? <div className="terminal-empty">لا توجد رموز في القائمة.</div> : null}
         </aside>
         <section className="terminal-content">
-          <div className="terminal-toolbar"><div><span className="micro-label">{selectedIsGold ? "XAU" : selectedQuote?.exchange ?? "GLOBAL"}</span><h2>{selectedIsGold ? "Gold Spot" : selectedQuote?.instrument ?? selected}</h2></div><div className="range-tabs">{(["1D","1W","1M","1Y"] as const).map((r) => <button type="button" className={range === r ? "active" : ""} onClick={() => setRange(r)} key={r}>{r}</button>)}</div></div>
-          <div className="terminal-primary-metrics"><div><span>PRICE</span><strong>{fmt(currentValue, selectedIsGold ? currency : selectedQuote?.currency ?? "USD")}</strong></div><div><span>CHANGE</span><b className={Number(derivedPercent) > 0 ? "up" : Number(derivedPercent) < 0 ? "down" : ""}>{fmt(derivedChange, selectedIsGold ? currency : selectedQuote?.currency ?? "USD")} · {pct(derivedPercent)}</b></div><div><span>HIGH</span><strong>{fmt(high, selectedIsGold ? currency : selectedQuote?.currency ?? "USD")}</strong></div><div><span>LOW</span><strong>{fmt(low, selectedIsGold ? currency : selectedQuote?.currency ?? "USD")}</strong></div></div>
-          <div className="terminal-chart-card"><div className="terminal-card-head"><div><span className="micro-label">HISTORY</span><strong>{data.history.length ? (data.history.length + " observations") : "No history"}</strong></div><div className="terminal-source">{selectedIsGold ? data.gold.provider : selectedQuote?.provider ?? "UNAVAILABLE"} · {selectedIsGold ? data.gold.status : selectedQuote?.status ?? "UNAVAILABLE"}</div></div><Chart points={data.history} currency={selectedIsGold ? currency : selectedQuote?.currency ?? "USD"} /></div>
+          <div className="terminal-toolbar"><div><span className="micro-label">{selectedIsGold ? "XAU" : selectedIsSilver ? "XAG" : selectedQuote?.exchange ?? "GLOBAL"}</span><h2>{selectedIsGold ? (language === "ar" ? "الذهب الفوري" : "Gold Spot") : selectedIsSilver ? (language === "ar" ? "الفضة الفورية" : "Silver Spot") : selectedQuote?.instrument ?? selected}</h2></div><div className="range-tabs">{(["1D","1W","1M","1Y"] as const).map((r) => <button type="button" className={range === r ? "active" : ""} onClick={() => setRange(r)} key={r}>{r}</button>)}</div></div>
+          <div className="terminal-primary-metrics"><div><span>السعر</span><strong>{fmt(currentValue, selectedCurrency)}</strong></div><div><span>التغير</span><b className={Number(derivedPercent) > 0 ? "up" : Number(derivedPercent) < 0 ? "down" : ""}>{fmt(derivedChange, selectedCurrency)} · {pct(derivedPercent)}</b></div><div><span>الأعلى</span><strong>{fmt(high, selectedCurrency)}</strong></div><div><span>الأدنى</span><strong>{fmt(low, selectedCurrency)}</strong></div></div>
+          <div className="terminal-chart-card"><div className="terminal-card-head"><div><span className="micro-label">التاريخ</span><strong>{data.history.length ? (data.history.length + " قراءة") : "لا يوجد تاريخ"}</strong></div><div className="terminal-source">{selectedIsGold ? data.gold.provider : selectedIsSilver ? data.silver.provider : selectedQuote?.provider ?? "UNAVAILABLE"} · {selectedIsGold ? data.gold.status : selectedIsSilver ? data.silver.status : selectedQuote?.status ?? "UNAVAILABLE"}</div></div><Chart points={data.history} currency={selectedCurrency} /></div>
           <div className="terminal-grid-two">
-            <section className="terminal-card"><div className="terminal-card-head"><div><span className="micro-label">SOURCE TRUST</span><strong>سجل المصدر والحالة</strong></div></div><div className="trust-list"><div><span>المصدر</span><b>{selectedIsGold ? data.gold.provider : selectedQuote?.provider ?? "—"}</b></div><div><span>الحالة</span><b>{selectedIsGold ? data.gold.status : selectedQuote?.status ?? "—"}</b></div><div><span>آخر تحديث</span><b>{selectedIsGold ? (data.gold.timestamp ? new Date(data.gold.timestamp).toLocaleString() : "—") : (selectedQuote?.timestamp ? new Date(selectedQuote.timestamp).toLocaleString() : "—")}</b></div><div><span>آخر فحص</span><b>{now ? new Date(now).toLocaleString() : "—"}</b></div></div></section>
-            <section className="terminal-card"><div className="terminal-card-head"><div><span className="micro-label">COMPARISON</span><strong>مقارنة سريعة</strong></div></div><div className="compare-grid"><div><span>Spot</span><b>{fmt(currentValue, selectedIsGold ? currency : selectedQuote?.currency ?? "USD")}</b></div><div><span>High</span><b>{fmt(high, selectedIsGold ? currency : selectedQuote?.currency ?? "USD")}</b></div><div><span>Low</span><b>{fmt(low, selectedIsGold ? currency : selectedQuote?.currency ?? "USD")}</b></div><div><span>Change</span><b>{pct(derivedPercent)}</b></div></div></section>
+            <section className="terminal-card"><div className="terminal-card-head"><div><span className="micro-label">موثوقية المصدر</span><strong>سجل المصدر والحالة</strong></div></div><div className="trust-list"><div><span>المصدر</span><b>{selectedIsGold ? data.gold.provider : selectedIsSilver ? data.silver.provider : selectedQuote?.provider ?? "—"}</b></div><div><span>الحالة</span><b>{selectedIsGold ? data.gold.status : selectedIsSilver ? data.silver.status : selectedQuote?.status ?? "—"}</b></div><div><span>آخر تحديث</span><b>{selectedIsGold ? (data.gold.timestamp ? new Date(data.gold.timestamp).toLocaleString() : "—") : selectedIsSilver ? (data.silver.timestamp ? new Date(data.silver.timestamp).toLocaleString() : "—") : (selectedQuote?.timestamp ? new Date(selectedQuote.timestamp).toLocaleString() : "—")}</b></div><div><span>آخر فحص</span><b>{now ? new Date(now).toLocaleString() : "—"}</b></div></div></section>
+            <section className="terminal-card"><div className="terminal-card-head"><div><span className="micro-label">مقارنة</span><strong>مقارنة سريعة</strong></div></div><div className="compare-grid"><div><span>الفوري</span><b>{fmt(currentValue, selectedCurrency)}</b></div><div><span>الأعلى</span><b>{fmt(high, selectedCurrency)}</b></div><div><span>الأدنى</span><b>{fmt(low, selectedCurrency)}</b></div><div><span>التغير</span><b>{pct(derivedPercent)}</b></div></div></section>
           </div>
-          <div className="terminal-footnote">Fail-closed: البيانات غير الموثوقة أو القديمة لا تُعرض كـLIVE.</div>
+          <div className="terminal-footnote">{language === "ar" ? "حماية الثقة: البيانات غير الموثوقة أو القديمة لا تُعرض كمباشرة." : "Fail-closed: untrusted or stale data is not shown as LIVE."}</div>
         </section>
       </section>
     </main>

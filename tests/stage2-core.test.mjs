@@ -5,10 +5,11 @@ import { readFileSync } from "node:fs";
 const read=(p)=>readFileSync(p,"utf8");
 
 test("Stage 2 core surfaces exist",()=>{
-  assert.match(read("app/dashboard/operations/page.tsx"),/MMarketplace|Marketplace/);
-  assert.match(read("app/directory/page.tsx"),/GOLD STORES DIRECTORY/);
+  assert.match(read("app/dashboard/operations/page.tsx"),/السوق|marketplace/i);
+  assert.match(read("app/directory/page.tsx"),/دليل محلات الذهب/);
   assert.match(read("app/marketplace/page.tsx"),/no paid checkout|بدون دفع/i);
-  assert.match(read("app/admin/page.tsx"),/MASTER ADMIN/);
+  assert.match(read("app/store/[slug]/page.tsx"),/status.*published/);
+  assert.match(read("app/admin/page.tsx"),/إدارة المنصة/);
 });
 
 test("Stage 2 API keeps tenant boundaries and uses existing pricing/transaction primitives",()=>{
@@ -57,6 +58,12 @@ test("Repair lifecycle matches database statuses",()=>{
   assert.match(read("app/api/stage2/route.ts"),/in_repair/);
   assert.doesNotMatch(read("app/api/stage2/route.ts"),/statuses:\["received","in_progress"/);
 });
+
+test("Public APIs do not expose internal marketplace metadata or organization IDs",()=>{ const api=read("app/api/stage2/route.ts"); assert.match(api,/gmp_marketplace_listings.*select\("id,store_id,listing_type,title,description,category,price,currency,availability,contact_mode,image_path,updated_at"\)/s); assert.doesNotMatch(api,/action === "marketplace"[\s\S]{0,2500}organization_id/); });
+
+test("Public store profiles require publication",()=>{ const src=read("app/store/[slug]/page.tsx"); assert.match(src,/notFound\(\)/); assert.match(src,/eq\("status","published"\)/); assert.match(read("app/directory/page.tsx"),/safeWebsite/); });
+
+test("Public marketplace order RPC is server-only",()=>{ const m=read("supabase/migrations/20260919000600_gmp_marketplace_rpc_security_hardening.sql"); assert.match(m,/revoke execute on function public\.gmp_create_marketplace_order/); assert.match(m,/from anon,authenticated/); });
 
 test("No Stage 2 paid checkout or external Stage 3 features",()=>{
   const src=read("app/marketplace/page.tsx");

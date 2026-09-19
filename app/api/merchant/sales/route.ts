@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireMerchantPlan } from "../../../../lib/merchant-access";
+import { queueCustomerWhatsApp } from "../../../../lib/operational-notifications";
 
 const MAX_SALE_LINES = 100;
 const PAYMENT_METHODS = new Set(["cash", "bank", "card", "wallet", "other"]);
@@ -47,6 +48,10 @@ export async function POST(request: Request) {
       p_lines: normalized,
     });
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    if (customerId && data?.sale_id) {
+      const { data: customer } = await supabase.from("gmp_customers").select("phone").eq("id",customerId).eq("organization_id",organization.id).maybeSingle();
+      void queueCustomerWhatsApp({organizationId:organization.id,recipient:customer?.phone,kind:"sale",parameters:[String(data.invoice_no??"")],metadata:{sale_id:data.sale_id}});
+    }
     return NextResponse.json(data, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "unexpected_error";

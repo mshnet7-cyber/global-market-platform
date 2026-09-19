@@ -20,7 +20,7 @@ test("compliance workflow has duplicate protection and event idempotency",()=>{
 });
 
 test("e-invoice queue is fail-closed",()=>{
- const src=read("app/api/merchant/invoicing/route.ts");
+ const src=read("app/api/merchant/invoicing/route.ts"); assert.match(src,/gmp_claim_einvoice_send/);
  assert.match(src,/sale\.status !== "issued"/);
  assert.match(src,/connector\.status !== "active"/);
  assert.match(src,/idempotency_key/);

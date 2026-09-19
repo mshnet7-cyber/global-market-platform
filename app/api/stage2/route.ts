@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import { createSupabaseAdminClient } from "../../../lib/supabase/admin";
 import { requireStage2Permission, type Stage2Permission } from "../../../lib/stage2-access";
 import { recordAuditEvent } from "../../../lib/provider-observability";
+import { queueCustomerWhatsApp } from "../../../lib/operational-notifications";
 
 const json = (data: unknown, status = 200) => NextResponse.json(data, {
   status,
@@ -61,7 +62,7 @@ export async function GET(request: Request) {
       if (!storeIds.length) return json({ stores: [], listings: [] });
       const [{ data: stores }, { data: listings, error }] = await Promise.all([
         admin.from("gmp_stores").select("id,name,slug,phone,whatsapp,logo_path,country_code,currency,timezone").in("id",storeIds),
-        admin.from("gmp_marketplace_listings").select("id,store_id,listing_type,title,description,category,price,currency,availability,contact_mode,image_path,metadata,updated_at").in("store_id",storeIds).eq("status","active").order("updated_at",{ascending:false}).limit(500)
+        admin.from("gmp_marketplace_listings").select("id,store_id,listing_type,title,description,category,price,currency,availability,contact_mode,image_path,updated_at").in("store_id",storeIds).eq("status","active").order("updated_at",{ascending:false}).limit(500)
       ]);
       if(error) return json({error:error.message},400);
       const dirMap=new Map((directory??[]).map((d:any)=>[d.store_id,d]));
@@ -83,7 +84,7 @@ export async function GET(request: Request) {
         .eq("status", "published").order("published_at", { ascending: false }).limit(100);
       if (error) return json({ error: error.message }, 400);
       const ids = (rows ?? []).map(r => r.store_id);
-      const { data: stores } = ids.length ? await admin.from("gmp_stores").select("id,organization_id,name,slug,phone,whatsapp,logo_path,country_code,currency,timezone").in("id", ids) : { data: [] as any[] };
+      const { data: stores } = ids.length ? await admin.from("gmp_stores").select("id,name,slug,phone,whatsapp,logo_path,country_code,currency,timezone").in("id", ids) : { data: [] as any[] };
       const storeMap = new Map((stores ?? []).map(s => [s.id, s]));
       const data = (rows ?? []).map(r => ({ ...r, store: storeMap.get(r.store_id) ?? null })).filter(r => {
         const hay = JSON.stringify(r).toLowerCase();
@@ -101,14 +102,15 @@ export async function GET(request: Request) {
         .eq("slug", slug).limit(1);
       const store = stores?.[0];
       if (!store) return json({ error: "store_not_found" }, 404);
-      const { data: directory } = await admin.from("gmp_store_directory").select("*").eq("store_id", store.id).eq("status","published").maybeSingle();
+      const { data: directory } = await admin.from("gmp_store_directory").select("store_id,status,description,category,address,city,region,postal_code,latitude,longitude,website,services,hours,social_links,verified_at,published_at,created_at,updated_at").eq("store_id", store.id).eq("status","published").maybeSingle();
       if (!directory) return json({ error: "store_not_published" }, 404);
       const { data: listings } = await admin.from("gmp_marketplace_listings")
-        .select("id,listing_type,title,description,category,price,currency,availability,contact_mode,image_path,metadata,updated_at")
+        .select("id,listing_type,title,description,category,price,currency,availability,contact_mode,image_path,updated_at")
         .eq("store_id", store.id).eq("status","active").order("updated_at",{ascending:false}).limit(200);
       const { data: branches } = await admin.from("gmp_branches").select("id,name,code,city,address,phone,whatsapp,active")
         .eq("organization_id", store.organization_id).eq("active",true).order("name").limit(50);
-      return json({ store, directory, listings: listings ?? [], branches: branches ?? [] });
+      const publicStore = { id: store.id, name: store.name, slug: store.slug, phone: store.phone, whatsapp: store.whatsapp, logo_path: store.logo_path, country_code: store.country_code, currency: store.currency, timezone: store.timezone };
+      return json({ store: publicStore, directory, listings: listings ?? [], branches: branches ?? [] });
     }
 
     if (action === "listings") {
@@ -125,7 +127,7 @@ export async function GET(request: Request) {
       const { data: directory } = await admin.from("gmp_store_directory").select("store_id,status").eq("store_id",target).eq("status","published").maybeSingle();
       if (!directory) return json({ error: "store_not_published" }, 404);
       const { data, error } = await admin.from("gmp_marketplace_listings")
-        .select("id,listing_type,title,description,category,price,currency,availability,contact_mode,image_path,metadata,updated_at")
+        .select("id,listing_type,title,description,category,price,currency,availability,contact_mode,image_path,updated_at")
         .eq("store_id",target).eq("status","active").order("updated_at",{ascending:false}).limit(200);
       if (error) return json({ error: error.message },400);
       return json({ rows:data ?? [] });
@@ -212,13 +214,26 @@ export async function POST(request: Request) {
       const storeId = text(b.store_id,80);
       if (!isUuid(storeId)) return json({error:"store_required"},400);
       const lines = Array.isArray(b.lines) ? b.lines : [];
+      if (!lines.length || lines.length > 50) return json({error:"invalid_order_lines"},400);
+      const honeypot = text(b.website,120);
+      if (honeypot) return json({error:"order_rejected"},429);
+      const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip")?.trim() || "unknown";
+      const fingerprint = hash(forwarded + "|" + (request.headers.get("user-agent") ?? "unknown").slice(0,240));
+      const limit = await admin.rpc("gmp_allow_public_marketplace_order",{p_key_hash:fingerprint,p_now:new Date().toISOString()});
+      if (limit.error) return json({error:"rate_limit_unavailable"},503);
+      if (limit.data !== true) return json({error:"rate_limited",retry_after_seconds:60},429);
+      const idem = text(b.idempotency_key,120) || hash(JSON.stringify({storeId,buyer:text(b.buyer_phone,40),lines}));
       const result = await admin.rpc("gmp_create_marketplace_order",{
         p_store_id:storeId,p_buyer_name:text(b.buyer_name,120),p_buyer_phone:text(b.buyer_phone,40),
         p_buyer_email:text(b.buyer_email,160) || null,p_note:text(b.note,1000) || null,
         p_lines:lines,p_fulfillment_mode:text(b.fulfillment_mode,20) || "contact",
-        p_idempotency_key:text(b.idempotency_key,120) || hash(JSON.stringify({storeId,buyer:text(b.buyer_phone,40),lines}))
+        p_idempotency_key:idem
       });
       if (result.error) return json({error:result.error.message},400);
+      if (result.data?.success && !result.data?.idempotent) {
+        const { data: store } = await admin.from("gmp_stores").select("organization_id,whatsapp,phone").eq("id",storeId).maybeSingle();
+        void queueCustomerWhatsApp({organizationId:String(store?.organization_id ?? ""),recipient:String(b.buyer_phone ?? ""),kind:"order",parameters:[String(result.data.order_no ?? "")],metadata:{order_id:result.data.order_id,store_id:storeId}});
+      }
       return json(result.data,201);
     }
 
@@ -496,14 +511,12 @@ export async function POST(request: Request) {
         marketplace_order:{table:"gmp_marketplace_orders",statuses:["new","contacted","confirmed","fulfilled","cancelled"]},
         dooh_campaign:{table:"gmp_ad_campaigns",statuses:["pending","approved","active","paused","completed","cancelled"]},
         dooh_placement:{table:"gmp_ad_placements",statuses:["scheduled","live","paused","completed","cancelled"]},
-        display_content:{table:"gmp_display_content",statuses:[]},
         repair:{table:"gmp_repair_orders",statuses:["received","in_repair","ready","delivered","cancelled"]},
       };
       const cfg=map[entity]; if(!cfg || (cfg.statuses.length && !cfg.statuses.includes(status)))return json({error:"invalid_status"},400);
       const query=access.supabase.from(cfg.table).update({status,updated_at:new Date().toISOString()}).eq("id",id);
-      if(entity==="dooh_campaign" || entity==="dooh_placement")query.eq("organization_id",access.organization.id);
-      if(entity==="marketplace_order")query.eq("organization_id",access.organization.id);
-      if(entity==="repair")query.eq("organization_id",access.organization.id);
+      if(entity==="marketplace_order" || entity==="dooh_campaign" || entity==="dooh_placement" || entity==="repair") query.eq("organization_id",access.organization.id);
+
       const {data,error}=await query.select("*").single();
       if(error)return json({error:error.message},400);return json({success:true,row:data});
     }
