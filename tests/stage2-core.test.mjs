@@ -84,16 +84,27 @@ test("Public store response scopes branches to the requested store branch",()=>{
 
 
 
-test("Stage 2 transaction RPCs are hardened and demo-compatible",()=>{
+test("Stage 2 transaction RPCs are hardened and preview demo access stays server-side",()=>{
   const src=read("app/api/stage2/route.ts");
+  assert.match(src,/createSupabaseAdminClient/);
+  assert.doesNotMatch(src,/createSupabaseDemoClient|getDemoSession/);
   assert.match(src,/rpc\("gmp_create_inventory_product"/);
   assert.match(src,/rpc\("gmp_create_and_post_sale"/);
   assert.match(src,/rpc\("gmp_create_purchase"/);
   assert.match(src,/rpc\("gmp_create_and_post_expense"/);
   assert.match(src,/rpc\("gmp_create_manual_journal"/);
-  assert.doesNotMatch(src,/gmp_demo_create_/);
+  const admin=read("app/api/admin/overview/route.ts");
+  assert.match(admin,/createSupabaseAdminClient/);
+  assert.doesNotMatch(admin,/createSupabaseDemoClient/);
+  const merchant=read("lib/merchant-access.ts");
+  assert.match(merchant,/createSupabaseAdminClient/);
+  assert.doesNotMatch(merchant,/createSupabaseDemoClient/);
+  const hardening=read("supabase/migrations/20260920060000_gmp_preview_demo_server_only.sql");
+  assert.match(hardening,/drop policy if exists %I/);
+  assert.match(hardening,/revoke all privileges on table/);
+  assert.match(hardening,/revoke execute on function public\\.gmp_create_inventory_product/);
+  assert.match(hardening,/from anon/);
   assert.match(read("supabase/migrations/20260920012655_gmp_fix_stage2_transaction_auth_and_rls_20260920.sql"),/SECURITY DEFINER/);
-  assert.match(read("supabase/migrations/20260920012727_gmp_fix_stage2_product_demo_actor_20260920.sql"),/shop_owner/);
 });
 
 test("Stage 2 schema compatibility fixes are tracked",()=>{
