@@ -2,6 +2,7 @@ import { readBoundedRequestJson } from "../../../lib/bounded-body";
 import { NextResponse } from "next/server";
 import crypto from "node:crypto";
 import { createSupabaseAdminClient } from "../../../lib/supabase/admin";
+import { getDemoSession } from "../../../lib/demo-auth";
 import { requireStage2Permission, type Stage2Permission } from "../../../lib/stage2-access";
 import { recordAuditEvent } from "../../../lib/provider-observability";
 import { queueCustomerWhatsApp } from "../../../lib/operational-notifications";
@@ -54,7 +55,8 @@ export async function GET(request: Request) {
   try {
 
     if (action === "marketplace") {
-      const db = createSupabaseAdminClient();
+      const demo = await getDemoSession();
+      const db = createSupabaseAdminClient(demo ? { "x-gmp-demo-role": demo.role } : undefined);
       if (!db) return json({ error: "not_configured" }, 503);
       const { data: directory } = await db.from("gmp_store_directory")
         .select("store_id,status,description,category,city,services,hours")
