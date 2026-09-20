@@ -16,7 +16,9 @@ test("demo access is preview-only and requires server-side credential matching",
   assert.match(auth, /crypto\.subtle\.verify/);
   assert.match(auth, /verifyRoleSignature/);
   assert.match(actions, /matchDemoCredentials/);
-  assert.ok(actions.indexOf("const demoRole = matchDemoCredentials") < actions.indexOf("setDemoSession"));
+  const demoMatch = actions.indexOf("const demoRole = matchDemoCredentials");
+  const demoSession = actions.indexOf("await setDemoSession(demoRole)");
+  assert.ok(demoMatch >= 0 && demoSession > demoMatch);
   assert.doesNotMatch(actions, /demoLoginAction/);
   assert.doesNotMatch(page, /demoLoginAction/);
   assert.doesNotMatch(page, /action="\/api\/auth\/demo-login"/);
