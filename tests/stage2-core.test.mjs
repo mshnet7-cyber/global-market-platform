@@ -139,7 +139,9 @@ test("Browser state-changing merchant APIs enforce same-origin requests",()=>{
     "app/api/stage3/billing/route.ts",
     "app/api/stage3/einvoice/route.ts",
     "app/api/stage3/whatsapp/route.ts",
-    "app/api/stores/create/route.ts"
+    "app/api/stores/create/route.ts",
+    "app/api/v1/keys/route.ts",
+    "app/api/dashboard/webhooks/route.ts"
   ];
   for(const file of guarded){
     const src=read(file);
