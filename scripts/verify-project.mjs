@@ -57,6 +57,8 @@ for (const file of migrationFiles) {
   migrationVersionOwners.set(match[1], file);
 }
 ok("migration filename versions are unique", duplicateMigrationVersions.length === 0, duplicateMigrationVersions.join("; "));
+ok("production migration versions are tracked", migrationFiles.some(x=>x.includes("20260920014853_gmp_preview_demo_server_only.sql")) && migrationFiles.some(x=>x.includes("20260920021211_gmp_revoke_anon_mutations.sql")));
+ok("stale migration versions are absent", !migrationFiles.some(x=>x.includes("20260920060000_gmp_preview_demo_server_only.sql")) && !migrationFiles.some(x=>x.includes("20260920023000_gmp_revoke_anon_mutations.sql")));
 ok("operational workflow migration tracked", migrationFiles.some(x=>x.includes("gmp_full_plan_operational_workflows_v1")));
 ok("camera endpoint migration tracked", migrationFiles.some(x=>x.includes("gmp_camera_endpoint_hardening_v1")));
 ok("invoicing hardening migration tracked", migrationFiles.some(x=>x.includes("gmp_harden_invoicing_rls_indexes_transitions_v1")));
