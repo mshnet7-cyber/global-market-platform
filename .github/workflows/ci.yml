@@ -58,6 +58,18 @@ jobs:
       - name: Install Vercel CLI
         run: npm install --global vercel@50.15.1
 
+      - name: Validate Vercel deployment credentials
+        shell: bash
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$VERCEL_TOKEN" || { echo "::error::Missing GitHub Actions secret VERCEL_TOKEN"; exit 1; }
+          test -n "$VERCEL_ORG_ID" || { echo "::error::Missing GitHub Actions secret VERCEL_ORG_ID"; exit 1; }
+          test -n "$VERCEL_PROJECT_ID" || { echo "::error::Missing GitHub Actions secret VERCEL_PROJECT_ID"; exit 1; }
+
       - name: Validate required Vercel Preview environment
         shell: bash
         env:
@@ -67,12 +79,16 @@ jobs:
         run: |
           set -euo pipefail
           env_list="$(vercel env ls preview --token="$VERCEL_TOKEN" | awk '{print $1}')"
-          for name in NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY GMP_DEMO_SESSION_SECRET; do
+          for name in NEXT_PUBLIC_SUPABASE_URL GMP_DEMO_SESSION_SECRET; do
             if ! printf '%s\n' "$env_list" | grep -Fxq "$name"; then
               echo "::error::Missing Vercel Preview environment variable: $name"
               exit 1
             fi
           done
+          if ! printf '%s\n' "$env_list" | grep -Fxq "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY" && ! printf '%s\n' "$env_list" | grep -Fxq "NEXT_PUBLIC_SUPABASE_ANON_KEY"; then
+            echo "::error::Missing Vercel Preview Supabase publishable/anon key"
+            exit 1
+          fi
           if ! printf '%s\n' "$env_list" | grep -Fxq "SUPABASE_SECRET_KEY" && ! printf '%s\n' "$env_list" | grep -Fxq "SUPABASE_SERVICE_ROLE_KEY"; then
             echo "::error::Missing Vercel Preview server-only Supabase key"
             exit 1
