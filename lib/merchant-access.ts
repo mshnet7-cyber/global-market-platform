@@ -35,13 +35,18 @@ export async function getMerchantContext() {
     const relation = Array.isArray(subscription?.gmp_plans) ? subscription?.gmp_plans[0] : subscription?.gmp_plans;
     const active = subscription?.status === "active" || subscription?.status === "trialing" || subscription?.status === "grace_period";
     const notExpired = !subscription?.current_period_end || new Date(subscription.current_period_end).getTime() >= Date.now();
+    const effectivePlanCode = active && notExpired && isMerchantPlanCode(relation?.code) ? relation.code : null;
+    const { data: entitlement } = effectivePlanCode
+      ? await supabase.from("gmp_plan_entitlements").select("analytics,alerts,members,ai_ocr,accounting,pos,inventory,repairs,person_gold_purchase,tax_reports,advanced_audit,advanced_reports").eq("plan_id", subscription?.plan_id ?? "").maybeSingle()
+      : { data: null };
 
     return {
       supabase,
       user: { id: demo.account.userId, email: demo.account.email },
       organization,
       role: "owner" as const,
-      planCode: active && notExpired && isMerchantPlanCode(relation?.code) ? relation.code : null
+      planCode: effectivePlanCode,
+      entitlements: entitlement ?? null
     };
   }
 
