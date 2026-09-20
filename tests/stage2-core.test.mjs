@@ -102,7 +102,7 @@ test("Stage 2 transaction RPCs are hardened and preview demo access stays server
   const hardening=read("supabase/migrations/20260920060000_gmp_preview_demo_server_only.sql");
   assert.match(hardening,/drop policy if exists %I/);
   assert.match(hardening,/revoke all privileges on table/);
-  assert.match(hardening,/revoke execute on function public\\.gmp_create_inventory_product/);
+  assert.match(hardening,/revoke execute on function public\.gmp_create_inventory_product/);
   assert.match(hardening,/from anon/);
   assert.match(read("supabase/migrations/20260920012655_gmp_fix_stage2_transaction_auth_and_rls_20260920.sql"),/SECURITY DEFINER/);
 });
