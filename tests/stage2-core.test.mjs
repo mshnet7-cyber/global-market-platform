@@ -83,3 +83,4 @@ test("Public store response scopes branches to the requested store branch",()=>{
 
 
 
+\n\ntest("Preview Demo Stage 2 transactions use guarded wrappers",()=>{\n const src=read("app/api/stage2/route.ts");\n const m=read("supabase/migrations/20260920011837_gmp_preview_demo_transaction_wrappers_20260920.sql");\n assert.match(src,/isShopDemo \? "gmp_demo_create_inventory_product"/);\n assert.match(src,/isShopDemo \? "gmp_demo_create_and_post_sale"/);\n assert.match(src,/isShopDemo \? "gmp_demo_create_purchase"/);\n assert.match(src,/isShopDemo \? "gmp_demo_create_and_post_expense"/);\n assert.match(src,/isShopDemo \? "gmp_demo_create_manual_journal"/);\n assert.match(m,/gmp_preview_demo_guard/);\n assert.match(m,/grant execute on function public\\.gmp_demo_create_inventory_product/);\n assert.match(m,/grant execute on function public\\.gmp_demo_create_and_post_sale/);\n});\n\n\n
