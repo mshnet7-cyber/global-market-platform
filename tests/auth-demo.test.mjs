@@ -4,21 +4,17 @@ import { readFileSync } from "node:fs";
 
 const read = (path) => readFileSync(path, "utf8");
 
-test("demo login route is preview-only, role-bound, origin-checked, and body-bounded", () => {
-  const route = read("app/api/auth/demo-login/route.ts");
+test("demo access is preview-only and requires server-side credential matching", () => {
   const auth = read("lib/demo-auth.ts");
+  const actions = read("app/login/actions.ts");
+  const page = read("app/login/page.tsx");
   assert.match(auth, /VERCEL_ENV === "preview"/);
   assert.doesNotMatch(auth, /DEMO_MODE === "true"/);
-  assert.match(route, /if \(!isSameOriginRequest\(request\)\)/);
-  assert.match(route, /if \(!isDemoEnvironment\(\)\)/);
-  assert.match(route, /readBoundedRequestFormData/);
-  assert.match(route, /16 \* 1024/);
-  assert.match(route, /request_body_too_large/);
-  assert.match(route, /platform_admin/);
-  assert.match(route, /shop_owner/);
-  assert.match(route, /setDemoSession/);
-  assert.ok(route.indexOf("if (!isSameOriginRequest(request))") < route.indexOf("readBoundedRequestFormData(request"));
-  assert.ok(route.indexOf("if (!isDemoEnvironment())") < route.indexOf("setDemoSession(role)"));
+  assert.match(actions, /matchDemoCredentials/);
+  assert.ok(actions.indexOf("const demoRole = matchDemoCredentials") < actions.indexOf("setDemoSession"));
+  assert.doesNotMatch(actions, /demoLoginAction/);
+  assert.doesNotMatch(page, /demoLoginAction/);
+  assert.doesNotMatch(page, /action="\/api\/auth\/demo-login"/);
 });
 
 test("login server action is bound to safe redirect targets and both auth modes", () => {
@@ -36,12 +32,11 @@ test("login server action is bound to safe redirect targets and both auth modes"
   assert.match(action, /redirect\(/);
 });
 
-test("public login page invokes server actions instead of protected auth route handlers", () => {
+test("public login page uses the credential-checked server action", () => {
   const page = read("app/login/page.tsx");
-  assert.match(page, /import \{ demoLoginAction, loginAction \} from "\.\/actions"/);
+  assert.match(page, /import \{ loginAction \} from "\.\/actions"/);
   assert.match(page, /action=\{loginAction\}/);
-  assert.match(page, /action=\{demoLoginAction\}/);
-  assert.doesNotMatch(page, /action="\/api\/auth\/login"/);
+  assert.doesNotMatch(page, /demoLoginAction/);
   assert.doesNotMatch(page, /action="\/api\/auth\/demo-login"/);
 });
 
