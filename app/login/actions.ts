@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "../../lib/supabase/server";
-import { clearDemoSession, isDemoEnvironment, matchDemoCredentials, setDemoSession } from "../../lib/demo-auth";
+import { clearDemoSession, matchDemoCredentials, setDemoSession } from "../../lib/demo-auth";
 
 function safeNext(value: unknown) {
   const next = String(value ?? "").trim();
@@ -43,15 +43,6 @@ export async function loginAction(formData: FormData) {
   redirect(next);
 }
 
-export async function demoLoginAction(formData: FormData) {
-  if (!isDemoEnvironment()) redirect("/login?error=demo_disabled");
-
-  const role = textField(formData, "role", 32);
-  if (role !== "platform_admin" && role !== "shop_owner") redirect("/login?error=invalid");
-
-  await setDemoSession(role);
-  redirect(role === "platform_admin" ? "/admin" : "/dashboard");
-}
 
 export async function logoutAction() {
   await clearDemoSession();
