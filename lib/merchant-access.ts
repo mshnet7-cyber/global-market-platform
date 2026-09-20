@@ -1,6 +1,5 @@
 import { createSupabaseServerClient } from "./supabase/server";
 import { createSupabaseAdminClient } from "./supabase/admin";
-import { createSupabaseDemoClient } from "./supabase/demo";
 import { getDemoSession } from "./demo-auth";
 
 export type MerchantPlanCode = "starter" | "pro" | "business";
@@ -11,8 +10,7 @@ export async function getMerchantContext() {
   if (demo) {
     if (demo.role !== "shop_owner") return { supabase: null, user: null, organization: null, role: null as MerchantRole | null, planCode: null as MerchantPlanCode | null };
 
-    const admin = createSupabaseAdminClient();
-    const supabase = admin ?? createSupabaseDemoClient("shop_owner");
+    const supabase = createSupabaseAdminClient();
     if (!supabase) return { supabase: null, user: null, organization: null, role: null as MerchantRole | null, planCode: null as MerchantPlanCode | null };
 
     const { data: organization } = await supabase
