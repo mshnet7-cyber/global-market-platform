@@ -156,3 +156,10 @@ test("External device endpoints remain token/session-authenticated rather than b
   assert.match(pair,/pairing|pair_code/i);
   assert.match(snapshot,/session_hash|session/i);
 });
+
+test("Anonymous GMP table mutations are disabled at the database layer",()=>{
+  const m=read("supabase/migrations/20260920023000_gmp_revoke_anon_mutations.sql");
+  assert.match(m,/revoke insert, update, delete, truncate, references, trigger on table/i);
+  assert.match(m,/c\.relname like 'gmp_%'/);
+  assert.match(m,/from anon/);
+});
