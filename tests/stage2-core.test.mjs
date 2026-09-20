@@ -98,7 +98,11 @@ test("Stage 2 transaction RPCs are hardened and preview demo access stays server
   assert.doesNotMatch(admin,/createSupabaseDemoClient/);
   const merchant=read("lib/merchant-access.ts");
   assert.match(merchant,/createSupabaseAdminClient/);
+  assert.match(merchant,/x-gmp-demo-role.*shop_owner/);
   assert.doesNotMatch(merchant,/createSupabaseDemoClient/);
+  const adminClient=read("lib/supabase/admin.ts");
+  assert.match(adminClient,/headers\?: Record<string, string>/);
+  assert.match(adminClient,/global: headers \? \{ headers \} : undefined/);
   const hardening=read("supabase/migrations/20260920060000_gmp_preview_demo_server_only.sql");
   assert.match(hardening,/drop policy if exists %I/);
   assert.match(hardening,/revoke all privileges on table/);
