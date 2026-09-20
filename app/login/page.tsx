@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { demoLoginAction, loginAction } from "./actions";
+import { loginAction } from "./actions";
 
 function safeNext(value: string | undefined) {
   const next = value?.trim();
@@ -28,12 +28,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         <form className="login-form" action={loginAction}><input type="hidden" name="next" value={next} /><label className="label">البريد الإلكتروني<input className="select" type="email" name="email" autoComplete="email" inputMode="email" maxLength={320} required /></label><label className="label">كلمة المرور<input className="select" type="password" name="password" autoComplete="current-password" maxLength={256} required /></label><button className="btn btn-primary" type="submit">دخول إلى لوحة المحل</button></form>
         <div className="actions" style={{marginTop:14}}><Link className="btn" href={"/signup?next=" + encodeURIComponent(next)}>إنشاء حساب جديد</Link><Link className="btn btn-ghost" href="/pricing">مشاهدة الباقات</Link></div>
         {process.env.VERCEL_ENV === "preview" && <div className="notice" style={{marginTop:16}}>
-          <strong>الدخول السريع للتجربة</strong>
-          <div className="actions" style={{marginTop:10}}>
-            <form action={demoLoginAction}><input type="hidden" name="role" value="platform_admin" /><button className="btn btn-primary" type="submit">دخول إدارة المنصة</button></form>
-            <form action={demoLoginAction}><input type="hidden" name="role" value="shop_owner" /><button className="btn" type="submit">دخول المحل التجريبي</button></form>
-          </div>
-          <div style={{marginTop:10,fontSize:13}}>أو استخدم بيانات الحساب أدناه.</div>
+          <div style={{marginTop:10,fontSize:13}}>استخدم بيانات الحساب التجريبي أدناه لتسجيل الدخول إلى بيئة المعاينة.</div>
           <strong>بيانات التجربة للمعاينة</strong>
           <div style={{marginTop:8}}>إدارة المنصة: <code>admin@accounts.omangold.local</code> / <code>GMP-Demo-Admin-2026!</code></div>
           <div style={{marginTop:4}}>المحل: <code>sharaf@accounts.omangold.local</code> / <code>GMP-Demo-Shop-2026!</code></div>
