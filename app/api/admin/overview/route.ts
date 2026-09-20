@@ -2,7 +2,6 @@ import { readBoundedRequestJson } from "../../../../lib/bounded-body";
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "../../../../lib/supabase/server";
 import { createSupabaseAdminClient } from "../../../../lib/supabase/admin";
-import { createSupabaseDemoClient } from "../../../../lib/supabase/demo";
 import { getDemoSession } from "../../../../lib/demo-auth";
 
 const json=(data:unknown,status=200)=>NextResponse.json(data,{status,headers:{"cache-control":"no-store"}});
@@ -11,9 +10,9 @@ async function guard(){
   const demo = await getDemoSession();
   if (demo) {
     if (demo.role !== "platform_admin") throw new Error("forbidden");
-    const supabase = createSupabaseDemoClient(demo.role);
-    if (!supabase) throw new Error("not_configured");
-    return { supabase, admin: null, user: { id: demo.account.userId, email: demo.account.email }, demo: true as const };
+    const admin = createSupabaseAdminClient();
+    if (!admin) throw new Error("not_configured");
+    return { supabase: null, admin, user: { id: demo.account.userId, email: demo.account.email }, demo: true as const };
   }
   const supabase=await createSupabaseServerClient();
   if(!supabase)throw new Error("not_configured");
