@@ -83,3 +83,21 @@ test("Public store response scopes branches to the requested store branch",()=>{
 
 
 
+
+test("Stage 2 transaction RPCs are hardened and demo-compatible",()=>{
+  const src=read("app/api/stage2/route.ts");
+  assert.match(src,/rpc\("gmp_create_inventory_product"/);
+  assert.match(src,/rpc\("gmp_create_and_post_sale"/);
+  assert.match(src,/rpc\("gmp_create_purchase"/);
+  assert.match(src,/rpc\("gmp_create_and_post_expense"/);
+  assert.match(src,/rpc\("gmp_create_manual_journal"/);
+  assert.doesNotMatch(src,/gmp_demo_create_/);
+  assert.match(read("supabase/migrations/20260920012655_gmp_fix_stage2_transaction_auth_and_rls_20260920.sql"),/SECURITY DEFINER/);
+  assert.match(read("supabase/migrations/20260920012727_gmp_fix_stage2_product_demo_actor_20260920.sql"),/shop_owner/);
+});
+
+test("Stage 2 schema compatibility fixes are tracked",()=>{
+  assert.match(read("supabase/migrations/20260920012226_gmp_fix_stage2_store_active_column_20260920.sql"),/gmp_stores/);
+  assert.match(read("supabase/migrations/20260920012330_gmp_fix_stage2_sale_generated_line_total_20260920.sql"),/line_total/);
+  assert.match(read("supabase/migrations/20260920012448_gmp_fix_stage2_supplier_active_column_20260920.sql"),/gmp_suppliers/);
+});
