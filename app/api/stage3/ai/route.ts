@@ -12,7 +12,6 @@ export async function POST(request:Request){
  try{
   const {supabase,organization,user}=await requireMerchantPlan(["business"]);
   const b=await readBoundedRequestJson(request, 64 * 1024).catch(()=>null) as Record<string,unknown>|null;if(!b)return json({error:"invalid_json"},400);
-  const admin=createSupabaseAdminClient();if(!admin)return json({error:"service_not_configured"},503);
   const action=String(b.action||"");
   if(action==="ocr"){
    const id=String(b.document_id||"");if(!id)return json({error:"document_id_required"},400);
@@ -20,6 +19,7 @@ export async function POST(request:Request){
    if(!doc)return json({error:"document_not_found"},404);
    const bucket=process.env.GMP_DOCUMENTS_BUCKET?.trim();if(!bucket)return json({error:"documents_bucket_not_configured",integration_state:"integration_ready"},503);
    if(getAiStatus().state!=="live")return json({error:"ai_not_configured",integration_state:"integration_ready"},503);
+   const admin=createSupabaseAdminClient();if(!admin)return json({error:"service_not_configured"},503);
    const {data:signed}=await admin.storage.from(bucket).createSignedUrl(doc.storage_path,300);if(!signed?.signedUrl)return json({error:"document_url_unavailable"},503);
    const inputHash=createHash("sha256").update(doc.storage_path).digest("hex");
    const {data:job,error:jobError}=await admin.from("gmp_ai_jobs").insert({organization_id:organization.id,document_id:doc.id,job_type:"ocr",status:"running",provider:getAiStatus().provider,model:getAiStatus().model,input_hash:inputHash,created_by:user.id}).select("id").single();
