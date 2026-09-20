@@ -47,8 +47,9 @@ jobs:
           ensure_env NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY "sb_publishable_jWtSwXizl3kJJ9f7x6_KQQ_vXcR9YTw"
           ensure_env GMP_DEMO_SESSION_SECRET "$(openssl rand -hex 32)"
 
-          if ! vercel env ls preview --token="${{ secrets.VERCEL_TOKEN }}" | awk '{print $1}' | grep -Fxq "SUPABASE_SECRET_KEY"; then
-            echo "::error::Missing required Vercel Preview secret SUPABASE_SECRET_KEY. Add the Supabase server-only secret key to the Vercel Preview environment before deployment."
+          env_list="$(vercel env ls preview --token="${{ secrets.VERCEL_TOKEN }}" | awk '{print $1}')"
+          if ! printf '%s\n' "$env_list" | grep -Fxq "SUPABASE_SECRET_KEY" && ! printf '%s\n' "$env_list" | grep -Fxq "SUPABASE_SERVICE_ROLE_KEY"; then
+            echo "::error::Missing required Vercel Preview server-only Supabase key. Add SUPABASE_SECRET_KEY or SUPABASE_SERVICE_ROLE_KEY to the Vercel Preview environment before deployment."
             exit 1
           fi
         env:
@@ -67,7 +68,41 @@ jobs:
           set -euo pipefail
           test -n "$(grep -E '^NEXT_PUBLIC_SUPABASE_URL=' .env.preview 2>/dev/null | cut -d= -f2-)" || { echo "::error::NEXT_PUBLIC_SUPABASE_URL missing from pulled preview environment"; exit 1; }
           test -n "$(grep -E '^NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=' .env.preview 2>/dev/null | cut -d= -f2-)" || { echo "::error::NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY missing from pulled preview environment"; exit 1; }
-          test -n "$(grep -E '^SUPABASE_SECRET_KEY=' .env.preview 2>/dev/null | cut -d= -f2-)" || { echo "::error::SUPABASE_SECRET_KEY missing from pulled preview environment"; exit 1; }
+          if ! grep -Eq '^SUPABASE_SECRET_KEY=.+$|^SUPABASE_SERVICE_ROLE_KEY=.+
+          test -n "$(grep -E '^GMP_DEMO_SESSION_SECRET=' .env.preview 2>/dev/null | cut -d= -f2-)" || { echo "::error::GMP_DEMO_SESSION_SECRET missing from pulled preview environment"; exit 1; }
+
+      - name: Build Vercel preview artifact
+        run: vercel build --token="${{ secrets.VERCEL_TOKEN }}"
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Deploy tested preview artifact
+        id: deploy
+        shell: bash
+        run: |
+          set -euo pipefail
+          url="$(vercel deploy --prebuilt --non-interactive --token="${{ secrets.VERCEL_TOKEN }}" | tail -n 1)"
+          test -n "$url"
+          echo "deployment_url=$url" >> "$GITHUB_OUTPUT"
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Smoke test deployed preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          deployment_url="${{ steps.deploy.outputs.deployment_url }}"
+          vercel curl /api/health --deployment "$deployment_url" --token="${{ secrets.VERCEL_TOKEN }}"
+          vercel curl /login --deployment "$deployment_url" --token="${{ secrets.VERCEL_TOKEN }}"
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+ .env.preview 2>/dev/null; then
+            echo "::error::No server-only Supabase key found in pulled preview environment"
+            exit 1
+          fi
           test -n "$(grep -E '^GMP_DEMO_SESSION_SECRET=' .env.preview 2>/dev/null | cut -d= -f2-)" || { echo "::error::GMP_DEMO_SESSION_SECRET missing from pulled preview environment"; exit 1; }
 
       - name: Build Vercel preview artifact
