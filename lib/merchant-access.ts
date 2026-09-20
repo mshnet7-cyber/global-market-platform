@@ -11,10 +11,10 @@ export type MerchantEntitlement = "analytics" | "alerts" | "members" | "ai_ocr" 
 export async function getMerchantContext() {
   const demo = await getDemoSession();
   if (demo) {
-    if (demo.role !== "shop_owner") return { supabase: null, user: null, organization: null, role: null as MerchantRole | null, planCode: null as MerchantPlanCode | null };
+    if (demo.role !== "shop_owner") return { supabase: null, user: null, organization: null, role: null as MerchantRole | null, planCode: null as MerchantPlanCode | null, entitlements: null };
 
     const supabase = createSupabaseAdminClient({ "x-gmp-demo-role": "shop_owner" });
-    if (!supabase) return { supabase: null, user: null, organization: null, role: null as MerchantRole | null, planCode: null as MerchantPlanCode | null };
+    if (!supabase) return { supabase: null, user: null, organization: null, role: null as MerchantRole | null, planCode: null as MerchantPlanCode | null, entitlements: null };
 
     const { data: organization } = await supabase
       .from("gmp_organizations")
@@ -22,7 +22,7 @@ export async function getMerchantContext() {
       .eq("slug","global-market-demo-shop")
       .maybeSingle();
 
-    if (!organization) return { supabase, user: null, organization: null, role: null, planCode: null };
+    if (!organization) return { supabase, user: null, organization: null, role: null, planCode: null, entitlements: null };
 
     const { data: subscription } = await supabase
       .from("gmp_subscriptions")
@@ -51,10 +51,10 @@ export async function getMerchantContext() {
   }
 
   const supabase = await createSupabaseServerClient();
-  if (!supabase) return { supabase: null, user: null, organization: null, role: null as MerchantRole | null, planCode: null as MerchantPlanCode | null };
+  if (!supabase) return { supabase: null, user: null, organization: null, role: null as MerchantRole | null, planCode: null as MerchantPlanCode | null, entitlements: null };
 
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { supabase, user: null, organization: null, role: null, planCode: null };
+  if (!user) return { supabase, user: null, organization: null, role: null, planCode: null, entitlements: null };
 
   const { data: owned } = await supabase
     .from("gmp_organizations")
@@ -81,7 +81,7 @@ export async function getMerchantContext() {
     role = membership?.role as MerchantRole | null;
   }
 
-  if (!organization || !role) return { supabase, user, organization: null, role: null, planCode: null };
+  if (!organization || !role) return { supabase, user, organization: null, role: null, planCode: null, entitlements: null };
 
   const { data: subscription } = await supabase
     .from("gmp_subscriptions")
