@@ -10,4 +10,8 @@ Security baseline: RLS enabled on merchant MVP tables, sensitive identity docume
 
 Current deployment baseline: Vercel production build previously completed successfully on commit 94ba35d. New scope changes require the next deployment to complete before final runtime verification.
 
-Known external blockers: production Supabase environment variables must be configured for authenticated health checks; payment provider/checkout and official government e-invoicing integrations are not yet configured. These are intentionally not faked.
+Preview authentication hardening: demo access is server-only; the browser cannot use a forgeable demo-role header or anonymous demo RPC execution. Demo role headers are injected only by trusted server-side clients after credential/session checks.
+
+Intentional Supabase advisor warning: the five atomic merchant transaction RPCs remain SECURITY DEFINER because they perform privileged multi-table transactional work. Application-layer merchant authorization and tenant checks remain mandatory; anonymous EXECUTE has been revoked.
+
+Known external blockers: production Supabase environment variables must be configured for authenticated health checks; payment provider/checkout and official government e-invoicing integrations are not yet configured; Supabase Auth leaked-password protection still requires enabling in the project Auth settings. These are intentionally not faked.
