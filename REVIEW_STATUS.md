@@ -6,11 +6,11 @@ Public MVP: gold, silver, currencies, news, shop discovery and advertising. Stoc
 
 Merchant foundation: multi-tenant organizations, branches/stores, plans and pricing, products, sales/POS foundation, purchases with human review fields, expenses, repairs, person-to-person gold purchases, private documents, and transaction review/audit records.
 
-Security baseline: RLS enabled on merchant MVP tables, sensitive identity documents restricted to authenticated owner/admin roles, new foreign-key indexes added, and auth.uid() wrapped for RLS query efficiency.
+Security baseline: RLS enabled on merchant MVP tables, sensitive identity documents restricted to authenticated owner/admin roles, new foreign-key indexes added, and auth.uid() wrapped for RLS query efficiency. Browser state-changing routes enforce same-origin requests, and anonymous DML on GMP tables is revoked at the database layer.
 
-Current deployment baseline: Vercel production build previously completed successfully on commit 94ba35d. New scope changes require the next deployment to complete before final runtime verification.
+Deployment status: the latest branch contains the current security hardening, but Vercel is currently rate-limiting new builds (`build-rate-limit` / retry in 24 hours). The last known READY Vercel deployment predates the latest hardening, so final runtime verification on the newest commit is still pending.
 
-Preview authentication hardening: demo access is server-only; the browser cannot use a forgeable demo-role header or anonymous demo RPC execution. Demo role headers are injected only by trusted server-side clients after credential/session checks.
+Preview authentication hardening: demo access is server-only; demo credentials are checked before a session is issued, the demo session cookie is HMAC-signed, the browser cannot forge the demo-role header, and anonymous demo RPC execution is revoked. Demo role headers are injected only by trusted server-side clients after credential/session checks.
 
 Intentional Supabase advisor warning: the five atomic merchant transaction RPCs remain SECURITY DEFINER because they perform privileged multi-table transactional work. Application-layer merchant authorization and tenant checks remain mandatory; anonymous EXECUTE has been revoked.
 
