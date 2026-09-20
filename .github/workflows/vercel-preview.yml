@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   deploy-preview:
-    if: >
+    if: >-
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.event == 'push' &&
       startsWith(github.event.workflow_run.head_branch, 'cloudflare-workers-')
@@ -68,41 +68,7 @@ jobs:
           set -euo pipefail
           test -n "$(grep -E '^NEXT_PUBLIC_SUPABASE_URL=' .env.preview 2>/dev/null | cut -d= -f2-)" || { echo "::error::NEXT_PUBLIC_SUPABASE_URL missing from pulled preview environment"; exit 1; }
           test -n "$(grep -E '^NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=' .env.preview 2>/dev/null | cut -d= -f2-)" || { echo "::error::NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY missing from pulled preview environment"; exit 1; }
-          if ! grep -Eq '^SUPABASE_SECRET_KEY=.+$|^SUPABASE_SERVICE_ROLE_KEY=.+
-          test -n "$(grep -E '^GMP_DEMO_SESSION_SECRET=' .env.preview 2>/dev/null | cut -d= -f2-)" || { echo "::error::GMP_DEMO_SESSION_SECRET missing from pulled preview environment"; exit 1; }
-
-      - name: Build Vercel preview artifact
-        run: vercel build --token="${{ secrets.VERCEL_TOKEN }}"
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-
-      - name: Deploy tested preview artifact
-        id: deploy
-        shell: bash
-        run: |
-          set -euo pipefail
-          url="$(vercel deploy --prebuilt --non-interactive --token="${{ secrets.VERCEL_TOKEN }}" | tail -n 1)"
-          test -n "$url"
-          echo "deployment_url=$url" >> "$GITHUB_OUTPUT"
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-
-      - name: Smoke test deployed preview
-        shell: bash
-        run: |
-          set -euo pipefail
-          deployment_url="${{ steps.deploy.outputs.deployment_url }}"
-          vercel curl /api/health --deployment "$deployment_url" --token="${{ secrets.VERCEL_TOKEN }}"
-          vercel curl /login --deployment "$deployment_url" --token="${{ secrets.VERCEL_TOKEN }}"
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
- .env.preview 2>/dev/null; then
-            echo "::error::No server-only Supabase key found in pulled preview environment"
-            exit 1
-          fi
+          grep -Eq '^SUPABASE_SECRET_KEY=.+$|^SUPABASE_SERVICE_ROLE_KEY=.+$' .env.preview 2>/dev/null || { echo "::error::No server-only Supabase key found in pulled preview environment"; exit 1; }
           test -n "$(grep -E '^GMP_DEMO_SESSION_SECRET=' .env.preview 2>/dev/null | cut -d= -f2-)" || { echo "::error::GMP_DEMO_SESSION_SECRET missing from pulled preview environment"; exit 1; }
 
       - name: Build Vercel preview artifact
