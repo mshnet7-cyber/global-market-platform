@@ -2,8 +2,6 @@ import { readBoundedRequestJson } from "../../../lib/bounded-body";
 import { NextResponse } from "next/server";
 import crypto from "node:crypto";
 import { createSupabaseAdminClient } from "../../../lib/supabase/admin";
-import { createSupabaseDemoClient } from "../../../lib/supabase/demo";
-import { getDemoSession } from "../../../lib/demo-auth";
 import { requireStage2Permission, type Stage2Permission } from "../../../lib/stage2-access";
 import { recordAuditEvent } from "../../../lib/provider-observability";
 import { queueCustomerWhatsApp } from "../../../lib/operational-notifications";
@@ -56,8 +54,7 @@ export async function GET(request: Request) {
   try {
 
     if (action === "marketplace") {
-      const demo = await getDemoSession();
-      const db = demo ? createSupabaseDemoClient(demo.role) : createSupabaseAdminClient();
+      const db = createSupabaseAdminClient();
       if (!db) return json({ error: "not_configured" }, 503);
       const { data: directory } = await db.from("gmp_store_directory")
         .select("store_id,status,description,category,city,services,hours")
@@ -78,8 +75,7 @@ export async function GET(request: Request) {
     }
 
     if (action === "directory") {
-      const demo = await getDemoSession();
-      const db = demo ? createSupabaseDemoClient(demo.role) : createSupabaseAdminClient();
+      const db = createSupabaseAdminClient();
       if (!db) return json({ error: "not_configured" }, 503);
       const q = text(url.searchParams.get("q"), 80).toLowerCase();
       const city = text(url.searchParams.get("city"), 80).toLowerCase();
@@ -100,8 +96,7 @@ export async function GET(request: Request) {
     }
 
     if (action === "store") {
-      const demo = await getDemoSession();
-      const db = demo ? createSupabaseDemoClient(demo.role) : createSupabaseAdminClient();
+      const db = createSupabaseAdminClient();
       if (!db) return json({ error: "not_configured" }, 503);
       const slug = text(url.searchParams.get("slug"), 100);
       const { data: stores } = await db.from("gmp_stores").select("id,organization_id,branch_id,name,slug,phone,whatsapp,logo_path,country_code,currency,timezone")
@@ -121,8 +116,7 @@ export async function GET(request: Request) {
     }
 
     if (action === "listings") {
-      const demo = await getDemoSession();
-      const db = demo ? createSupabaseDemoClient(demo.role) : createSupabaseAdminClient();
+      const db = createSupabaseAdminClient();
       if (!db) return json({ error: "not_configured" }, 503);
       const storeId = text(url.searchParams.get("store_id"), 80);
       const slug = text(url.searchParams.get("slug"), 100);
