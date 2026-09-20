@@ -116,3 +116,41 @@ test("Stage 2 schema compatibility fixes are tracked",()=>{
   assert.match(read("supabase/migrations/20260920012330_gmp_fix_stage2_sale_generated_line_total_20260920.sql"),/line_total/);
   assert.match(read("supabase/migrations/20260920012448_gmp_fix_stage2_supplier_active_column_20260920.sql"),/gmp_suppliers/);
 });
+
+
+test("Browser state-changing merchant APIs enforce same-origin requests",()=>{
+  const guarded=[
+    "app/api/admin/overview/route.ts",
+    "app/api/alerts/rules/route.ts",
+    "app/api/displays/create/route.ts",
+    "app/api/displays/pair-code/route.ts",
+    "app/api/displays/revoke/route.ts",
+    "app/api/merchant/cameras/route.ts",
+    "app/api/merchant/compliance/route.ts",
+    "app/api/merchant/documents/route.ts",
+    "app/api/merchant/invoicing/route.ts",
+    "app/api/merchant/operations/route.ts",
+    "app/api/merchant/sales/route.ts",
+    "app/api/notifications/route.ts",
+    "app/api/stage2/route.ts",
+    "app/api/stage3/ai/route.ts",
+    "app/api/stage3/billing/route.ts",
+    "app/api/stage3/einvoice/route.ts",
+    "app/api/stage3/whatsapp/route.ts",
+    "app/api/stores/create/route.ts"
+  ];
+  for(const file of guarded){
+    const src=read(file);
+    assert.match(src,/isSameOriginRequest/);
+    assert.match(src,/cross_site_request/);
+  }
+});
+
+test("External device endpoints remain token/session-authenticated rather than browser-origin guarded",()=>{
+  const heartbeat=read("app/api/displays/heartbeat/route.ts");
+  const pair=read("app/api/displays/pair/route.ts");
+  const snapshot=read("app/api/displays/snapshot/route.ts");
+  assert.match(heartbeat,/session_hash|x-gmp/i);
+  assert.match(pair,/pairing|pair_code/i);
+  assert.match(snapshot,/session_hash|session/i);
+});
