@@ -2,7 +2,9 @@ import { createSupabaseServerClient } from "./supabase/server";
 import { createSupabaseAdminClient } from "./supabase/admin";
 import { getDemoSession } from "./demo-auth";
 
-export type MerchantPlanCode = "starter" | "pro" | "business";
+import { isMerchantPlanCode, type MerchantPlanCode } from "./saas-plans";
+
+export type { MerchantPlanCode };
 export type MerchantRole = "owner" | "admin" | "viewer";
 
 export async function getMerchantContext() {
@@ -38,7 +40,7 @@ export async function getMerchantContext() {
       user: { id: demo.account.userId, email: demo.account.email },
       organization,
       role: "owner" as const,
-      planCode: active && notExpired ? (relation?.code as MerchantPlanCode ?? null) : null
+      planCode: active && notExpired && isMerchantPlanCode(relation?.code) ? relation.code : null
     };
   }
 
@@ -83,7 +85,7 @@ export async function getMerchantContext() {
     .limit(1)
     .maybeSingle();
   const planRelation = Array.isArray(subscription?.gmp_plans) ? subscription?.gmp_plans[0] : subscription?.gmp_plans;
-  const planCode = planRelation?.code as MerchantPlanCode | undefined;
+  const planCode = isMerchantPlanCode(planRelation?.code) ? planRelation.code : null;
   const active = subscription?.status === "active" || subscription?.status === "trialing" || subscription?.status === "grace_period";
   const notExpired = !subscription?.current_period_end || new Date(subscription.current_period_end).getTime() >= Date.now();
 
