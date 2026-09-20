@@ -35,6 +35,17 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
+      - name: Ensure preview demo signing secret
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! vercel env ls preview --token="${{ secrets.VERCEL_TOKEN }}" | grep -q '^GMP_DEMO_SESSION_SECRET'; then
+            openssl rand -hex 32 | vercel env add GMP_DEMO_SESSION_SECRET preview --sensitive --token="${{ secrets.VERCEL_TOKEN }}"
+          fi
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
       - name: Build Vercel preview artifact
         run: vercel build --token="${{ secrets.VERCEL_TOKEN }}"
         env:
