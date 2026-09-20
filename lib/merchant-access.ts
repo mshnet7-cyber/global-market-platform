@@ -10,7 +10,7 @@ export async function getMerchantContext() {
   if (demo) {
     if (demo.role !== "shop_owner") return { supabase: null, user: null, organization: null, role: null as MerchantRole | null, planCode: null as MerchantPlanCode | null };
 
-    const supabase = createSupabaseAdminClient();
+    const supabase = createSupabaseAdminClient({ "x-gmp-demo-role": "shop_owner" });
     if (!supabase) return { supabase: null, user: null, organization: null, role: null as MerchantRole | null, planCode: null as MerchantPlanCode | null };
 
     const { data: organization } = await supabase
