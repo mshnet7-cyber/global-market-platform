@@ -1,9 +1,12 @@
+import { isSameOriginRequest } from "../../../../lib/request-security";
 import { NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "../../../../lib/supabase/admin";
 import { getMerchantContext } from "../../../../lib/merchant-access";
 import { readBoundedRequestFormData } from "../../../../lib/bounded-body";
 
 export async function POST(request: Request) {
+  if (!isSameOriginRequest(request)) return new Response(JSON.stringify({ error: "cross_site_request" }), { status: 403, headers: { "content-type": "application/json", "cache-control": "no-store" } });
+
   const context = await getMerchantContext();
   const admin = createSupabaseAdminClient();
   if (!context.user) return NextResponse.redirect(new URL("/login?next=/display", request.url));
