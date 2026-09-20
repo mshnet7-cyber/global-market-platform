@@ -17,7 +17,49 @@ const DEMO_USERS: Record<DemoRole, { email: string; password: string; userId: st
   },
 };
 
-const DEMO_COOKIE = "gmp_demo_role";
+const DEMO_COOKIE = "gmp_demo_session";
+const DEMO_SECRET_ENV = "GMP_DEMO_SESSION_SECRET";
+
+function demoSecret() {
+  return process.env[DEMO_SECRET_ENV] ?? process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
+}
+
+function base64url(bytes: Uint8Array) {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+function fromBase64url(value: string) {
+  const padded = value.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((value.length + 3) % 4);
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+async function importSigningKey() {
+  const secret = demoSecret();
+  if (!secret) return null;
+  return crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign", "verify"]);
+}
+
+async function signRole(role: DemoRole) {
+  const key = await importSigningKey();
+  if (!key) return null;
+  const signature = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(role));
+  return base64url(new Uint8Array(signature));
+}
+
+async function verifyRoleSignature(role: DemoRole, signature: string) {
+  const key = await importSigningKey();
+  if (!key) return false;
+  try {
+    return await crypto.subtle.verify("HMAC", key, fromBase64url(signature), new TextEncoder().encode(role));
+  } catch {
+    return false;
+  }
+}
 
 export function isDemoEnvironment() {
   return process.env.VERCEL_ENV === "preview";
@@ -38,16 +80,20 @@ export function matchDemoCredentials(email: string, password: string): DemoRole 
 
 export async function getDemoSession(): Promise<{ role: DemoRole; account: ReturnType<typeof getDemoCredentials> } | null> {
   if (!isDemoEnvironment()) return null;
-  const role = (await cookies()).get(DEMO_COOKIE)?.value as DemoRole | undefined;
-  if (!role || !DEMO_USERS[role]) return null;
+  const raw = (await cookies()).get(DEMO_COOKIE)?.value ?? "";
+  const [roleValue, signature] = raw.split(".");
+  const role = roleValue as DemoRole | undefined;
+  if (!role || !DEMO_USERS[role] || !signature || !(await verifyRoleSignature(role, signature))) return null;
   return { role, account: DEMO_USERS[role] };
 }
 
 export async function setDemoSession(role: DemoRole) {
   if (!isDemoEnvironment()) throw new Error("demo_disabled");
-  (await cookies()).set(DEMO_COOKIE, role, {
+  const signature = await signRole(role);
+  if (!signature) throw new Error("demo_secret_missing");
+  (await cookies()).set(DEMO_COOKIE, `${role}.${signature}`, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: true,
     sameSite: "lax",
     path: "/",
     maxAge: 60 * 60 * 8,
