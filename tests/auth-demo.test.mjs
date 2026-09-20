@@ -30,8 +30,8 @@ test("login server action is bound to safe redirect targets and both auth modes"
   assert.match(action, /startsWith\("\/"\)/);
   assert.match(action, /!next\.startsWith\("\/\/"\)/);
   assert.match(action, /next\.length <= 2048/);
-  assert.match(action, /formData\.get\("email"\)/);
-  assert.match(action, /formData\.get\("password"\)/);
+  assert.match(action, /textField\(formData, "email", 320\)/);
+  assert.match(action, /textField\(formData, "password", 256\)/);
   assert.match(action, /maxLength/);
   assert.match(action, /redirect\(/);
 });
