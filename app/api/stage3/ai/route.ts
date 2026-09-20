@@ -1,3 +1,4 @@
+import { isSameOriginRequest } from "../../../../lib/request-security";
 import { readBoundedRequestJson } from "../../../../lib/bounded-body";
 import { NextResponse } from "next/server";
 import { createHash } from "node:crypto";
@@ -9,6 +10,8 @@ import { recordAuditEvent } from "../../../../lib/provider-observability";
 const json=(data:unknown,status=200)=>NextResponse.json(data,{status,headers:{"cache-control":"no-store"}});
 export async function GET(){try{await requireMerchantPlan(["business"]);return json({capability:"ai_copilot_ocr",...getAiStatus()})}catch(e){return json({error:e instanceof Error?e.message:"unauthorized"},401)}}
 export async function POST(request:Request){
+  if (!isSameOriginRequest(request)) return new Response(JSON.stringify({ error: "cross_site_request" }), { status: 403, headers: { "content-type": "application/json", "cache-control": "no-store" } });
+
  try{
   const {supabase,organization,user}=await requireMerchantPlan(["business"]);
   const b=await readBoundedRequestJson(request, 64 * 1024).catch(()=>null) as Record<string,unknown>|null;if(!b)return json({error:"invalid_json"},400);
