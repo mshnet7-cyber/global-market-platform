@@ -10,6 +10,11 @@ test("demo access is preview-only and requires server-side credential matching",
   const page = read("app/login/page.tsx");
   assert.match(auth, /VERCEL_ENV === "preview"/);
   assert.doesNotMatch(auth, /DEMO_MODE === "true"/);
+  assert.match(auth, /gmp_demo_session/);
+  assert.match(auth, /GMP_DEMO_SESSION_SECRET/);
+  assert.match(auth, /crypto\.subtle\.sign/);
+  assert.match(auth, /crypto\.subtle\.verify/);
+  assert.match(auth, /verifyRoleSignature/);
   assert.match(actions, /matchDemoCredentials/);
   assert.ok(actions.indexOf("const demoRole = matchDemoCredentials") < actions.indexOf("setDemoSession"));
   assert.doesNotMatch(actions, /demoLoginAction/);
@@ -46,6 +51,28 @@ test("normal login keeps demo credentials ahead of Supabase password auth", () =
   assert.ok(route.indexOf("const demoRole = matchDemoCredentials") < route.indexOf("signInWithPassword"));
   assert.match(route, /demoRole === "platform_admin"/);
   assert.match(route, /setDemoSession/);
+});
+
+test("preview demo role cannot be trusted without an HMAC signature", () => {
+  const auth = read("lib/demo-auth.ts");
+  const session = auth.indexOf("getDemoSession");
+  const verify = auth.indexOf("verifyRoleSignature");
+  assert.ok(session >= 0);
+  assert.ok(verify >= 0);
+  assert.ok(verify < session + 1000);
+  assert.match(auth, /roleValue/);
+  assert.match(auth, /signature/);
+  assert.match(auth, /crypto\.subtle\.verify/);
+});
+
+test("state-changing admin and merchant APIs reject cross-site requests", () => {
+  const admin = read("app/api/admin/overview/route.ts");
+  const stage2 = read("app/api/stage2/route.ts");
+  assert.match(admin, /isSameOriginRequest/);
+  assert.ok(admin.indexOf("isSameOriginRequest(request)") < admin.indexOf("const \{supabase,admin,user\}=await guard"));
+  assert.match(stage2, /isSameOriginRequest/);
+  assert.match(stage2, /action !== "marketplace_order"/);
+  assert.match(stage2, /cross_site_request/);
 });
 
 test("logout checks request origin before changing session state", () => {
