@@ -24,6 +24,12 @@ ok("OMR asset pack is saved", ["svg","png","pdf","eps"].every(ext=>existsSync(jo
 ok("OMR money component exists", existsSync(join(root,"components","MoneyDisplay.tsx")));
 ok("OMR money component is wired into public displays", text("app/page.tsx").includes("MoneyDisplay") && text("app/gold/GoldIntelligence.tsx").includes("MoneyDisplay") && text("app/silver/SilverIntelligence.tsx").includes("MoneyDisplay") && text("app/markets/MarketTerminal.tsx").includes("MoneyDisplay") && text("app/screen/page.tsx").includes("MoneyDisplay") && text("app/store/[slug]/page.tsx").includes("MoneyDisplay"));
 ok("OMR money component is wired into commerce and billing displays", text("app/marketplace/page.tsx").includes("MoneyDisplay") && text("app/dashboard/page.tsx").includes("MoneyDisplay") && text("app/pricing/page.tsx").includes("MoneyDisplay"));
+const saasPlans=text("lib/saas-plans.ts");
+ok("central SaaS plan contract exists", saasPlans.includes('MerchantPlanCode') && saasPlans.includes('MERCHANT_PLANS') && saasPlans.includes('ADDITIONAL_SCREEN_PRICING') && saasPlans.includes('isMerchantPlanCode'));
+ok("pricing page consumes central SaaS contract", text("app/pricing/page.tsx").includes('MERCHANT_PLANS.map') && text("app/pricing/page.tsx").includes('ADDITIONAL_SCREEN_PRICING'));
+ok("dashboard consumes central SaaS contract", text("app/dashboard/page.tsx").includes('MERCHANT_PLANS.map') && text("app/dashboard/page.tsx").includes('getMerchantPlan'));
+ok("merchant access validates SaaS plan codes", text("lib/merchant-access.ts").includes('isMerchantPlanCode') && text("lib/merchant-access.ts").includes('type MerchantPlanCode'));
+
 ok("merchant camera API exists", existsSync(join(root,"app/api/merchant/cameras/route.ts")));
 ok("merchant compliance API exists", existsSync(join(root,"app/api/merchant/compliance/route.ts")));
 ok("merchant invoicing API exists", existsSync(join(root,"app/api/merchant/invoicing/route.ts")));
