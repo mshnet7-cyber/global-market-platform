@@ -24,11 +24,17 @@ ok("OMR asset pack is saved", ["svg","png","pdf","eps"].every(ext=>existsSync(jo
 ok("OMR money component exists", existsSync(join(root,"components","MoneyDisplay.tsx")));
 ok("OMR money component is wired into public displays", text("app/page.tsx").includes("MoneyDisplay") && text("app/gold/GoldIntelligence.tsx").includes("MoneyDisplay") && text("app/silver/SilverIntelligence.tsx").includes("MoneyDisplay") && text("app/markets/MarketTerminal.tsx").includes("MoneyDisplay") && text("app/screen/page.tsx").includes("MoneyDisplay") && text("app/store/[slug]/page.tsx").includes("MoneyDisplay"));
 ok("OMR money component is wired into commerce and billing displays", text("app/marketplace/page.tsx").includes("MoneyDisplay") && text("app/dashboard/page.tsx").includes("MoneyDisplay") && text("app/pricing/page.tsx").includes("MoneyDisplay"));
-const migrationFiles = execFileSync("git",["ls-files","supabase/migrations"],{encoding:"utf8"}).split("\n").filter(Boolean);\n\nconst saasPlans=text("lib/saas-plans.ts");
-ok("central SaaS plan contract exists", saasPlans.includes('MerchantPlanCode') && saasPlans.includes('MERCHANT_PLANS') && saasPlans.includes('ADDITIONAL_SCREEN_PRICING') && saasPlans.includes('isMerchantPlanCode'));\nok("SaaS trial onboarding migration is tracked", migrationFiles.some(x=>x.includes("20260920233712_gmp_saas_trial_onboarding_v1.sql")));\nok("trial store limit consistency migration is tracked", migrationFiles.some(x=>x.includes("20260920235614_gmp_trial_store_limit_consistency_v1.sql")));
+const migrationFiles = execFileSync("git",["ls-files","supabase/migrations"],{encoding:"utf8"}).split("
+").filter(Boolean);
+
+const saasPlans=text("lib/saas-plans.ts");
+ok("central SaaS plan contract exists", saasPlans.includes('MerchantPlanCode') && saasPlans.includes('MERCHANT_PLANS') && saasPlans.includes('ADDITIONAL_SCREEN_PRICING') && saasPlans.includes('isMerchantPlanCode'));
+ok("SaaS trial onboarding migration is tracked", migrationFiles.some(x=>x.includes("20260920233712_gmp_saas_trial_onboarding_v1.sql")));
+ok("trial store limit consistency migration is tracked", migrationFiles.some(x=>x.includes("20260920235614_gmp_trial_store_limit_consistency_v1.sql")));
 
 ok("signup passes selected SaaS plan to bootstrap", text("app/api/auth/signup/route.ts").includes("p_plan_code: plan || \"starter\""));
-ok("merchant entitlements are centrally enforced", text("lib/merchant-access.ts").includes("requireMerchantEntitlement") && text("app/api/merchant/sales/route.ts").includes('requireMerchantEntitlement("pos")') && text("app/api/merchant/operations/route.ts").includes("entitlements"));\nok("store provisioning recognizes trial subscriptions", migrationFiles.some(x=>x.includes("20260920235614_gmp_trial_store_limit_consistency_v1.sql")));
+ok("merchant entitlements are centrally enforced", text("lib/merchant-access.ts").includes("requireMerchantEntitlement") && text("app/api/merchant/sales/route.ts").includes('requireMerchantEntitlement("pos")') && text("app/api/merchant/operations/route.ts").includes("entitlements"));
+ok("store provisioning recognizes trial subscriptions", migrationFiles.some(x=>x.includes("20260920235614_gmp_trial_store_limit_consistency_v1.sql")));
 ok("billing checkout supports initial or renewal subscription", text("app/api/stage3/billing/route.ts").includes('getMerchantContext') && !text("app/api/stage3/billing/route.ts").includes("requireMerchantPlan([\"starter\",\"pro\",\"business\"])"));
 ok("pricing page consumes central SaaS contract", text("app/pricing/page.tsx").includes('MERCHANT_PLANS.map') && text("app/pricing/page.tsx").includes('ADDITIONAL_SCREEN_PRICING'));
 ok("dashboard consumes central SaaS contract", text("app/dashboard/page.tsx").includes('MERCHANT_PLANS.map') && text("app/dashboard/page.tsx").includes('getMerchantPlan'));
@@ -55,7 +61,8 @@ const storePage=text("app/store/[slug]/page.tsx");
 ok("public store requires publication", storePage.includes("notFound()") && storePage.includes('eq("status","published")'));
 const marketplaceLock=text("supabase/migrations/20260918204610_gmp_marketplace_rpc_security_hardening_20260919.sql");
 ok("public marketplace RPC locked down", marketplaceLock.includes("revoke execute on function public.gmp_create_marketplace_order") && marketplaceLock.includes("from anon,authenticated"));
-const migrationFiles = execFileSync("git",["ls-files","supabase/migrations"],{encoding:"utf8"}).split("\n").filter(Boolean);
+const migrationFiles = execFileSync("git",["ls-files","supabase/migrations"],{encoding:"utf8"}).split("
+").filter(Boolean);
 const migrationVersionOwners = new Map();
 const duplicateMigrationVersions = [];
 for (const file of migrationFiles) {
