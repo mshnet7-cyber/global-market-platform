@@ -167,7 +167,7 @@ test("Anonymous GMP table mutations are disabled at the database layer",()=>{
 });
 
 test("Stage 2 demo actor override is service-role bound",()=>{
-  const m=read("supabase/migrations/20260920070500_gmp_stage2_demo_service_role_guard_v1.sql");
+  const m=read("supabase/migrations/20260920033811_gmp_stage2_demo_service_role_guard_v1.sql");
   assert.match(m,/auth\.role\(\)/);
   assert.match(m,/service_role/);
   assert.match(m,/x-gmp-demo-role/);
