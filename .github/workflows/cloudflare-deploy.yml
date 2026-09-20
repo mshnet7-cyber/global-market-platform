@@ -1,9 +1,11 @@
 name: Cloudflare Workers Deploy
 
+# Production deployment is allowed from main and the hardened Cloudflare migration branch.
+
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, 'cloudflare-workers-*']
 
 permissions:
   contents: read
