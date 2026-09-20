@@ -6,6 +6,7 @@ import { isMerchantPlanCode, type MerchantPlanCode } from "./saas-plans";
 
 export type { MerchantPlanCode };
 export type MerchantRole = "owner" | "admin" | "viewer";
+export type MerchantEntitlement = "analytics" | "alerts" | "members" | "ai_ocr" | "accounting" | "pos" | "inventory" | "repairs" | "person_gold_purchase" | "tax_reports" | "advanced_audit" | "advanced_reports";
 
 export async function getMerchantContext() {
   const demo = await getDemoSession();
@@ -89,7 +90,11 @@ export async function getMerchantContext() {
   const active = subscription?.status === "active" || subscription?.status === "trialing" || subscription?.status === "grace_period";
   const notExpired = !subscription?.current_period_end || new Date(subscription.current_period_end).getTime() >= Date.now();
 
-  return { supabase, user, organization, role, planCode: active && notExpired ? (planCode ?? null) : null };
+  const effectivePlanCode = active && notExpired ? (planCode ?? null) : null;
+  const { data: entitlement } = effectivePlanCode
+    ? await supabase.from("gmp_plan_entitlements").select("analytics,alerts,members,ai_ocr,accounting,pos,inventory,repairs,person_gold_purchase,tax_reports,advanced_audit,advanced_reports").eq("plan_id", subscription?.plan_id ?? "").maybeSingle()
+    : { data: null };
+  return { supabase, user, organization, role, planCode: effectivePlanCode, entitlements: entitlement ?? null };
 }
 
 export async function requireMerchantPlan(allowed: MerchantPlanCode[]) {
@@ -98,4 +103,11 @@ export async function requireMerchantPlan(allowed: MerchantPlanCode[]) {
     throw new Error("merchant_plan_required");
   }
   return context as typeof context & { user: NonNullable<typeof context.user>; organization: NonNullable<typeof context.organization>; role: "owner" | "admin"; planCode: MerchantPlanCode };
+}
+
+
+export async function requireMerchantEntitlement(entitlement: MerchantEntitlement) {
+  const context = await requireMerchantPlan(["starter","pro","business"]);
+  if (!context.entitlements || context.entitlements[entitlement] !== true) throw new Error("merchant_entitlement_required");
+  return context;
 }
