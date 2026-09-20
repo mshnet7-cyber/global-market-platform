@@ -221,8 +221,6 @@ export async function POST(request: Request) {
     return json({ error: message }, message === "request_body_too_large" ? 413 : 400);
   }
   const action = text(b.action, 80);
-  const demoSession = await getDemoSession();
-  const isShopDemo = demoSession?.role === "shop_owner";
   try {
     if (action === "marketplace_order") {
       const admin = createSupabaseAdminClient();
@@ -338,7 +336,7 @@ export async function POST(request: Request) {
     if (action === "product") {
       const access = await requirePermission("inventory.write",["pro","business"]);
       const storeId=text(b.store_id,80); if(!await orgStore(access.supabase,access.organization.id,storeId))return json({error:"store_not_found"},404);
-      const {data,error}=await access.supabase.rpc(isShopDemo ? "gmp_demo_create_inventory_product" : "gmp_create_inventory_product",{
+      const {data,error}=await access.supabase.rpc("gmp_create_inventory_product",{
         p_organization_id:access.organization.id,p_store_id:storeId,p_name:text(b.name,180),p_sku:text(b.sku,80),
         p_barcode:text(b.barcode,80),p_category:text(b.category,100),p_karat:text(b.karat,20),p_price:positive(b.price),
         p_cost_price:positive(b.cost_price),p_making_charge:positive(b.making_charge),
@@ -350,7 +348,7 @@ export async function POST(request: Request) {
     if (action === "sale") {
       const access = await requirePermission("pos.write",["pro","business"]);
       const lines=Array.isArray(b.lines)?b.lines:[]; if(!lines.length)return json({error:"lines_required"},400);
-      const {data,error}=await access.supabase.rpc(isShopDemo ? "gmp_demo_create_and_post_sale" : "gmp_create_and_post_sale",{
+      const {data,error}=await access.supabase.rpc("gmp_create_and_post_sale",{
         p_organization_id:access.organization.id,p_branch_id:isUuid(text(b.branch_id,80))?text(b.branch_id,80):null,
         p_store_id:text(b.store_id,80),p_customer_id:isUuid(text(b.customer_id,80))?text(b.customer_id,80):null,
         p_payment_method:text(b.payment_method,20)||"cash",p_notes:text(b.notes,1500)||null,p_lines:lines
@@ -360,7 +358,7 @@ export async function POST(request: Request) {
 
     if (action === "purchase") {
       const access = await requirePermission("erp.write",["pro","business"]);
-      const {data,error}=await access.supabase.rpc(isShopDemo ? "gmp_demo_create_purchase" : "gmp_create_purchase",{
+      const {data,error}=await access.supabase.rpc("gmp_create_purchase",{
         p_organization_id:access.organization.id,p_branch_id:isUuid(text(b.branch_id,80))?text(b.branch_id,80):null,
         p_store_id:text(b.store_id,80),p_supplier_id:isUuid(text(b.supplier_id,80))?text(b.supplier_id,80):null,
         p_invoice_no:text(b.invoice_no,100),p_lines:Array.isArray(b.lines)?b.lines:[]
@@ -370,7 +368,7 @@ export async function POST(request: Request) {
 
     if (action === "expense") {
       const access = await requirePermission("erp.write",["business"]);
-      const {data,error}=await access.supabase.rpc(isShopDemo ? "gmp_demo_create_and_post_expense" : "gmp_create_and_post_expense",{
+      const {data,error}=await access.supabase.rpc("gmp_create_and_post_expense",{
         p_organization_id:access.organization.id,p_branch_id:isUuid(text(b.branch_id,80))?text(b.branch_id,80):null,
         p_category:text(b.category,120),p_description:text(b.description,1000),p_amount:positive(b.amount),
         p_vat_amount:positive(b.vat_amount),p_expense_date:text(b.expense_date,20)||new Date().toISOString().slice(0,10),
@@ -381,7 +379,7 @@ export async function POST(request: Request) {
 
     if (action === "journal") {
       const access = await requirePermission("erp.write",["business"]);
-      const {data,error}=await access.supabase.rpc(isShopDemo ? "gmp_demo_create_manual_journal" : "gmp_create_manual_journal",{
+      const {data,error}=await access.supabase.rpc("gmp_create_manual_journal",{
         p_organization_id:access.organization.id,p_branch_id:isUuid(text(b.branch_id,80))?text(b.branch_id,80):null,
         p_description:text(b.description,500),p_entry_date:text(b.entry_date,20)||new Date().toISOString().slice(0,10),
         p_lines:Array.isArray(b.lines)?b.lines:[]
