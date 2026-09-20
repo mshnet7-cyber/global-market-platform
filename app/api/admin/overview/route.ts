@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "../../../../lib/supabase/server";
 import { createSupabaseAdminClient } from "../../../../lib/supabase/admin";
 import { getDemoSession } from "../../../../lib/demo-auth";
+import { isSameOriginRequest } from "../../../../lib/request-security";
 
 const json=(data:unknown,status=200)=>NextResponse.json(data,{status,headers:{"cache-control":"no-store"}});
 
@@ -50,6 +51,7 @@ export async function GET(){
 }
 
 export async function POST(request:Request){
+  if (!isSameOriginRequest(request)) return json({error:"cross_site_request"},403);
   try{
     const {supabase,admin,user}=await guard();
     const db = admin ?? supabase;
