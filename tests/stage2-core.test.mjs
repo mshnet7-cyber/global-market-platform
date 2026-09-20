@@ -87,7 +87,9 @@ test("Public store response scopes branches to the requested store branch",()=>{
 test("Stage 2 transaction RPCs are hardened and preview demo access stays server-side",()=>{
   const src=read("app/api/stage2/route.ts");
   assert.match(src,/createSupabaseAdminClient/);
-  assert.doesNotMatch(src,/createSupabaseDemoClient|getDemoSession/);
+  assert.doesNotMatch(src,/createSupabaseDemoClient/);
+  assert.match(src,/getDemoSession/);
+  assert.match(src,/x-gmp-demo-role/);
   assert.match(src,/rpc\("gmp_create_inventory_product"/);
   assert.match(src,/rpc\("gmp_create_and_post_sale"/);
   assert.match(src,/rpc\("gmp_create_purchase"/);
