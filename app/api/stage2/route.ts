@@ -6,6 +6,7 @@ import { getDemoSession } from "../../../lib/demo-auth";
 import { requireStage2Permission, type Stage2Permission } from "../../../lib/stage2-access";
 import { recordAuditEvent } from "../../../lib/provider-observability";
 import { queueCustomerWhatsApp } from "../../../lib/operational-notifications";
+import { isSameOriginRequest } from "../../../lib/request-security";
 
 const json = (data: unknown, status = 200) => NextResponse.json(data, {
   status,
@@ -217,6 +218,7 @@ export async function POST(request: Request) {
     return json({ error: message }, message === "request_body_too_large" ? 413 : 400);
   }
   const action = text(b.action, 80);
+  if (action !== "marketplace_order" && !isSameOriginRequest(request)) return json({error:"cross_site_request"},403);
   try {
     if (action === "marketplace_order") {
       const admin = createSupabaseAdminClient();
