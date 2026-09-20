@@ -71,18 +71,12 @@ test("No Stage 2 paid checkout or external Stage 3 features",()=>{
   assert.match(src,/payment-free|بدون دفع/i);
 });
 
-
 test("Public store response scopes branches to the requested store branch",()=>{
  const src=read("app/api/stage2/route.ts");
  assert.match(src,/branch_id,name,slug/);
  assert.match(src,/\.eq\("id", store\.branch_id\)/);
  assert.doesNotMatch(src,/\.eq\("organization_id", store\.organization_id\)\.eq\("active",true\)\.order\("name"\)/);
 });
-
-
-
-
-
 
 test("Stage 2 transaction RPCs are hardened and preview demo access stays server-side",()=>{
   const src=read("app/api/stage2/route.ts");
@@ -105,7 +99,7 @@ test("Stage 2 transaction RPCs are hardened and preview demo access stays server
   const adminClient=read("lib/supabase/admin.ts");
   assert.match(adminClient,/headers\?: Record<string, string>/);
   assert.match(adminClient,/global: headers \? \{ headers \} : undefined/);
-  const hardening=read("supabase/migrations/20260920060000_gmp_preview_demo_server_only.sql");
+  const hardening=read("supabase/migrations/20260920014853_gmp_preview_demo_server_only.sql");
   assert.match(hardening,/drop policy if exists %I/);
   assert.match(hardening,/revoke all privileges on table/);
   assert.match(hardening,/revoke execute on function public\.gmp_create_inventory_product/);
@@ -118,7 +112,6 @@ test("Stage 2 schema compatibility fixes are tracked",()=>{
   assert.match(read("supabase/migrations/20260920012330_gmp_fix_stage2_sale_generated_line_total_20260920.sql"),/line_total/);
   assert.match(read("supabase/migrations/20260920012448_gmp_fix_stage2_supplier_active_column_20260920.sql"),/gmp_suppliers/);
 });
-
 
 test("Browser state-changing merchant APIs enforce same-origin requests",()=>{
   const guarded=[
@@ -160,7 +153,7 @@ test("External device endpoints remain token/session-authenticated rather than b
 });
 
 test("Anonymous GMP table mutations are disabled at the database layer",()=>{
-  const m=read("supabase/migrations/20260920023000_gmp_revoke_anon_mutations.sql");
+  const m=read("supabase/migrations/20260920021211_gmp_revoke_anon_mutations.sql");
   assert.match(m,/revoke insert, update, delete, truncate, references, trigger on table/i);
   assert.match(m,/c\.relname like 'gmp_%'/);
   assert.match(m,/from anon/);
