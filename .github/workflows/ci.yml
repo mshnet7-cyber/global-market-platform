@@ -37,3 +37,92 @@ jobs:
       - name: Cloudflare Workers deploy dry-run
         if: startsWith(github.head_ref, 'cloudflare-workers-') || startsWith(github.ref, 'refs/heads/cloudflare-workers-')
         run: npm run deploy:cloudflare:dry-run
+
+  vercel-preview:
+    name: Vercel Preview Deploy
+    needs: quality
+    if: >-
+      github.event_name == 'push' &&
+      startsWith(github.ref_name, 'cloudflare-workers-')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout tested commit
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@50.15.1
+
+      - name: Validate required Vercel Preview environment
+        shell: bash
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          env_list="$(vercel env ls preview --token="$VERCEL_TOKEN" | awk '{print $1}')"
+          for name in NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY GMP_DEMO_SESSION_SECRET; do
+            if ! printf '%s\n' "$env_list" | grep -Fxq "$name"; then
+              echo "::error::Missing Vercel Preview environment variable: $name"
+              exit 1
+            fi
+          done
+          if ! printf '%s\n' "$env_list" | grep -Fxq "SUPABASE_SECRET_KEY" && ! printf '%s\n' "$env_list" | grep -Fxq "SUPABASE_SERVICE_ROLE_KEY"; then
+            echo "::error::Missing Vercel Preview server-only Supabase key"
+            exit 1
+          fi
+
+      - name: Pull final Vercel preview environment
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: vercel pull --yes --environment=preview --token="$VERCEL_TOKEN"
+
+      - name: Validate pulled preview environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$(grep -E '^NEXT_PUBLIC_SUPABASE_URL=' .env.preview 2>/dev/null | cut -d= -f2-)" || { echo "::error::NEXT_PUBLIC_SUPABASE_URL missing"; exit 1; }
+          grep -Eq '^NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=.+$|^NEXT_PUBLIC_SUPABASE_ANON_KEY=.+$' .env.preview 2>/dev/null || { echo "::error::Supabase publishable/anon key missing"; exit 1; }
+          grep -Eq '^SUPABASE_SECRET_KEY=.+$|^SUPABASE_SERVICE_ROLE_KEY=.+$' .env.preview 2>/dev/null || { echo "::error::No server-only Supabase key found"; exit 1; }
+          test -n "$(grep -E '^GMP_DEMO_SESSION_SECRET=' .env.preview 2>/dev/null | cut -d= -f2-)" || { echo "::error::GMP_DEMO_SESSION_SECRET missing"; exit 1; }
+
+      - name: Build tested Vercel preview artifact
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: vercel build --token="$VERCEL_TOKEN"
+
+      - name: Deploy tested preview artifact
+        id: deploy
+        shell: bash
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          url="$(vercel deploy --prebuilt --non-interactive --token="$VERCEL_TOKEN" | tail -n 1)"
+          test -n "$url"
+          echo "deployment_url=$url" >> "$GITHUB_OUTPUT"
+          echo "Preview deployment: $url"
+
+      - name: Smoke test deployed preview
+        shell: bash
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          DEPLOYMENT_URL: ${{ steps.deploy.outputs.deployment_url }}
+        run: |
+          set -euo pipefail
+          vercel curl /api/health --deployment "$DEPLOYMENT_URL" --token="$VERCEL_TOKEN"
+          vercel curl /login --deployment "$DEPLOYMENT_URL" --token="$VERCEL_TOKEN"
