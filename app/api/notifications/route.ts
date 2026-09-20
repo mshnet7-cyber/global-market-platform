@@ -1,3 +1,4 @@
+import { isSameOriginRequest } from "../../../lib/request-security";
 import { readBoundedRequestJson } from "../../../lib/bounded-body";
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "../../../lib/supabase/server";
@@ -15,6 +16,8 @@ export async function GET(){
 }
 
 export async function PATCH(request:Request){
+  if (!isSameOriginRequest(request)) return new Response(JSON.stringify({ error: "cross_site_request" }), { status: 403, headers: { "content-type": "application/json", "cache-control": "no-store" } });
+
   const supabase=await createSupabaseServerClient();
   if(!supabase)return json({error:"service_not_configured"},500);
   const {data:{user}}=await supabase.auth.getUser();
