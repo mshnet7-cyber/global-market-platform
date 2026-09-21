@@ -919,3 +919,277 @@ html[data-theme="light"] .footer-grid strong{color:#263941!important}
   html[data-font-scale="large"] body{zoom:1.03}
   html[data-font-scale="small"] body{zoom:.97}
 }
+
+
+
+/* ==========================================================================
+   SaaS Global Hardening Layer
+   Cross-surface design normalization for public, merchant and admin workspaces.
+   Presentation/accessibility only; no business, auth, pricing, data or API logic.
+   ========================================================================== */
+
+:root{
+  --saas-max:1280px;
+  --saas-gutter:clamp(16px,3vw,32px);
+  --saas-sidebar:272px;
+  --saas-header:72px;
+  --saas-control-h:44px;
+  --saas-radius-sm:10px;
+  --saas-radius-md:14px;
+  --saas-radius-lg:18px;
+  --saas-border:rgba(255,255,255,.085);
+  --saas-surface:#0b171e;
+  --saas-surface-2:#0f1d25;
+  --saas-muted:#81919a;
+  --saas-text:#edf2f3;
+  --saas-gold:#d8b56a;
+  --saas-focus:#f3dca4;
+}
+
+html[data-theme="light"]{
+  --saas-border:rgba(18,37,46,.12);
+  --saas-surface:#fff;
+  --saas-surface-2:#f4f7f8;
+  --saas-muted:#5d7079;
+  --saas-text:#17262e;
+}
+
+*{box-sizing:border-box}
+body{min-width:320px;overflow-x:hidden}
+main{min-width:0}
+.container,.wrap{width:min(var(--saas-max),calc(100% - (var(--saas-gutter) * 2)))}
+
+:where(a,button,input,select,textarea,[role="button"]):focus-visible{
+  outline:2px solid var(--saas-focus);
+  outline-offset:3px;
+}
+
+:where(button,[role="button"],a.btn){cursor:pointer}
+:where(button:disabled,input:disabled,select:disabled,textarea:disabled){cursor:not-allowed;opacity:.58}
+
+:where(.dashboard-shell,.stage2-page,.stage3-page,.section-page,.page-frame){
+  min-height:100dvh;
+}
+
+:where(.dashboard-main,.stage2-page,.stage3-page){
+  width:min(var(--saas-max),calc(100% - (var(--saas-gutter) * 2)));
+  margin-inline:auto;
+}
+
+/* Consistent SaaS page headers */
+:where(.dashboard-hero,.stage2-page-head,.stage3-header,.section-header,.page-hero){
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:24px;
+  min-width:0;
+}
+
+:where(.dashboard-hero>div:first-child,.stage2-page-head>div:first-child,.stage3-header>div:first-child){
+  min-width:0;
+}
+
+:where(.dashboard-title,.stage2-page-head h1,.stage3-header h1,.section-header h1,.page-hero h1){
+  text-wrap:balance;
+  overflow-wrap:anywhere;
+}
+
+:where(.dashboard-subtitle,.stage2-page-head p,.stage3-header p,.section-lede,.page-hero p){
+  max-width:760px;
+  color:var(--saas-muted);
+}
+
+/* Cards, panels and empty states */
+:where(.card,.kpi,.module-card,.plan-tile,.section-panel,.stage2-panel,.stage3-card,.stage3-panel,.quote-card,.news-card,.market-card,.plan-card,.hero-panel,.login-card){
+  border-radius:var(--saas-radius-lg);
+  border:1px solid var(--saas-border);
+  background:var(--saas-surface);
+  min-width:0;
+}
+
+:where(.card,.kpi,.module-card,.plan-tile,.section-panel,.stage2-panel,.stage3-card,.stage3-panel){
+  box-shadow:0 10px 30px rgba(0,0,0,.08);
+}
+
+:where(.card,.module-card,.plan-tile,.stage2-panel,.stage3-card) > *{min-width:0}
+
+:where(.empty-state,.stage2-empty,.stage3-empty){
+  border:1px dashed var(--saas-border);
+  border-radius:var(--saas-radius-md);
+  background:color-mix(in srgb,var(--saas-surface) 86%,transparent);
+  color:var(--saas-muted);
+  padding:24px;
+}
+
+/* Tables: dense desktop, scroll-safe mobile */
+:where(table,.stage2-table,.stage3-table){
+  width:100%;
+  border-collapse:separate;
+  border-spacing:0;
+}
+
+:where(.table-wrap,.stage2-table-wrap,.stage3-table-wrap,.table-responsive){
+  width:100%;
+  overflow:auto;
+  -webkit-overflow-scrolling:touch;
+  border-radius:var(--saas-radius-md);
+}
+
+:where(table th,table td,.stage2-table th,.stage2-table td,.stage3-table th,.stage3-table td){
+  padding:12px 14px;
+  border-bottom:1px solid var(--saas-border);
+  text-align:start;
+  vertical-align:middle;
+}
+
+:where(table th,.stage2-table th,.stage3-table th){
+  font-size:11px;
+  font-weight:800;
+  color:var(--saas-muted);
+  white-space:nowrap;
+  background:color-mix(in srgb,var(--saas-surface-2) 82%,transparent);
+}
+
+:where(table tbody tr:hover,.stage2-table tbody tr:hover,.stage3-table tbody tr:hover){
+  background:color-mix(in srgb,var(--saas-gold) 4%,transparent);
+}
+
+/* Forms */
+:where(form,.stage2-form-grid,.stage3-form-grid){
+  min-width:0;
+}
+
+:where(input,select,textarea,.select,.field input,.field select,.stage2-field input,.stage2-field select,.stage3-field input,.stage3-field select){
+  width:100%;
+  min-height:var(--saas-control-h);
+  border-radius:var(--saas-radius-sm);
+  border:1px solid var(--saas-border);
+  background:var(--saas-surface-2);
+  color:var(--saas-text);
+  padding:10px 12px;
+  font:inherit;
+}
+
+:where(textarea){min-height:110px;resize:vertical}
+:where(label,.label,.field,.stage2-field,.stage3-field){
+  min-width:0;
+}
+:where(label,.label,.field>span,.stage2-field,.stage3-field){
+  font-size:12px;
+  font-weight:700;
+}
+
+:where(input[type="number"],input[inputmode="decimal"],input[inputmode="numeric"]){
+  direction:ltr;
+  text-align:end;
+  font-variant-numeric:tabular-nums;
+}
+
+/* Status language */
+:where(.status,.pill,.stage2-badge,.stage3-status){
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:28px;
+  padding:4px 9px;
+  border-radius:999px;
+  white-space:nowrap;
+  font-size:10px;
+  font-weight:800;
+}
+
+/* Navigation remains usable when module count grows */
+:where(.dashboard-nav-main,.nav-links,.stage2-tabs,.stage3-tabs){
+  scrollbar-width:none;
+}
+:where(.dashboard-nav-main,.nav-links,.stage2-tabs,.stage3-tabs)::-webkit-scrollbar{display:none}
+
+/* Merchant workspace grid */
+:where(.grid,.dashboard-kpis,.stage2-kpis,.stage2-grid,.stage3-grid){
+  min-width:0;
+}
+:where(.grid,.stage2-grid,.stage3-grid)>*{min-width:0}
+
+/* Light theme: explicit contrast for common surfaces */
+html[data-theme="light"] :where(
+  .dashboard-shell,.stage2-page,.stage3-page,.section-page,.page-frame,
+  .card,.kpi,.module-card,.plan-tile,.section-panel,.stage2-panel,.stage3-card,.stage3-panel,
+  .quote-card,.news-card,.market-card,.plan-card,.hero-panel,.login-card
+){
+  color:var(--saas-text);
+}
+
+html[data-theme="light"] :where(
+  table th,.stage2-table th,.stage3-table th
+){
+  background:#edf2f4;
+  color:#50636c;
+}
+
+html[data-theme="light"] :where(
+  input,select,textarea,.select,.field input,.field select,.stage2-field input,.stage2-field select,.stage3-field input,.stage3-field select
+){
+  background:#fff;
+  color:#17262e;
+  border-color:rgba(18,37,46,.15);
+}
+
+html[data-theme="light"] :where(.stage2-alert,.notice,.announcement){
+  background:#fff;
+  color:#334a55;
+  border-color:rgba(18,37,46,.13);
+}
+
+/* Compact responsive behavior */
+@media (max-width:1100px){
+  :where(.dashboard-hero,.stage2-page-head,.stage3-header,.section-header,.page-hero){
+    align-items:flex-start;
+    flex-direction:column;
+  }
+  :where(.dashboard-hero .actions,.stage2-head-actions,.stage3-header .actions){
+    width:100%;
+  }
+}
+
+@media (max-width:760px){
+  :root{
+    --saas-gutter:14px;
+    --saas-control-h:46px;
+  }
+  :where(.dashboard-main,.stage2-page,.stage3-page){
+    width:calc(100% - (var(--saas-gutter) * 2));
+  }
+  :where(.dashboard-kpis,.grid.grid-4,.grid.four,.grid.three,.stage2-grid.two,.stage3-grid){
+    grid-template-columns:1fr!important;
+  }
+  :where(.dashboard-nav-main,.nav-links){
+    overflow-x:auto;
+    justify-content:flex-start;
+  }
+  :where(.stage2-tabs,.stage3-tabs){
+    overflow-x:auto;
+    flex-wrap:nowrap;
+  }
+  :where(.stage2-tabs)>*,:where(.stage3-tabs)>*{
+    flex:0 0 auto;
+  }
+  :where(.form-actions,.actions){
+    width:100%;
+  }
+  :where(.form-actions .btn,.actions .btn){
+    flex:1 1 auto;
+  }
+  :where(table,.stage2-table,.stage3-table){
+    min-width:680px;
+  }
+}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{
+    scroll-behavior:auto!important;
+    transition-duration:.01ms!important;
+    animation-duration:.01ms!important;
+    animation-iteration-count:1!important;
+  }
+}
+
