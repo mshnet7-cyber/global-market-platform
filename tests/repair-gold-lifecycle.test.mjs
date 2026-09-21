@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-const s=readFileSync("supabase/migrations/20260922040000_gmp_repair_gold_lifecycle_v1.sql","utf8");
+const s=readFileSync("supabase/migrations/20260922040000_gmp_repair_gold_lifecycle_v1.sql","utf8") + readFileSync("supabase/migrations/20260922050000_gmp_repair_gold_lifecycle_karat_fix.sql","utf8");
 const ok=(n,c)=>{if(!c)throw new Error(n)};
 ok("store scope",s.includes("repair_store_scope_invalid"));
 ok("idempotency",s.includes("gmp_repair_operation_idempotency")&&s.includes("primary key (organization_id,client_ref)"));
