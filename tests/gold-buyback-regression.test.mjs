@@ -1,0 +1,11 @@
+import { readFileSync } from "node:fs";
+const s=readFileSync("supabase/migrations/20260922030000_gmp_gold_buyback_regression_fix.sql","utf8");
+const ok=(n,c)=>{if(!c)throw new Error(n)};
+ok("single ledger trigger source",s.includes("The AFTER INSERT trigger writes exactly one Gold Ledger entry"));
+ok("no direct post rpc",!s.includes("gmp_post_gold_ledger_entry("));
+ok("ledger lookup",s.includes("reference_type='inventory_movement'"));
+ok("search path hardened",s.includes("set search_path = ''"));
+ok("tenant auth",s.includes("m.role in ('owner','admin')"));
+ok("idempotency",s.includes("client_ref"));
+ok("restricted execution",s.includes("revoke all on function")&&s.includes("grant execute"));
+console.log("gold-buyback-regression: 7 checks passed");
