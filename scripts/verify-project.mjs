@@ -63,8 +63,6 @@ const storePage=text("app/store/[slug]/page.tsx");
 ok("public store requires publication", storePage.includes("notFound()") && storePage.includes('eq("status","published")'));
 const marketplaceLock=text("supabase/migrations/20260918204610_gmp_marketplace_rpc_security_hardening_20260919.sql");
 ok("public marketplace RPC locked down", marketplaceLock.includes("revoke execute on function public.gmp_create_marketplace_order") && marketplaceLock.includes("from anon,authenticated"));
-const migrationFiles = execFileSync("git",["ls-files","supabase/migrations"],{encoding:"utf8"}).split("
-").filter(Boolean);
 const migrationVersionOwners = new Map();
 const duplicateMigrationVersions = [];
 for (const file of migrationFiles) {
