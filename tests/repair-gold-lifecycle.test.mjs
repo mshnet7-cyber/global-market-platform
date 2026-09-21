@@ -1,0 +1,13 @@
+import { readFileSync } from "node:fs";
+const s=readFileSync("supabase/migrations/20260922040000_gmp_repair_gold_lifecycle_v1.sql","utf8");
+const ok=(n,c)=>{if(!c)throw new Error(n)};
+ok("store scope",s.includes("repair_store_scope_invalid"));
+ok("idempotency",s.includes("gmp_repair_operation_idempotency")&&s.includes("primary key (organization_id,client_ref)"));
+ok("receive ledger",s.includes("'repair_in','in'"));
+ok("deliver ledger",s.includes("'repair_out','out'"));
+ok("accounting",s.includes("system_key='sales'")&&s.includes("gmp_journal_lines"));
+ok("status lifecycle",s.includes("received")&&s.includes("in_repair")&&s.includes("ready")&&s.includes("delivered"));
+ok("auth",s.includes("m.role in ('owner','admin')"));
+ok("search path",s.includes("set search_path=''"));
+ok("restricted execution",s.includes("revoke all on function")&&s.includes("grant execute"));
+console.log("repair-gold-lifecycle: 9 checks passed");
