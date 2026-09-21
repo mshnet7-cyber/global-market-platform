@@ -1,0 +1,1 @@
+import {readFileSync} from "node:fs"; const s=readFileSync("app/visual-polish.css","utf8"); for(const x of ["Theme polish v4","--gmp-content-max","--gmp-focus-ring","table-wrap","data-font-scale","data-theme="+"\\\"light\\\""]) if(!s.includes(x)) throw new Error("missing "+x); console.log("theme polish v4: PASS");
