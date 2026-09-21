@@ -1,0 +1,35 @@
+{
+  "name": "global-market-platform-ai-team",
+  "roles": {
+    "architect": "protect module boundaries and business invariants",
+    "frontend": "theme, responsive UX, RTL/LTR and accessibility",
+    "backend": "RPC, API, workflows and idempotency",
+    "database": "Supabase migrations, RLS and integrity",
+    "gold_domain": "Gold Engine, Gold Ledger, POS, buyback, exchange, repair and workshop",
+    "accounting_tax": "ledger, VAT and e-invoicing",
+    "security": "Auth, tenant isolation, authorization and audit",
+    "qa": "tests, regression and browser E2E",
+    "devops": "CI, Vercel, Cloudflare and runtime",
+    "release": "final release gate and evidence verification"
+  },
+  "gates": [
+    "contract-tests",
+    "lint",
+    "build",
+    "database-integrity",
+    "security",
+    "e2e-browser",
+    "deployment-commit-match",
+    "runtime-health",
+    "critical-user-journeys"
+  ],
+  "protected_domains": [
+    "pricing",
+    "gold-ledger",
+    "accounting",
+    "tax",
+    "auth",
+    "rls",
+    "tenant-isolation"
+  ]
+}
