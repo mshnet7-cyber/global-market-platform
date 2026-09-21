@@ -579,3 +579,23 @@ html[data-theme="light"] ::selection{
 @media(max-width:480px){
   .preference-language{padding-inline:3px}
 }
+
+
+/* Financial/UI digits stay Latin (0-9) in every language, including Arabic RTL. */
+html,body,
+input,select,textarea,button,
+.market-price,.panel-value,.quote-price,.plan-price,.kpi-value,
+.money-display-number,.numeric,[data-numeric]{
+  font-variant-numeric:tabular-nums lining-nums;
+}
+html[dir="rtl"] .market-price,
+html[dir="rtl"] .panel-value,
+html[dir="rtl"] .quote-price,
+html[dir="rtl"] .plan-price,
+html[dir="rtl"] .kpi-value,
+html[dir="rtl"] .money-display-number,
+html[dir="rtl"] .numeric,
+html[dir="rtl"] [data-numeric]{
+  direction:ltr;
+  unicode-bidi:isolate;
+}
