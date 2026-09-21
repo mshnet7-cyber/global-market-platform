@@ -14,7 +14,7 @@ function formatMoney(value: number | null, locale: string, currency: string, max
 export default async function Home({ searchParams }: { searchParams?: Promise<{ country?: string; language?: string }> }) {
   const params = await searchParams;
   const cookieStore = await cookies();
-  const initialTheme = cookieStore.get("gmp-theme")?.value === "light" ? "light" : "dark";
+  const initialTheme: "dark" | "light" = cookieStore.get("gmp-theme")?.value === "light" ? "light" : "dark";
   const country = countries.find((c) => c.code === params?.country?.toUpperCase()) ?? countries.find((c) => c.code === appConfig.defaultCountry) ?? countries[0];
   const requestedLanguage = params?.language?.toLowerCase() ?? "";
   const language = isValidLanguage(requestedLanguage) && supportedLanguageCodes.includes(requestedLanguage as (typeof supportedLanguageCodes)[number]) ? requestedLanguage : appConfig.defaultLanguage;
