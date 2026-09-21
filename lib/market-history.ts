@@ -1,5 +1,5 @@
 import { MARKET_INDEX_SYMBOLS, MARKET_SYMBOLS } from "./providers/market-data";
-import { createSupabaseAdminClient } from "./supabase/admin";
+import { createSupabaseAdminClient } from "./supabase/admin";\nimport { assessTimestamp } from "./market-trust";
 
 export const HISTORY_RANGES = {
   "1D": 24 * 60 * 60 * 1000,
@@ -49,5 +49,8 @@ export async function getPublicPriceHistory(instrumentCode: string, range: Histo
     .order("observed_at", { ascending: true })
     .limit(safeLimit);
   if (error) return [] as PublicPricePoint[];
-  return (data ?? []) as PublicPricePoint[];
+  return (data ?? []).map((row) => ({
+    ...row,
+    status: assessTimestamp(row.observed_at).status,
+  })) as PublicPricePoint[];
 }
