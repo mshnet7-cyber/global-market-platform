@@ -36,7 +36,7 @@ async function persistMetalSnapshot(snapshot: Awaited<ReturnType<typeof getFreeM
   try {
     const { data: latest } = await admin
       .from("gmp_price_quotes")
-      .select("observed_at,value")
+      .select("observed_at,value,received_at")
       .eq("instrument_code", instrumentCode)
       .order("observed_at", { ascending: false })
       .limit(1)
@@ -52,6 +52,7 @@ async function persistMetalSnapshot(snapshot: Awaited<ReturnType<typeof getFreeM
         unit: snapshot.unit,
         status: snapshot.status,
         observed_at: observedAt,
+        received_at: snapshot.receivedAt ?? new Date().toISOString(),
         provider,
       });
     }
@@ -108,6 +109,7 @@ async function persistPublicQuotes(quotes: Quote[]) {
           unit: quote.unit,
           status: quote.status,
           observed_at: observedAt,
+          received_at: quote.receivedAt ?? new Date().toISOString(),
           provider: quote.provider,
         });
       }
