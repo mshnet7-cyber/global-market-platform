@@ -50,13 +50,12 @@ begin
    raise exception 'not authorized';
  end if;
 
+ select * into v_repair from public.gmp_repair_orders where id=p_repair_id for update;
  select response into v_existing from public.gmp_repair_operation_idempotency
  where organization_id=v_org and client_ref=trim(p_client_ref);
  if v_existing is not null then
    return jsonb_build_object('success',true,'idempotent',true,'result',v_existing);
  end if;
-
- select * into v_repair from public.gmp_repair_orders where id=p_repair_id for update;
  if p_action not in ('receive','ready','deliver') then raise exception 'invalid_repair_action'; end if;
  if p_action='receive' and v_repair.status<>'received' then raise exception 'invalid_repair_status'; end if;
  if p_action='ready' and v_repair.status<>'in_repair' then raise exception 'invalid_repair_status'; end if;
@@ -72,7 +71,7 @@ begin
    v_unit:=case when v_net>0 then coalesce(v_repair.amount,0)/v_net else 0 end;
    select public.gmp_post_gold_ledger_entry(
      v_repair.organization_id,v_repair.branch_id,p_store_id,null,'repair_in','in','repair',p_repair_id,
-     'repair-receive:'||p_repair_id::text,v_repair.karat::numeric,v_net,0,v_net,v_unit,0,0,'OMR',
+     'repair-receive:'||p_repair_id::text,(nullif((regexp_match(trim(coalesce(v_repair.karat,'')),'([0-9]+(?:[.][0-9]+)?)'))[1],'')::numeric),v_net,0,v_net,v_unit,0,0,'OMR',
      jsonb_build_object('repair_no',v_repair.repair_no,'action','receive')
    ) into v_ledger;
    v_ledger_id:=(v_ledger->>'entry_id')::uuid;
