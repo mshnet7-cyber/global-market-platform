@@ -1,3 +1,42 @@
+
+/* GMP SaaS Design System v2 — typography, spacing, surfaces and responsive hierarchy.
+   Presentation/accessibility only. No business/data/auth/API behavior is changed. */
+@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;500;600;700;800;900&family=Noto+Sans:wght@400;500;600;700;800;900&display=swap");
+:root{
+  --gmp-font-sans:"Noto Sans",ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+  --gmp-font-ar:"Noto Sans Arabic","Noto Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Tahoma,Arial,sans-serif;
+  --gmp-container:1240px;--gmp-gutter:24px;--gmp-radius-sm:10px;--gmp-radius-md:14px;--gmp-radius-lg:18px;--gmp-radius-xl:24px;
+  --gmp-shadow-card:0 10px 30px rgba(0,0,0,.14);--gmp-shadow-float:0 18px 50px rgba(0,0,0,.18);--gmp-gold:#d8b56a;--gmp-gold-hi:#f3dca4;
+}
+html{font-family:var(--gmp-font-sans);font-size:16px;line-height:1.5}
+html[dir="rtl"],html[lang^="ar"]{font-family:var(--gmp-font-ar)}
+body,input,select,textarea,button{font-family:inherit}
+body{line-height:1.55;letter-spacing:-.008em}
+h1,h2,h3,h4{font-weight:800;letter-spacing:-.025em;line-height:1.15}
+h1{font-size:clamp(2.25rem,4.5vw,4rem);line-height:1.08}
+h2{font-size:clamp(1.65rem,2.5vw,2.35rem)}
+h3{font-size:clamp(1.15rem,1.7vw,1.4rem)}
+small,.meta,.muted{font-size:.8125rem}
+.container,.wrap{width:min(calc(100% - (var(--gmp-gutter) * 2)),var(--gmp-container));margin-inline:auto}
+.topbar{backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.topbar .nav{min-height:72px;gap:20px}.brand{font-weight:850;letter-spacing:.035em}.nav-links{gap:3px}.nav-links a{padding:9px 11px;border-radius:10px;font-size:12px;font-weight:700}.nav-actions{gap:8px}
+.btn{min-height:42px;padding:10px 15px;border-radius:11px;font-weight:750;line-height:1.15}.btn-lg{min-height:48px;padding:13px 19px;border-radius:13px}
+.hero-premium{padding-block:78px 46px;gap:56px}.hero-copy-wrap{max-width:700px}.hero h1{max-width:780px;margin-bottom:18px}.lede{max-width:680px;line-height:1.8}
+.market-hero-card{border-radius:var(--gmp-radius-xl);padding:26px}.market-price{font-size:clamp(2.7rem,5vw,4.6rem);line-height:1.02;font-weight:850}
+.section{padding-block:64px 0}.section-head{gap:20px}.market-cards{gap:14px}.market-card,.quote-card,.news-card,.module-card,.plan-card,.section-panel,.card,.kpi{border-radius:var(--gmp-radius-lg)}
+.market-card{min-height:128px;padding:18px}.card-icon,.module-icon{border-radius:12px}.merchant-banner{border-radius:var(--gmp-radius-xl);padding:30px 32px}.footer-premium{margin-top:72px}.footer-grid{gap:38px}
+.dashboard-main{padding-block:42px 72px}.dashboard-title{font-size:clamp(2rem,3.2vw,3rem)}.dashboard-kpis{gap:14px}.kpi{padding:19px}.module-card{min-height:154px;padding:21px}.plan-tile{border-radius:14px}
+.preference-icon-button,.preference-language{border-radius:11px}.preference-language-button{font-size:10px;font-weight:800}
+input,select,textarea,.select{min-height:46px;border-radius:11px}label,.label,.field{font-size:12px;font-weight:700}
+html[data-theme="light"]{--gmp-surface-0:#f4f6f8;--gmp-surface-1:#fff;--gmp-surface-2:#edf1f4;--gmp-text:#17262e;--gmp-text-2:#53656e;--gmp-border:rgba(18,37,46,.12);--gmp-shadow-card:0 10px 28px rgba(18,37,46,.07);--gmp-shadow-float:0 18px 48px rgba(18,37,46,.11)}
+html[data-theme="light"] body{background:var(--gmp-surface-0);color:var(--gmp-text)}
+html[data-theme="light"] .topbar{background:rgba(255,255,255,.92)!important}
+html[data-theme="light"] .market-card:hover,html[data-theme="light"] .quote-card:hover,html[data-theme="light"] .news-card:hover,html[data-theme="light"] .module-card:hover,html[data-theme="light"] .plan-card:hover,html[data-theme="light"] .card:hover{box-shadow:var(--gmp-shadow-float)!important;border-color:rgba(139,105,39,.24)!important}
+html[data-theme="light"] .footer-premium{background:#e8edf0!important}
+@media(max-width:900px){:root{--gmp-gutter:20px}.hero-premium{padding-block:62px 34px;gap:34px}.section{padding-top:52px}}
+@media(max-width:600px){:root{--gmp-gutter:14px}html{font-size:15px}h1{font-size:clamp(2rem,9vw,2.7rem)}h2{font-size:clamp(1.5rem,7vw,2rem)}.topbar .nav{min-height:64px;gap:8px}.brand{font-size:14px}.nav-actions{gap:4px}.hero-premium{padding-block:48px 28px}.market-hero-card{padding:20px;border-radius:18px}.market-price{font-size:clamp(2.4rem,13vw,3.5rem)}.section{padding-top:44px}.merchant-banner{padding:24px;border-radius:18px}.footer-premium{margin-top:52px}}
+@media(prefers-reduced-motion:reduce){.market-card,.quote-card,.news-card,.module-card,.plan-card,.card{transition:none!important}}
+
 /* Final visual system layer — presentation only.
    No pricing, auth, data, RLS, RPC, API or business logic changes. */
 

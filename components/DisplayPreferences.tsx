@@ -41,14 +41,21 @@ export default function DisplayPreferences({ language, initialTheme, initialFont
     window.location.assign(url.toString());
   }
 
+  const labels = {
+    ar: { prefs: "إعدادات العرض", font: "حجم الخط", decrease: "تصغير الخط", increase: "تكبير الخط", light: "الوضع النهاري", dark: "الوضع الليلي" },
+    en: { prefs: "Display settings", font: "Font size", decrease: "Decrease text size", increase: "Increase text size", light: "Light mode", dark: "Dark mode" },
+    tr: { prefs: "Görüntü ayarları", font: "Yazı boyutu", decrease: "Yazıyı küçült", increase: "Yazıyı büyüt", light: "Açık tema", dark: "Koyu tema" },
+    de: { prefs: "Anzeigeeinstellungen", font: "Schriftgröße", decrease: "Text verkleinern", increase: "Text vergrößern", light: "Helles Design", dark: "Dunkles Design" },
+  }[language];
+
   return (
-    <div className="display-preferences" aria-label="Display preferences">
-      <div className="font-size-controls" role="group" aria-label="Font size">
-        <button type="button" className="preference-icon-button preference-font-button" onClick={() => setFontSize("small")} aria-label="Decrease text size" title="Decrease text size" disabled={fontScale === "small"}>
+    <div className="display-preferences" aria-label={labels.prefs}>
+      <div className="font-size-controls" role="group" aria-label={labels.font}>
+        <button type="button" className="preference-icon-button preference-font-button" onClick={() => setFontSize("small")} aria-label={labels.decrease} title={labels.decrease} disabled={fontScale === "small"}>
           <Minus size={15} strokeWidth={2.2} />
         </button>
         <span className="font-size-indicator" aria-hidden="true">A</span>
-        <button type="button" className="preference-icon-button preference-font-button" onClick={() => setFontSize("large")} aria-label="Increase text size" title="Increase text size" disabled={fontScale === "large"}>
+        <button type="button" className="preference-icon-button preference-font-button" onClick={() => setFontSize("large")} aria-label={labels.increase} title={labels.increase} disabled={fontScale === "large"}>
           <Plus size={15} strokeWidth={2.2} />
         </button>
       </div>
@@ -56,8 +63,8 @@ export default function DisplayPreferences({ language, initialTheme, initialFont
         type="button"
         className="preference-icon-button"
         onClick={toggleTheme}
-        aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-        title={theme === "dark" ? "Light mode" : "Dark mode"}
+        aria-label={theme === "dark" ? labels.light : labels.dark}
+        title={theme === "dark" ? labels.light : labels.dark}
       >
         {theme === "dark" ? <Sun size={16} strokeWidth={2} /> : <Moon size={16} strokeWidth={2} />}
       </button>
