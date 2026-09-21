@@ -599,3 +599,284 @@ html[dir="rtl"] [data-numeric]{
   direction:ltr;
   unicode-bidi:isolate;
 }
+
+
+/* Accessibility typography + complete light-mode contrast layer.
+   Presentation only. Keep semantic/business/auth/data behavior untouched. */
+html[data-font-scale="small"] body{zoom:.94}
+html[data-font-scale="large"] body{zoom:1.06}
+.font-size-controls{display:inline-flex;align-items:center;gap:2px}
+.preference-font-button:disabled{opacity:.42;cursor:default;transform:none!important}
+.font-size-indicator{display:inline-grid;place-items:center;min-width:18px;color:#81919a;font:900 12px/1 var(--gmp-latin-font)}
+html[data-theme="light"] .font-size-indicator{color:#52636d}
+html[data-theme="light"] .preference-icon-button:hover{color:#654b12}
+
+/* Root surfaces must all move together in light mode. */
+html[data-theme="light"] body,
+html[data-theme="light"] .app-shell,
+html[data-theme="light"] .page-frame,
+html[data-theme="light"] .dashboard-shell,
+html[data-theme="light"] .stage1-main,
+html[data-theme="light"] .stage2-page,
+html[data-theme="light"] .stage2-public,
+html[data-theme="light"] .stage3-page{
+  background:#f3f6f7!important;
+  color:#17262e!important;
+}
+html[data-theme="light"] .app-shell:before,
+html[data-theme="light"] .page-frame:before,
+html[data-theme="light"] .dashboard-shell:before{
+  opacity:.45;
+  background-image:linear-gradient(rgba(12,29,38,.028) 1px,transparent 1px),linear-gradient(90deg,rgba(12,29,38,.018) 1px,transparent 1px);
+}
+
+/* Legacy dark selectors used by Stage 1/2/3 and terminal pages. */
+html[data-theme="light"] .topbar,
+html[data-theme="light"] .dashboard-topbar,
+html[data-theme="light"] .stage1-nav{
+  background:rgba(255,255,255,.94)!important;
+  color:#203039!important;
+  border-color:rgba(12,29,38,.11)!important;
+  box-shadow:0 7px 24px rgba(12,29,38,.07);
+}
+html[data-theme="light"] .dashboard-brand,
+html[data-theme="light"] .stage1-nav-title,
+html[data-theme="light"] .stage1-nav a,
+html[data-theme="light"] .stage1-nav .brand{
+  color:#172b34!important;
+}
+html[data-theme="light"] .nav-links a,
+html[data-theme="light"] .dashboard-nav-main a,
+html[data-theme="light"] .stage1-nav a{
+  color:#50636d!important;
+}
+html[data-theme="light"] .nav-links a:hover,
+html[data-theme="light"] .dashboard-nav-main a:hover,
+html[data-theme="light"] .stage1-nav a:hover{
+  color:#694f15!important;
+  background:rgba(191,145,43,.08)!important;
+}
+html[data-theme="light"] .btn,
+html[data-theme="light"] .btn-ghost,
+html[data-theme="light"] .stage3-btn,
+html[data-theme="light"] .stage2-tabs button,
+html[data-theme="light"] .stage3-tabs button{
+  background:#fff!important;
+  color:#24363e!important;
+  border-color:rgba(12,29,38,.14)!important;
+}
+html[data-theme="light"] .btn:hover,
+html[data-theme="light"] .stage3-btn:hover{
+  background:#f8fafb!important;
+  border-color:rgba(139,105,39,.35)!important;
+}
+html[data-theme="light"] .btn-primary,
+html[data-theme="light"] .stage3-btn-primary,
+html[data-theme="light"] .stage2-tabs button.active,
+html[data-theme="light"] .stage3-tabs button.active{
+  background:linear-gradient(135deg,#e7c878,#c89e3e)!important;
+  color:#17130a!important;
+  border-color:#c89e3e!important;
+}
+html[data-theme="light"] .announcement,
+html[data-theme="light"] .ticker-label,
+html[data-theme="light"] .ticker-grid,
+html[data-theme="light"] .preference-bar{
+  background:#fff!important;
+  color:#33464f!important;
+  border-color:rgba(12,29,38,.11)!important;
+}
+html[data-theme="light"] .announcement a,
+html[data-theme="light"] .text-link{color:#705313!important}
+html[data-theme="light"] .ticker-grid a{border-color:rgba(12,29,38,.08)!important}
+html[data-theme="light"] .ticker-grid strong{color:#22353e!important}
+html[data-theme="light"] .ticker-grid span,
+html[data-theme="light"] .ticker-grid em{color:#65767f!important}
+
+/* Cards, panels and operational modules. */
+html[data-theme="light"] .hero-card,
+html[data-theme="light"] .gold-card,
+html[data-theme="light"] .notice,
+html[data-theme="light"] .stage2-panel,
+html[data-theme="light"] .stage2-kpis>div,
+html[data-theme="light"] .stage2-store-card,
+html[data-theme="light"] .stage2-product-card,
+html[data-theme="light"] .stage2-cart,
+html[data-theme="light"] .stage2-drawer-panel,
+html[data-theme="light"] .stage3-card,
+html[data-theme="light"] .stage3-panel,
+html[data-theme="light"] .stage3-table-wrap,
+html[data-theme="light"] .terminal-card,
+html[data-theme="light"] .terminal-chart-card,
+html[data-theme="light"] .terminal-primary-metrics>div,
+html[data-theme="light"] .gold-spot,
+html[data-theme="light"] .gold-purity-card,
+html[data-theme="light"] .gold-history-card{
+  background:#fff!important;
+  color:#24363e!important;
+  border-color:rgba(12,29,38,.11)!important;
+  box-shadow:0 12px 34px rgba(12,29,38,.07)!important;
+}
+html[data-theme="light"] .stage2-mini-list>div,
+html[data-theme="light"] .stage2-callout,
+html[data-theme="light"] .stage2-detail-grid>div,
+html[data-theme="light"] .stage2-tags span,
+html[data-theme="light"] .compare-grid>div,
+html[data-theme="light"] .pricing-breakdown>div,
+html[data-theme="light"] .terminal-empty-chart,
+html[data-theme="light"] .gold-triple div,
+html[data-theme="light"] .stage3-result,
+html[data-theme="light"] .stage3-empty,
+html[data-theme="light"] .alert-rule-row{
+  background:#f6f8f9!important;
+  color:#44565f!important;
+  border-color:rgba(12,29,38,.09)!important;
+}
+html[data-theme="light"] .module-card,
+html[data-theme="light"] .stage2-store-card,
+html[data-theme="light"] .stage2-product-card{
+  color:#263941!important;
+}
+html[data-theme="light"] .module-icon,
+html[data-theme="light"] .stage2-store-mark,
+html[data-theme="light"] .card-icon{
+  background:#f0f4f5!important;
+  border-color:rgba(12,29,38,.10)!important;
+}
+html[data-theme="light"] .module-arrow,
+html[data-theme="light"] .meta,
+html[data-theme="light"] .muted,
+html[data-theme="light"] .dashboard-subtitle,
+html[data-theme="light"] .stage2-section-title p,
+html[data-theme="light"] .stage2-panel p,
+html[data-theme="light"] .stage2-panel small,
+html[data-theme="light"] .stage2-store-main p,
+html[data-theme="light"] .stage2-meta-line,
+html[data-theme="light"] .stage3-header p,
+html[data-theme="light"] .stage3-card p,
+html[data-theme="light"] .stage3-panel p,
+html[data-theme="light"] .stage3-meta,
+html[data-theme="light"] .terminal-footnote,
+html[data-theme="light"] .terminal-source,
+html[data-theme="light"] .gold-spot>span,
+html[data-theme="light"] .gold-triple span{
+  color:#667780!important;
+}
+html[data-theme="light"] .kpi-label,
+html[data-theme="light"] .stage2-kpis span,
+html[data-theme="light"] .stage2-kpis small,
+html[data-theme="light"] .stage2-table-wrap th,
+html[data-theme="light"] .stage3-table th,
+html[data-theme="light"] .trust-list span,
+html[data-theme="light"] .compare-grid span,
+html[data-theme="light"] .pricing-breakdown span{
+  color:#66777f!important;
+}
+html[data-theme="light"] .kpi-value,
+html[data-theme="light"] .stage2-kpis strong,
+html[data-theme="light"] .stage3-card strong,
+html[data-theme="light"] .terminal-primary-metrics strong,
+html[data-theme="light"] .terminal-primary-metrics b,
+html[data-theme="light"] .gold-triple b,
+html[data-theme="light"] .gold-purity-card b{
+  color:#182b34!important;
+}
+
+/* Forms and tables need explicit contrast instead of inheriting dark-theme values. */
+html[data-theme="light"] .select,
+html[data-theme="light"] .field input,
+html[data-theme="light"] .field select,
+html[data-theme="light"] .stage2-form-grid input,
+html[data-theme="light"] .stage2-form-grid select,
+html[data-theme="light"] .stage2-form-grid textarea,
+html[data-theme="light"] .stage2-panel input,
+html[data-theme="light"] .stage2-panel select,
+html[data-theme="light"] .stage2-panel textarea,
+html[data-theme="light"] .stage2-cart input,
+html[data-theme="light"] .stage2-cart select,
+html[data-theme="light"] .stage2-cart textarea,
+html[data-theme="light"] .stage2-search input,
+html[data-theme="light"] .stage2-market-search input,
+html[data-theme="light"] .stage3-field input,
+html[data-theme="light"] .stage3-field select,
+html[data-theme="light"] .stage3-card textarea,
+html[data-theme="light"] .pricing-form-grid input,
+html[data-theme="light"] .pricing-form-grid select,
+html[data-theme="light"] .alert-form input{
+  background:#fff!important;
+  color:#1e3038!important;
+  border-color:rgba(12,29,38,.16)!important;
+  color-scheme:light;
+}
+html[data-theme="light"] .stage2-form-grid label,
+html[data-theme="light"] .stage2-panel label,
+html[data-theme="light"] .stage2-cart label,
+html[data-theme="light"] .stage3-field,
+html[data-theme="light"] .pricing-form-grid label,
+html[data-theme="light"] .alert-form label,
+html[data-theme="light"] .label,
+html[data-theme="light"] .field{
+  color:#53656e!important;
+}
+html[data-theme="light"] .stage2-table-wrap,
+html[data-theme="light"] .stage2-table-wrap table{
+  background:#fff!important;
+  color:#263941!important;
+  border-color:rgba(12,29,38,.10)!important;
+}
+html[data-theme="light"] .stage2-table-wrap td,
+html[data-theme="light"] .stage3-table td{
+  color:#30434c!important;
+  border-color:rgba(12,29,38,.08)!important;
+}
+html[data-theme="light"] .stage2-empty{
+  color:#687981!important;
+  border-color:rgba(12,29,38,.18)!important;
+  background:#fafbfb!important;
+}
+html[data-theme="light"] .stage3-field input::placeholder,
+html[data-theme="light"] input::placeholder,
+html[data-theme="light"] textarea::placeholder{color:#8a989f!important}
+
+/* Dark text cannot remain on white-only controls, while gold remains the accent. */
+html[data-theme="light"] .eyebrow,
+html[data-theme="light"] .kicker,
+html[data-theme="light"] .stage3-eyebrow{color:#80631d!important}
+html[data-theme="light"] .market-price,
+html[data-theme="light"] .gold-spot>strong,
+html[data-theme="light"] .screen-gold-price,
+html[data-theme="light"] .demo-screen-primary strong{
+  color:#182a33!important;
+  text-shadow:none!important;
+}
+html[data-theme="light"] .screen-gold,
+html[data-theme="light"] .demo-screen-primary{
+  background:radial-gradient(circle at 50% 0,rgba(191,145,43,.09),transparent 42%),#fff!important;
+  color:#1d3038!important;
+}
+html[data-theme="light"] .stage2-drawer{background:rgba(20,30,35,.34)!important}
+html[data-theme="light"] .dashboard-mobile-menu[open] nav{
+  background:#fff!important;
+  border-color:rgba(12,29,38,.12)!important;
+  box-shadow:0 18px 50px rgba(12,29,38,.14);
+}
+html[data-theme="light"] .dashboard-mobile-menu nav a{color:#40535d!important}
+html[data-theme="light"] .dashboard-mobile-menu nav a:hover{background:#f0f4f5!important;color:#6b5015!important}
+
+/* Footer and secondary surfaces. */
+html[data-theme="light"] .footer-premium{
+  background:#e7edef!important;
+  color:#43555e!important;
+  border-color:rgba(12,29,38,.11)!important;
+}
+html[data-theme="light"] .footer-grid p,
+html[data-theme="light"] .footer-grid span,
+html[data-theme="light"] .footer-grid a,
+html[data-theme="light"] .footer-bottom{color:#60717a!important}
+html[data-theme="light"] .footer-grid strong{color:#263941!important}
+
+/* Mobile keeps the same contrast system; no white-on-white menus or cards. */
+@media(max-width:760px){
+  html[data-font-scale="large"] body{zoom:1.03}
+  html[data-font-scale="small"] body{zoom:.97}
+}
