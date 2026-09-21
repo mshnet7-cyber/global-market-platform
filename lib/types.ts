@@ -1,4 +1,5 @@
 export type DataStatus = "LIVE" | "DELAYED" | "STALE" | "ESTIMATED" | "UNAVAILABLE" | "DEMO";
+
 export type Metal = "gold" | "silver";
 
 export type Quote = {
@@ -15,6 +16,7 @@ export type Quote = {
   currency: string;
   unit: string;
   timestamp: string | null;
+  receivedAt?: string | null;
   provider: string;
   status: DataStatus;
 };

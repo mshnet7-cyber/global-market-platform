@@ -54,6 +54,7 @@ export async function POST(request: Request) {
     p_timezone: country.timezone,
     p_org_slug: orgSlug,
     p_store_slug: storeSlug,
+    p_plan_code: plan || "starter",
   });
 
   if (bootstrapError) {

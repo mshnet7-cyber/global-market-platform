@@ -2,9 +2,11 @@ import { readBoundedRequestJson } from "../../../lib/bounded-body";
 import { NextResponse } from "next/server";
 import crypto from "node:crypto";
 import { createSupabaseAdminClient } from "../../../lib/supabase/admin";
+import { getDemoSession } from "../../../lib/demo-auth";
 import { requireStage2Permission, type Stage2Permission } from "../../../lib/stage2-access";
 import { recordAuditEvent } from "../../../lib/provider-observability";
 import { queueCustomerWhatsApp } from "../../../lib/operational-notifications";
+import { isSameOriginRequest } from "../../../lib/request-security";
 
 const json = (data: unknown, status = 200) => NextResponse.json(data, {
   status,
@@ -54,16 +56,17 @@ export async function GET(request: Request) {
   try {
 
     if (action === "marketplace") {
-      const admin = createSupabaseAdminClient();
-      if (!admin) return json({ error: "not_configured" }, 503);
-      const { data: directory } = await admin.from("gmp_store_directory")
+      const demo = await getDemoSession();
+      const db = createSupabaseAdminClient(demo ? { "x-gmp-demo-role": demo.role } : undefined);
+      if (!db) return json({ error: "not_configured" }, 503);
+      const { data: directory } = await db.from("gmp_store_directory")
         .select("store_id,status,description,category,city,services,hours")
         .eq("status","published").limit(200);
       const storeIds = (directory ?? []).map((x:any)=>x.store_id);
       if (!storeIds.length) return json({ stores: [], listings: [] });
       const [{ data: stores }, { data: listings, error }] = await Promise.all([
-        admin.from("gmp_stores").select("id,name,slug,phone,whatsapp,logo_path,country_code,currency,timezone").in("id",storeIds),
-        admin.from("gmp_marketplace_listings").select("id,store_id,listing_type,title,description,category,price,currency,availability,contact_mode,image_path,updated_at").in("store_id",storeIds).eq("status","active").order("updated_at",{ascending:false}).limit(500)
+        db.from("gmp_stores").select("id,name,slug,phone,whatsapp,logo_path,country_code,currency,timezone").in("id",storeIds),
+        db.from("gmp_marketplace_listings").select("id,store_id,listing_type,title,description,category,price,currency,availability,contact_mode,image_path,updated_at").in("store_id",storeIds).eq("status","active").order("updated_at",{ascending:false}).limit(500)
       ]);
       if(error) return json({error:error.message},400);
       const dirMap=new Map((directory??[]).map((d:any)=>[d.store_id,d]));
@@ -75,17 +78,17 @@ export async function GET(request: Request) {
     }
 
     if (action === "directory") {
-      const admin = createSupabaseAdminClient();
-      if (!admin) return json({ error: "not_configured" }, 503);
+      const db = createSupabaseAdminClient();
+      if (!db) return json({ error: "not_configured" }, 503);
       const q = text(url.searchParams.get("q"), 80).toLowerCase();
       const city = text(url.searchParams.get("city"), 80).toLowerCase();
       const category = text(url.searchParams.get("category"), 80).toLowerCase();
-      const { data: rows, error } = await admin.from("gmp_store_directory")
+      const { data: rows, error } = await db.from("gmp_store_directory")
         .select("store_id,status,description,category,address,city,region,website,services,hours,social_links,verified_at,published_at,updated_at")
         .eq("status", "published").order("published_at", { ascending: false }).limit(100);
       if (error) return json({ error: error.message }, 400);
       const ids = (rows ?? []).map(r => r.store_id);
-      const { data: stores } = ids.length ? await admin.from("gmp_stores").select("id,name,slug,phone,whatsapp,logo_path,country_code,currency,timezone").in("id", ids) : { data: [] as any[] };
+      const { data: stores } = ids.length ? await db.from("gmp_stores").select("id,name,slug,phone,whatsapp,logo_path,country_code,currency,timezone").in("id", ids) : { data: [] as any[] };
       const storeMap = new Map((stores ?? []).map(s => [s.id, s]));
       const data = (rows ?? []).map(r => ({ ...r, store: storeMap.get(r.store_id) ?? null })).filter(r => {
         const hay = JSON.stringify(r).toLowerCase();
@@ -96,39 +99,39 @@ export async function GET(request: Request) {
     }
 
     if (action === "store") {
-      const admin = createSupabaseAdminClient();
-      if (!admin) return json({ error: "not_configured" }, 503);
+      const db = createSupabaseAdminClient();
+      if (!db) return json({ error: "not_configured" }, 503);
       const slug = text(url.searchParams.get("slug"), 100);
-      const { data: stores } = await admin.from("gmp_stores").select("id,organization_id,branch_id,name,slug,phone,whatsapp,logo_path,country_code,currency,timezone")
+      const { data: stores } = await db.from("gmp_stores").select("id,organization_id,branch_id,name,slug,phone,whatsapp,logo_path,country_code,currency,timezone")
         .eq("slug", slug).limit(1);
       const store = stores?.[0];
       if (!store) return json({ error: "store_not_found" }, 404);
-      const { data: directory } = await admin.from("gmp_store_directory").select("store_id,status,description,category,address,city,region,postal_code,latitude,longitude,website,services,hours,social_links,verified_at,published_at,created_at,updated_at").eq("store_id", store.id).eq("status","published").maybeSingle();
+      const { data: directory } = await db.from("gmp_store_directory").select("store_id,status,description,category,address,city,region,postal_code,latitude,longitude,website,services,hours,social_links,verified_at,published_at,created_at,updated_at").eq("store_id", store.id).eq("status","published").maybeSingle();
       if (!directory) return json({ error: "store_not_published" }, 404);
-      const { data: listings } = await admin.from("gmp_marketplace_listings")
+      const { data: listings } = await db.from("gmp_marketplace_listings")
         .select("id,listing_type,title,description,category,price,currency,availability,contact_mode,image_path,updated_at")
         .eq("store_id", store.id).eq("status","active").order("updated_at",{ascending:false}).limit(200);
       const { data: branches } = store.branch_id
-        ? await admin.from("gmp_branches").select("id,name,code,city,address,phone,whatsapp,active").eq("organization_id", store.organization_id).eq("id", store.branch_id).eq("active",true).limit(1)
+        ? await db.from("gmp_branches").select("id,name,code,city,address,phone,whatsapp,active").eq("organization_id", store.organization_id).eq("id", store.branch_id).eq("active",true).limit(1)
         : { data: [] };
       const publicStore = { id: store.id, name: store.name, slug: store.slug, phone: store.phone, whatsapp: store.whatsapp, logo_path: store.logo_path, country_code: store.country_code, currency: store.currency, timezone: store.timezone };
       return json({ store: publicStore, directory, listings: listings ?? [], branches: branches ?? [] });
     }
 
     if (action === "listings") {
-      const admin = createSupabaseAdminClient();
-      if (!admin) return json({ error: "not_configured" }, 503);
+      const db = createSupabaseAdminClient();
+      if (!db) return json({ error: "not_configured" }, 503);
       const storeId = text(url.searchParams.get("store_id"), 80);
       const slug = text(url.searchParams.get("slug"), 100);
       let target = storeId;
       if (!target && slug) {
-        const { data: s } = await admin.from("gmp_stores").select("id").eq("slug",slug).maybeSingle();
+        const { data: s } = await db.from("gmp_stores").select("id").eq("slug",slug).maybeSingle();
         target = s?.id ?? "";
       }
       if (!isUuid(target)) return json({ error: "store_required" }, 400);
-      const { data: directory } = await admin.from("gmp_store_directory").select("store_id,status").eq("store_id",target).eq("status","published").maybeSingle();
+      const { data: directory } = await db.from("gmp_store_directory").select("store_id,status").eq("store_id",target).eq("status","published").maybeSingle();
       if (!directory) return json({ error: "store_not_published" }, 404);
-      const { data, error } = await admin.from("gmp_marketplace_listings")
+      const { data, error } = await db.from("gmp_marketplace_listings")
         .select("id,listing_type,title,description,category,price,currency,availability,contact_mode,image_path,updated_at")
         .eq("store_id",target).eq("status","active").order("updated_at",{ascending:false}).limit(200);
       if (error) return json({ error: error.message },400);
@@ -215,6 +218,7 @@ export async function POST(request: Request) {
     return json({ error: message }, message === "request_body_too_large" ? 413 : 400);
   }
   const action = text(b.action, 80);
+  if (action !== "marketplace_order" && !isSameOriginRequest(request)) return json({error:"cross_site_request"},403);
   try {
     if (action === "marketplace_order") {
       const admin = createSupabaseAdminClient();

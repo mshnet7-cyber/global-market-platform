@@ -2,28 +2,44 @@
   "name": "global-market-platform",
   "version": "0.3.2",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev",
+    "dev:vinext": "vinext dev",
     "build": "next build",
+    "build:vinext": "vinext build",
     "start": "next start",
+    "start:vinext": "vinext start",
+    "deploy:cloudflare": "vinext-cloudflare deploy",
+    "deploy:cloudflare:dry-run": "vinext-cloudflare deploy --dry-run",
     "lint": "eslint .",
     "verify": "node scripts/verify-project.mjs",
-    "test": "node --test tests/merchant-workflows.test.mjs tests/stage1-core.test.mjs tests/stage2-core.test.mjs tests/stage3-core.test.mjs && npm run verify"
+    "test": "node --test tests/auth-demo.test.mjs tests/merchant-workflows.test.mjs tests/stage1-core.test.mjs tests/stage2-core.test.mjs tests/stage3-core.test.mjs && npm run verify",
+    "check:vinext": "vinext check"
   },
   "dependencies": {
     "@supabase/ssr": "0.7.0",
     "@supabase/supabase-js": "2.57.4",
     "next": "16.3.3",
-    "react": "19.2.0",
-    "react-dom": "19.2.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
     "lucide-react": "0.468.0"
   },
   "devDependencies": {
-    "@types/node": "22.10.2",
-    "@types/react": "19.0.2",
-    "@types/react-dom": "19.0.2",
+    "@cloudflare/vite-plugin": "1.56.0",
+    "@cloudflare/workers-types": "5.20260919.1",
+    "@types/node": "22.12.0",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vinext/cloudflare": "1.0.0-beta.8",
+    "@vitejs/plugin-react": "6.1.1",
+    "@vitejs/plugin-rsc": "0.5.35",
     "eslint": "9.39.5",
     "eslint-config-next": "16.3.3",
-    "typescript": "5.7.2"
+    "react-server-dom-webpack": "19.3.0",
+    "typescript": "5.7.2",
+    "vite": "8.2.2",
+    "vinext": "1.0.0-beta.10",
+    "wrangler": "4.135.0"
   }
 }

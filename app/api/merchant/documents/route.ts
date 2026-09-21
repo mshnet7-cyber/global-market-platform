@@ -1,3 +1,4 @@
+import { isSameOriginRequest } from "../../../../lib/request-security";
 import { NextResponse } from "next/server";
 import { createHash, randomUUID } from "node:crypto";
 import { requireMerchantPlan } from "../../../../lib/merchant-access";
@@ -30,6 +31,8 @@ export async function GET(){
 }
 
 export async function POST(request:Request){
+  if (!isSameOriginRequest(request)) return new Response(JSON.stringify({ error: "cross_site_request" }), { status: 403, headers: { "content-type": "application/json", "cache-control": "no-store" } });
+
   try{
     const {supabase,organization,user}=await requireMerchantPlan(["business"]);
     const admin=createSupabaseAdminClient(); if(!admin)return json({error:"service_not_configured"},503);

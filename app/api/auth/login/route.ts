@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "../../../../lib/supabase/server";
 import { isSameOriginRequest } from "../../../../lib/request-security";
 import { readBoundedRequestFormData } from "../../../../lib/bounded-body";
+import { clearDemoSession, matchDemoCredentials, setDemoSession } from "../../../../lib/demo-auth";
 
 function safeNext(value: unknown) {
   const next = String(value ?? "").trim();
@@ -17,6 +18,14 @@ export async function POST(request: Request) {
   const password = String(form.get("password") ?? "");
   const next = safeNext(form.get("next"));
   if (!email || password.length < 1) return NextResponse.redirect(new URL(`/login?error=invalid&next=${encodeURIComponent(next)}`, request.url));
+
+  const demoRole = matchDemoCredentials(email, password);
+  if (demoRole) {
+    await clearDemoSession();
+    await setDemoSession(demoRole);
+    const demoNext = demoRole === "platform_admin" ? "/admin" : next;
+    return NextResponse.redirect(new URL(demoNext, request.url));
+  }
 
   const supabase = await createSupabaseServerClient();
   if (!supabase) return new NextResponse("Supabase is not configured.", { status: 503 });

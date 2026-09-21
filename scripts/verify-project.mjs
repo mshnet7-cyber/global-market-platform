@@ -15,6 +15,35 @@ const pkg = JSON.parse(text("package.json"));
 ok("Next is declared", Boolean(pkg.dependencies?.next));
 ok("build script exists", typeof pkg.scripts?.build === "string");
 ok("lint script exists", typeof pkg.scripts?.lint === "string");
+ok("vinext deployment path exists", typeof pkg.scripts?.["build:vinext"] === "string" && typeof pkg.scripts?.["deploy:cloudflare"] === "string" && typeof pkg.scripts?.["deploy:cloudflare:dry-run"] === "string");
+ok("Cloudflare Vite config exists", existsSync(join(root,"vite.config.ts")));
+ok("Cloudflare Wrangler config exists", existsSync(join(root,"wrangler.jsonc")));
+ok("Cloudflare worker entry exists", existsSync(join(root,"worker/index.ts")));
+ok("OMR symbol artwork exists", existsSync(join(root,"public","omr-symbol.svg")));
+ok("OMR asset pack is saved", ["svg","png","pdf","eps"].every(ext=>existsSync(join(root,"public","omr",`omr-symbol.${ext}`))));
+ok("OMR money component exists", existsSync(join(root,"components","MoneyDisplay.tsx")));
+ok("OMR money component is wired into public displays", text("app/page.tsx").includes("MoneyDisplay") && text("app/gold/GoldIntelligence.tsx").includes("MoneyDisplay") && text("app/silver/SilverIntelligence.tsx").includes("MoneyDisplay") && text("app/markets/MarketTerminal.tsx").includes("MoneyDisplay") && text("app/screen/page.tsx").includes("MoneyDisplay") && text("app/store/[slug]/page.tsx").includes("MoneyDisplay"));
+ok("OMR money component is wired into commerce and billing displays", text("app/marketplace/page.tsx").includes("MoneyDisplay") && text("app/dashboard/page.tsx").includes("MoneyDisplay") && text("app/pricing/page.tsx").includes("MoneyDisplay"));
+const migrationFiles = execFileSync("git",["ls-files","supabase/migrations"],{encoding:"utf8"}).split("\n").filter(Boolean);
+
+const saasPlans=text("lib/saas-plans.ts");
+ok("central SaaS plan contract exists", saasPlans.includes('MerchantPlanCode') && saasPlans.includes('MERCHANT_PLANS') && saasPlans.includes('ADDITIONAL_SCREEN_PRICING') && saasPlans.includes('isMerchantPlanCode'));
+ok("SaaS trial onboarding migration is tracked", migrationFiles.some(x=>x.includes("20260920233712_gmp_saas_trial_onboarding_v1.sql")));
+ok("trial store limit consistency migration is tracked", migrationFiles.some(x=>x.includes("20260920235614_gmp_trial_store_limit_consistency_v1.sql")));
+ok("market quote receipt migration is tracked", migrationFiles.some(x=>x.includes("20260921000056_gmp_price_quote_receipt_timestamps_v1.sql")));
+ok("market quote provenance is persisted", text("lib/providers/index.ts").includes("received_at: snapshot.receivedAt") && text("lib/providers/index.ts").includes("received_at: quote.receivedAt"));
+
+ok("signup passes selected SaaS plan to bootstrap", text("app/api/auth/signup/route.ts").includes("p_plan_code: plan || \"starter\""));
+ok("merchant entitlements are centrally enforced", text("lib/merchant-access.ts").includes("requireMerchantEntitlement") && text("app/api/merchant/sales/route.ts").includes('requireMerchantEntitlement("pos")') && text("app/api/merchant/operations/route.ts").includes("entitlements"));
+ok("store provisioning recognizes trial subscriptions", migrationFiles.some(x=>x.includes("20260920235614_gmp_trial_store_limit_consistency_v1.sql")));
+ok("market trust carries receipt time", text("lib/types.ts").includes("receivedAt") && text("lib/price-engine.ts").includes("receivedAt") && text("lib/market-history.ts").includes("received_at"));
+ok("trial store RPC is server-only", migrationFiles.some(x=>x.includes("20260920235614_gmp_trial_store_limit_consistency_v1.sql")));
+ok("trialing subscription status constraint is tracked", migrationFiles.some(x=>x.includes("20260921001356_gmp_add_trialing_subscription_status_v1.sql")));
+ok("billing checkout supports initial or renewal subscription", text("app/api/stage3/billing/route.ts").includes('getMerchantContext') && !text("app/api/stage3/billing/route.ts").includes("requireMerchantPlan([\"starter\",\"pro\",\"business\"])"));
+ok("pricing page consumes central SaaS contract", text("app/pricing/page.tsx").includes('MERCHANT_PLANS.map') && text("app/pricing/page.tsx").includes('ADDITIONAL_SCREEN_PRICING'));
+ok("dashboard consumes central SaaS contract", text("app/dashboard/page.tsx").includes('MERCHANT_PLANS.map') && text("app/dashboard/page.tsx").includes('getMerchantPlan'));
+ok("merchant access validates SaaS plan codes", text("lib/merchant-access.ts").includes('isMerchantPlanCode') && text("lib/merchant-access.ts").includes('type MerchantPlanCode'));
+
 ok("merchant camera API exists", existsSync(join(root,"app/api/merchant/cameras/route.ts")));
 ok("merchant compliance API exists", existsSync(join(root,"app/api/merchant/compliance/route.ts")));
 ok("merchant invoicing API exists", existsSync(join(root,"app/api/merchant/invoicing/route.ts")));
@@ -30,12 +59,12 @@ ok("WhatsApp retry claim tracked", whatsappRetry.includes("for update skip locke
 const webhookApi=text("app/api/dashboard/webhooks/route.ts");
 ok("webhook destination validation wired", webhookApi.includes("validateWebhookUrl") && webhookApi.includes("invalid_webhook_destination"));
 const webhooks=text("lib/webhooks.ts");
-ok("webhook SSRF guard", webhooks.includes("dns/promises") && webhooks.includes('redirect:"error"') && webhooks.includes("webhook_destination_not_allowed"));
+ok("webhook SSRF guard", webhooks.includes("node:dns") && webhooks.includes("resolve4") && webhooks.includes("resolve6") && !webhooks.includes("dns/promises") && !webhooks.includes("lookup(") && webhooks.includes('redirect:"error"') && webhooks.includes("webhook_destination_not_allowed"));
+ok("OMR Unicode does not leak into plain-text formatter", !webhooks.includes("\\u20C4"));
 const storePage=text("app/store/[slug]/page.tsx");
 ok("public store requires publication", storePage.includes("notFound()") && storePage.includes('eq("status","published")'));
 const marketplaceLock=text("supabase/migrations/20260918204610_gmp_marketplace_rpc_security_hardening_20260919.sql");
 ok("public marketplace RPC locked down", marketplaceLock.includes("revoke execute on function public.gmp_create_marketplace_order") && marketplaceLock.includes("from anon,authenticated"));
-const migrationFiles = execFileSync("git",["ls-files","supabase/migrations"],{encoding:"utf8"}).split("\n").filter(Boolean);
 const migrationVersionOwners = new Map();
 const duplicateMigrationVersions = [];
 for (const file of migrationFiles) {
@@ -47,6 +76,8 @@ for (const file of migrationFiles) {
   migrationVersionOwners.set(match[1], file);
 }
 ok("migration filename versions are unique", duplicateMigrationVersions.length === 0, duplicateMigrationVersions.join("; "));
+ok("production migration versions are tracked", migrationFiles.some(x=>x.includes("20260920014853_gmp_preview_demo_server_only.sql")) && migrationFiles.some(x=>x.includes("20260920021211_gmp_revoke_anon_mutations.sql")));
+ok("stale migration versions are absent", !migrationFiles.some(x=>x.includes("20260920060000_gmp_preview_demo_server_only.sql")) && !migrationFiles.some(x=>x.includes("20260920023000_gmp_revoke_anon_mutations.sql")) && !migrationFiles.some(x=>x.includes("20260920043000_gmp_preview_demo_admin_rls.sql")) && !migrationFiles.some(x=>x.includes("20260920043100_gmp_preview_demo_shop_grants.sql")) && !migrationFiles.some(x=>x.includes("20260920043200_gmp_preview_demo_directory_rls.sql")));
 ok("operational workflow migration tracked", migrationFiles.some(x=>x.includes("gmp_full_plan_operational_workflows_v1")));
 ok("camera endpoint migration tracked", migrationFiles.some(x=>x.includes("gmp_camera_endpoint_hardening_v1")));
 ok("invoicing hardening migration tracked", migrationFiles.some(x=>x.includes("gmp_harden_invoicing_rls_indexes_transitions_v1")));
@@ -61,12 +92,13 @@ ok("invoice API enforces transition allowlist", invoiceApi.includes("invalid_sub
 const complianceApi=text("app/api/merchant/compliance/route.ts");
 ok("compliance API enforces transition allowlist", complianceApi.includes("invalid_case_transition") && complianceApi.includes("transitions[current.status]"));
 const ci=text(".github/workflows/ci.yml");
+ok("CI quality job is defined", ci.includes("jobs:") && ci.includes("quality:") && ci.includes("runs-on: ubuntu-latest"));
 ok("CI runs tests", ci.includes("npm test"));
 ok("CI runs lint", ci.includes("npm run lint"));
 ok("CI runs build", ci.includes("npm run build"));
+ok("CI validates Cloudflare dry-run", ci.includes("npm run deploy:cloudflare:dry-run"));
 const hardening=text("supabase/migrations/20260918204134_gmp_p0_p1_hardening_20260919.sql");
 ok("marketplace abuse protection tracked", hardening.includes("gmp_public_order_rate_limits") && hardening.includes("gmp_allow_public_marketplace_order"));
-
 ok("marketplace RPC execute lockdown tracked", marketplaceLock.includes("revoke execute on function public.gmp_create_marketplace_order") && marketplaceLock.includes("from anon,authenticated"));
 ok("webhook retry hardening tracked", hardening.includes("gmp_claim_due_webhook_deliveries") && hardening.includes("dead_lettered"));
 const launchIndexes=text("supabase/migrations/20260919004107_gmp_launch_fk_indexes.sql");
@@ -81,4 +113,24 @@ ok("billing claim migration tracked", billingClaim.includes("gmp_claim_billing_e
 ok("e-invoice claim migration tracked", einvoiceClaim.includes("gmp_claim_einvoice_send") && einvoiceClaim.includes("for update") && einvoiceClaim.includes("revoke execute"));
 ok("compliance active-case guard tracked", complianceGuard.includes("gmp_compliance_active_entity_uniq"));
 ok("health endpoint does not expose env names", !text("app/api/health/route.ts").includes("missingEnvironmentVariables"));
+ok("Cloudflare cron bridge is configured", text("worker/index.ts").includes("/api/cron/webhooks") && text("worker/index.ts").includes("/api/cron/whatsapp") && text("worker/index.ts").includes("controller.cron"));
+ok("Cloudflare Workers config uses Worker entry and daily crons", text("wrangler.jsonc").includes('"main": "./worker/index.ts"') && text("wrangler.jsonc").includes('"0 0 * * *"') && text("wrangler.jsonc").includes('"5 0 * * *"'));
+ok("OMR display uses inline vector", text("components/MoneyDisplay.tsx").includes("<svg className=\"omr-symbol\"") && text("components/MoneyDisplay.tsx").includes("currentColor"));
+const demoAuth=text("lib/demo-auth.ts");
+const loginRoute=text("app/api/auth/login/route.ts");
+const adminApi=text("app/api/admin/overview/route.ts");
+const logoutRoute=text("app/api/auth/logout/route.ts");
+ok("preview-only demo auth is implemented", demoAuth.includes('VERCEL_ENV === "preview"') && !demoAuth.includes('DEMO_MODE === "true"') && demoAuth.includes("matchDemoCredentials"));
+ok("demo admin credentials route is wired", loginRoute.includes("matchDemoCredentials") && loginRoute.includes('demoRole === "platform_admin"') && adminApi.includes("getDemoSession"));
+ok("demo shop is wired to merchant context", text("lib/merchant-access.ts").includes('if (demo)') && text("lib/merchant-access.ts").includes('demo.role !== "shop_owner"') && text("lib/merchant-access.ts").includes('global-market-demo-shop'));
+const stage2DemoGuard=text("supabase/migrations/20260920033811_gmp_stage2_demo_service_role_guard_v1.sql");
+ok("Stage 2 demo actor override is service-role bound", stage2DemoGuard.includes("auth.role()") && stage2DemoGuard.includes("service_role") && stage2DemoGuard.includes("x-gmp-demo-role") && stage2DemoGuard.includes("updated_count <> 5"));
+const stage2Route=text("app/api/stage2/route.ts");
+ok("Stage 2 transaction RPCs are hardened and direct", stage2Route.includes('rpc("gmp_create_inventory_product"') && stage2Route.includes('rpc("gmp_create_and_post_sale"') && stage2Route.includes('rpc("gmp_create_purchase"') && stage2Route.includes('rpc("gmp_create_and_post_expense"') && stage2Route.includes('rpc("gmp_create_manual_journal"') && !stage2Route.includes("gmp_demo_create_"));
+ok("Stage 2 schema compatibility migrations are tracked", migrationFiles.some(x=>x.includes("20260920012226_gmp_fix_stage2_store_active_column_20260920.sql")) && migrationFiles.some(x=>x.includes("20260920012330_gmp_fix_stage2_sale_generated_line_total_20260920.sql")) && migrationFiles.some(x=>x.includes("20260920012448_gmp_fix_stage2_supplier_active_column_20260920.sql")) && migrationFiles.some(x=>x.includes("20260920012655_gmp_fix_stage2_transaction_auth_and_rls_20260920.sql")) && migrationFiles.some(x=>x.includes("20260920012727_gmp_fix_stage2_product_demo_actor_20260920.sql")));
+ok("demo session is cleared on logout", logoutRoute.includes("clearDemoSession"));
+const loginPage=text("app/login/page.tsx");
+const loginActions=text("app/login/actions.ts");
+ok("demo login is credential-bound and signed", loginActions.includes("\"use server\"") && loginActions.includes("matchDemoCredentials") && loginActions.includes("setDemoSession") && !loginActions.includes("demoLoginAction") && !loginPage.includes("demoLoginAction") && demoAuth.includes("gmp_demo_session") && demoAuth.includes("crypto.subtle.verify"));
+ok("OMR fallback stays ASCII-safe", text("lib/currency-display.ts").includes("OMR") && !text("lib/currency-display.ts").includes("⃄") && !text("lib/currency-display.ts").includes("\\u20C4"));
 console.log(`verify-project: ${checks.length} checks passed`);

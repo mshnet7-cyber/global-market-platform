@@ -34,6 +34,7 @@ export function makeMetalSnapshot(params: {
   currency: string;
   provider: string;
   timestamp: string | null;
+  receivedAt?: string | null;
   status: MetalSnapshot["status"];
 }): MetalSnapshot {
   const spot = convertUsd(params.ounceUsd, params.localPerUsd);
@@ -49,6 +50,7 @@ export function makeMetalSnapshot(params: {
     currency: params.currency,
     unit: "troy_ounce",
     timestamp: params.timestamp,
+    receivedAt: params.receivedAt ?? null,
     provider: params.provider,
     status: params.status,
     perGram24k,

@@ -1,9 +1,11 @@
+import { isSameOriginRequest } from "../../../../lib/request-security";
 import { readBoundedRequestJson } from "../../../../lib/bounded-body";
 import { NextResponse } from "next/server";
-import { requireMerchantPlan } from "../../../../lib/merchant-access";
+import { requireMerchantPlan, requireMerchantEntitlement } from "../../../../lib/merchant-access";
 import { queueCustomerWhatsApp } from "../../../../lib/operational-notifications";
 
 const plans: Record<string, ("pro" | "business")[]> = { purchases: ["pro", "business"], expenses: ["pro", "business"], repairs: ["business"], "buy-gold": ["business"], inventory: ["business"], accounting: ["pro", "business"], tax: ["business"] };
+const entitlements: Record<string, Parameters<typeof requireMerchantEntitlement>[0]> = { purchases: "pos", expenses: "accounting", repairs: "repairs", "buy-gold": "person_gold_purchase", inventory: "inventory", accounting: "accounting", tax: "tax_reports" };
 const methods = new Set(["cash", "bank", "card", "wallet", "other"]);
 const num = (v: unknown) => { const x = Number(v); return Number.isFinite(x) ? x : null; };
 const MAX_LINES = 100;
@@ -25,7 +27,7 @@ export async function GET(request: Request) {
   try {
     const url = new URL(request.url); const moduleName = url.searchParams.get("module") ?? ""; const access = plans[moduleName];
     if (!access) return NextResponse.json({ error: "invalid_module" }, { status: 404 });
-    const { supabase, organization } = await requireMerchantPlan(access); const limit = Math.min(Math.max(Number(url.searchParams.get("limit") ?? 20) || 20, 1), 100);
+    const { supabase, organization } = await requireMerchantEntitlement(entitlements[moduleName]); const limit = Math.min(Math.max(Number(url.searchParams.get("limit") ?? 20) || 20, 1), 100);
     if (moduleName === "accounting" || moduleName === "expenses") {
       const [{ data: accounts }, result] = await Promise.all([
         supabase.from("gmp_accounts").select("id,code,name,account_type,system_key,active").eq("organization_id", organization.id).eq("active", true).order("code"),
@@ -50,17 +52,19 @@ export async function GET(request: Request) {
     const table: Record<string,string>={purchases:"gmp_purchases",repairs:"gmp_repair_orders","buy-gold":"gmp_person_gold_purchases",inventory:"gmp_products"};
     const { data,error }=await supabase.from(table[moduleName]).select("*").eq("organization_id",organization.id).order("created_at",{ascending:false}).limit(limit);
     if(error)return NextResponse.json({error:error.message},{status:400}); return NextResponse.json({rows:data??[]});
-  } catch(error){const message=error instanceof Error?error.message:"unexpected_error";return NextResponse.json({error:message},{status:message==="merchant_plan_required"?403:500});}
+  } catch(error){const message=error instanceof Error?error.message:"unexpected_error";return NextResponse.json({error:message},{status:message==="merchant_entitlement_required"?403:500});}
 }
 
 type Row = Record<string, unknown>;
 
 export async function POST(request: Request) {
+  if (!isSameOriginRequest(request)) return new Response(JSON.stringify({ error: "cross_site_request" }), { status: 403, headers: { "content-type": "application/json", "cache-control": "no-store" } });
+
   try {
     const body=await readBoundedRequestJson(request, 64 * 1024).catch(()=>null) as Record<string,any>|null;
     if (!body) return NextResponse.json({error:"invalid_json"},{status:400});
     const moduleName=String(body.module??""); const access=plans[moduleName]; if(!access)return NextResponse.json({error:"invalid_module"},{status:404});
-    const {supabase,user,organization}=await requireMerchantPlan(access);
+    const {supabase,user,organization}=await requireMerchantEntitlement(entitlements[moduleName]);
     if(moduleName==="expenses"){
       if(body.action==="void"){
         const id=String(body.id??""),reason=String(body.reason??"").trim(); if(!id||!reason)return NextResponse.json({error:"expense_id_and_reason_required"},{status:400});

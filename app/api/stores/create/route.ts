@@ -1,3 +1,4 @@
+import { isSameOriginRequest } from "../../../../lib/request-security";
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "../../../../lib/supabase/server";
 import { createSupabaseAdminClient } from "../../../../lib/supabase/admin";
@@ -22,6 +23,8 @@ function validTimezone(value: string) {
 }
 
 export async function POST(request: Request) {
+  if (!isSameOriginRequest(request)) return new Response(JSON.stringify({ error: "cross_site_request" }), { status: 403, headers: { "content-type": "application/json", "cache-control": "no-store" } });
+
   const supabase = await createSupabaseServerClient();
   const admin = createSupabaseAdminClient();
   if (!supabase || !admin) return new NextResponse("Supabase is not configured.", { status: 503 });

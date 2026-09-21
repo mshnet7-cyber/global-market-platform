@@ -1,3 +1,4 @@
+import { isSameOriginRequest } from "../../../../lib/request-security";
 import { readBoundedRequestJson } from "../../../../lib/bounded-body";
 import { readBoundedJson } from "../../../../lib/stage3/provider-http";
 import { NextResponse } from "next/server";
@@ -17,6 +18,8 @@ export async function GET(){
 }
 
 export async function POST(request:Request){
+  if (!isSameOriginRequest(request)) return new Response(JSON.stringify({ error: "cross_site_request" }), { status: 403, headers: { "content-type": "application/json", "cache-control": "no-store" } });
+
   try{
     const { organization }=await requireMerchantPlan(["business"]);
     const body=await readBoundedRequestJson(request, 64 * 1024).catch(()=>null) as Record<string,unknown>|null;

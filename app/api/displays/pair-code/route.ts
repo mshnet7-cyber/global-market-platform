@@ -1,3 +1,4 @@
+import { isSameOriginRequest } from "../../../../lib/request-security";
 import { readBoundedRequestJson } from "../../../../lib/bounded-body";
 import { NextResponse } from "next/server";
 import crypto from "node:crypto";
@@ -13,6 +14,8 @@ function subscriptionIsUsable(subscription: { status?: string | null; current_pe
 }
 
 export async function POST(request: Request) {
+  if (!isSameOriginRequest(request)) return new Response(JSON.stringify({ error: "cross_site_request" }), { status: 403, headers: { "content-type": "application/json", "cache-control": "no-store" } });
+
   const context = await getMerchantContext();
   const admin = createSupabaseAdminClient();
   if (!admin) return NextResponse.json({ ok: false, error: "not_configured" }, { status: 503 });

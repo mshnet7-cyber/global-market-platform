@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getSnapshot } from "../../lib/providers";
 import { appConfig, countries, isValidLanguage } from "../../lib/config";
 import { getDisplayName, getMessages, isRtlLanguage } from "../../lib/i18n";
-import { formatMoneyDisplay } from "../../lib/currency-display";
+import MoneyDisplay from "../../components/MoneyDisplay";
 
 export default async function DemoPage({
   searchParams,
@@ -25,7 +25,7 @@ export default async function DemoPage({
   const countryName = getDisplayName("region", country.code, language, country.name);
 
   const money = (value: number | null | undefined, digits = 3) =>
-    formatMoneyDisplay(value, country.currency, locale, digits);
+    <MoneyDisplay value={value} currency={country.currency} locale={locale} maximumFractionDigits={digits} />;
 
   return (
     <div className="page-frame demo-page" dir={rtl ? "rtl" : "ltr"} lang={language}>
