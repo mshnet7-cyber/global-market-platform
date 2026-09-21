@@ -53,7 +53,7 @@ function parseTimestamp(value: unknown): string | null {
   return Number.isFinite(ms) ? new Date(ms).toISOString() : null;
 }
 
-export async function fetchGoldApi(symbol: 'XAU' | 'XAG'): Promise<{ price: number; bid: number | null; ask: number | null; timestamp: string | null } | null> {
+export async function fetchGoldApi(symbol: 'XAU' | 'XAG'): Promise<{ price: number; bid: number | null; ask: number | null; timestamp: string | null; receivedAt: string } | null> {
   try {
     const json = await safeJson<Record<string, unknown>>(`https://api.gold-api.com/price/${symbol}`);
     const price = Number(json.price);
@@ -66,13 +66,14 @@ export async function fetchGoldApi(symbol: 'XAU' | 'XAG'): Promise<{ price: numb
       bid: Number.isFinite(bid) && bid > 0 ? bid : null,
       ask: Number.isFinite(ask) && ask > 0 ? ask : null,
       timestamp,
+      receivedAt: new Date().toISOString(),
     };
   } catch {
     return null;
   }
 }
 
-export async function fetchCurrentGold(symbol: 'XAU' | 'XAG'): Promise<{ price: number; bid: number | null; ask: number | null; timestamp: string | null } | null> {
+export async function fetchCurrentGold(symbol: 'XAU' | 'XAG'): Promise<{ price: number; bid: number | null; ask: number | null; timestamp: string | null; receivedAt: string } | null> {
   const key = process.env.CURRENT_GOLD_API_KEY;
   const endpoint = process.env.CURRENT_GOLD_API_URL;
   if (!key || !endpoint) return null;
@@ -93,6 +94,7 @@ export async function fetchCurrentGold(symbol: 'XAU' | 'XAG'): Promise<{ price: 
       bid: Number.isFinite(bid) && bid > 0 ? bid : null,
       ask: Number.isFinite(ask) && ask > 0 ? ask : null,
       timestamp: parseTimestamp(json.updatedAt ?? json.updated_at ?? json.timestamp),
+      receivedAt: new Date().toISOString(),
     };
   } catch {
     return null;
@@ -134,6 +136,7 @@ export async function getFreeMetal(currency: string, symbol: 'XAU' | 'XAG', meta
     currency,
     provider: `${provider} + Frankfurter`,
     timestamp: quote.timestamp,
+    receivedAt: quote.receivedAt,
     status,
   });
 }
