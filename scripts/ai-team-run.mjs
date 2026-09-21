@@ -19,16 +19,18 @@ const state = {
   commit:sha,
   branch,
   roles:["architect","domain","frontend","backend","database","security","qa","devops","release"],
-  gates:["test","lint","build","verify"],
+  gates:["policy","test","lint","build","verify","evidence"],
   status:"initialized"
 };
 
 writeFileSync(stateDir+"/run.json",JSON.stringify(state,null,2)+"\n");
 
+run("npm",["run","ai:policy"]);
 run("npm",["test"]);
 run("npm",["run","lint"]);
 run("npm",["run","build"]);
 run("npm",["run","verify"]);
+run("npm",["run","ai:evidence"]);
 
 state.status="quality-pass";
 state.completedAt=new Date().toISOString();
