@@ -20,13 +20,13 @@ export default function DisplayPreferences({ language, initialTheme }: { languag
     const next: Theme = theme === "dark" ? "light" : "dark";
     document.documentElement.dataset.theme = next;
     document.documentElement.style.colorScheme = next;
-    // eslint-disable-next-line react-hooks/immutability
     document.cookie = "gmp-theme=" + next + "; Path=/; Max-Age=31536000; SameSite=Lax";
     setTheme(next);
   }
 
   function changeLanguage(next: Language) {
     if (next === language) return;
+    // eslint-disable-next-line react-hooks/immutability
     document.cookie = "gmp-language=" + next + "; Path=/; Max-Age=31536000; SameSite=Lax";
     const url = new URL(window.location.href);
     url.searchParams.set("language", next);
