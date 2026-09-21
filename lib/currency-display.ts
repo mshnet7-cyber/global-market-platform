@@ -17,6 +17,7 @@ export function formatMoneyParts(
     const number = new Intl.NumberFormat(locale, {
       minimumFractionDigits: Math.min(3, maximumFractionDigits),
       maximumFractionDigits,
+      numberingSystem: "latn",
     }).format(value);
     return { kind: "omr", text: number };
   }
@@ -27,6 +28,7 @@ export function formatMoneyParts(
         style: "currency",
         currency: code,
         maximumFractionDigits,
+        numberingSystem: "latn",
       }).format(value),
     };
   } catch {
@@ -58,5 +60,6 @@ export function formatNumberDisplay(
   return new Intl.NumberFormat(locale, {
     minimumFractionDigits: 0,
     maximumFractionDigits,
+    numberingSystem: "latn",
   }).format(value);
 }
