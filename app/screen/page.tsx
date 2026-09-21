@@ -11,7 +11,7 @@ const SNAPSHOT_KEY = "gmp_screen_snapshot";
 type DisplayPayload = {
   screen: { id: string; name: string; template: string };
   store: { id: string; name: string; currency: string; timezone: string; logo_path?: string | null; phone?: string | null; whatsapp?: string | null };
-  snapshot: { perGram24k: number | null; purities: Record<string, number | null>; currency: string; spot: number | null; bid: number | null; ask: number | null; timestamp: string | null; provider: string; status: string } | null;
+  snapshot: { perGram24k: number | null; purities: Record<string, number | null>; currency: string; spot: number | null; bid: number | null; ask: number | null; timestamp: string | null; receivedAt?: string | null; provider: string; status: string } | null;
   status: string;
   server_time: string;
   content?: Array<{id:string;content_type:string;title:string;body?:string|null;media_path?:string|null;payload?:Record<string,unknown>;priority:number}>;
@@ -134,7 +134,7 @@ export default function ScreenPage() {
             <div className="screen-connected-view">
               <div className="screen-header">
                 <div><div className="eyebrow">{payload?.store.name ?? "Global Market"}</div><h1>{payload?.screen.name ?? "شاشة الأسعار"}</h1></div>
-                <div className="notice"><strong>{statusLabel}</strong><div className="screen-status-meta">{payload?.snapshot?.timestamp ? new Date(payload.snapshot.timestamp).toLocaleString() : "—"}</div></div>
+                <div className="notice"><strong>{statusLabel}</strong><div className="screen-status-meta">{payload?.snapshot?.timestamp ? new Date(payload.snapshot.timestamp).toLocaleString() : "—"} · {payload?.snapshot?.provider || "—"}</div><div className="screen-status-meta">استلام: {payload?.snapshot?.receivedAt ? new Date(payload.snapshot.receivedAt).toLocaleString() : "—"}</div></div>
               </div>
               <div className="gold-card screen-gold">
                 <div className="screen-price-caption">ذهب 24K / غرام · {payload?.store.currency ?? "OMR"}</div>
