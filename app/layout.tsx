@@ -8,6 +8,7 @@ import "./launch-refinement.css";
 import "./stage1-core.css";
 import "./stage2.css";
 import "./stage3.css";
+import "./visual-polish.css";
 
 export const metadata: Metadata = {
   title: "Global Market Platform | Global market prices",
