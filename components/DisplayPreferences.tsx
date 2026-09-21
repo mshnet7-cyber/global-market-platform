@@ -1,7 +1,7 @@
 "use client";
 
 import { Languages, Moon, Sun } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 const LANGUAGES = [
   { code: "ar", label: "العربية" },
@@ -13,32 +13,14 @@ const LANGUAGES = [
 type Language = (typeof LANGUAGES)[number]["code"];
 type Theme = "dark" | "light";
 
-function getCookie(name: string) {
-  const prefix = name + "=";
-  const item = document.cookie.split("; ").find((entry) => entry.startsWith(prefix));
-  return item ? decodeURIComponent(item.slice(prefix.length)) : "";
-}
-
-export default function DisplayPreferences({ language }: { language: Language }) {
-  const [theme, setTheme] = useState<Theme>("dark");
-
-  useEffect(() => {
-    const saved = getCookie("gmp-theme");
-    const next: Theme =
-      saved === "light" || saved === "dark"
-        ? saved
-        : window.matchMedia("(prefers-color-scheme: light)").matches
-          ? "light"
-          : "dark";
-    document.documentElement.dataset.theme = next;
-    document.documentElement.style.colorScheme = next;
-    setTheme(next);
-  }, []);
+export default function DisplayPreferences({ language, initialTheme }: { language: Language; initialTheme: Theme }) {
+  const [theme, setTheme] = useState<Theme>(initialTheme);
 
   function toggleTheme() {
     const next: Theme = theme === "dark" ? "light" : "dark";
     document.documentElement.dataset.theme = next;
     document.documentElement.style.colorScheme = next;
+    // eslint-disable-next-line react-hooks/immutability
     document.cookie = "gmp-theme=" + next + "; Path=/; Max-Age=31536000; SameSite=Lax";
     setTheme(next);
   }
