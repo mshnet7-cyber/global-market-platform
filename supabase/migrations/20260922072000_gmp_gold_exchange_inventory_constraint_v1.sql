@@ -1,0 +1,2 @@
+alter table public.gmp_inventory_movements drop constraint if exists gmp_inventory_movements_movement_type_check;
+alter table public.gmp_inventory_movements add constraint gmp_inventory_movements_movement_type_check check (movement_type in ('purchase','sale','sale_return','purchase_return','transfer_in','transfer_out','adjustment_in','adjustment_out','opening_balance','person_gold_purchase','repair_in','repair_out','exchange_in','exchange_out'));
