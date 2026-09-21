@@ -35,12 +35,12 @@ declare
 begin
  if v_actor is null then raise exception 'authentication required'; end if;
  if coalesce(trim(p_client_ref),'')='' then raise exception 'client_ref_required'; end if;
- select i.response into v_line from public.gmp_purchase_receipt_idempotency i
- where i.organization_id=v_purchase.organization_id and i.client_ref=trim(p_client_ref);
- if v_line is not null then return v_line; end if;
  if p_lines is null or jsonb_typeof(p_lines)<>'array' or jsonb_array_length(p_lines)=0 then raise exception 'receipt_lines_required'; end if;
  select * into v_purchase from public.gmp_purchases where id=p_purchase_id for update;
  if not found then raise exception 'purchase_not_found'; end if;
+ select i.response into v_line from public.gmp_purchase_receipt_idempotency i
+ where i.organization_id=v_purchase.organization_id and i.client_ref=trim(p_client_ref);
+ if v_line is not null then return v_line; end if;
  if not exists(select 1 from public.gmp_organization_members m where m.organization_id=v_purchase.organization_id and m.user_id=v_actor and m.role in ('owner','admin')) then raise exception 'not authorized'; end if;
  if v_purchase.status not in ('draft','approved') then raise exception 'invalid_purchase_status'; end if;
  select id into v_inventory_account from public.gmp_accounts where organization_id=v_purchase.organization_id and system_key='inventory' and active limit 1;
