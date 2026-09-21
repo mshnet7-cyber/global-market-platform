@@ -132,7 +132,7 @@ export default function SilverIntelligence({
             <span>999 / {language === "ar" ? "غرام" : "GRAM"}</span>
             <strong>{money(silver.perGram24k, currency)}</strong>
             <em>{silver.status}</em>
-            <small>{silver.provider || "مصدر البيانات غير متاح"}</small>
+            <small>{silver.provider || "مصدر البيانات غير متاح"}</small><small>مصدر: {silver.timestamp ? new Date(silver.timestamp).toLocaleString(language) : "—"} · استلام: {silver.receivedAt ? new Date(silver.receivedAt).toLocaleString(language) : "—"}</small>
           </div>
         </section>
 
