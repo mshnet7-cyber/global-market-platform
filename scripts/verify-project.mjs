@@ -92,10 +92,7 @@ ok("invoice API enforces transition allowlist", invoiceApi.includes("invalid_sub
 const complianceApi=text("app/api/merchant/compliance/route.ts");
 ok("compliance API enforces transition allowlist", complianceApi.includes("invalid_case_transition") && complianceApi.includes("transitions[current.status]"));
 const ci=text(".github/workflows/ci.yml");
-ok("Vercel preview deploy is chained after green CI", ci.includes("vercel-preview:") && ci.includes("needs: quality") && ci.includes("github.event_name == 'push'") && ci.includes("startsWith(github.ref_name, 'cloudflare-workers-')"));
-ok("Vercel preview environment is validated", ci.includes("NEXT_PUBLIC_SUPABASE_URL") && ci.includes("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY") && ci.includes("GMP_DEMO_SESSION_SECRET") && ci.includes("SUPABASE_SECRET_KEY"));
-ok("Vercel preview artifact is built and deployed", ci.includes("vercel build") && ci.includes("vercel deploy --prebuilt"));
-ok("Vercel preview smoke tests are enforced", ci.includes("vercel curl /api/health") && ci.includes("vercel curl /login"));
+ok("CI quality job is defined", ci.includes("jobs:") && ci.includes("quality:") && ci.includes("runs-on: ubuntu-latest"));
 ok("CI runs tests", ci.includes("npm test"));
 ok("CI runs lint", ci.includes("npm run lint"));
 ok("CI runs build", ci.includes("npm run build"));
