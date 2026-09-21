@@ -102,6 +102,7 @@ function alphaQuote(item: SymbolDef, q: Record<string, unknown>): Quote | null {
     timestamp: date,
     provider: "Alpha Vantage",
     status: "DELAYED",
+    receivedAt: new Date().toISOString(),
   };
 }
 
@@ -172,6 +173,7 @@ async function fetchEodhd(symbols: readonly SymbolDef[]): Promise<ProviderResult
         timestamp,
         provider: "EODHD",
         status: "DELAYED",
+        receivedAt: new Date().toISOString(),
       } satisfies Quote;
     } catch {
       return null;
