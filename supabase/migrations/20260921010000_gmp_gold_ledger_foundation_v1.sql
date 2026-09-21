@@ -103,6 +103,14 @@ for all to authenticated using (
       and m.user_id=(select auth.uid())
       and m.role in ('owner','admin')
   )
+  and (
+    gmp_gold_price_rules.store_id is null
+    or exists (
+      select 1 from public.gmp_stores s
+      where s.id=gmp_gold_price_rules.store_id
+        and s.organization_id=gmp_gold_price_rules.organization_id
+    )
+  )
 );
 
 drop policy if exists gmp_gold_ledger_member_read on public.gmp_gold_ledger_entries;
@@ -123,6 +131,27 @@ for insert to authenticated with check (
     where m.organization_id=gmp_gold_ledger_entries.organization_id
       and m.user_id=(select auth.uid())
       and m.role in ('owner','admin')
+  )
+  and exists (
+    select 1 from public.gmp_stores s
+    where s.id=gmp_gold_ledger_entries.store_id
+      and s.organization_id=gmp_gold_ledger_entries.organization_id
+  )
+  and (
+    gmp_gold_ledger_entries.branch_id is null
+    or exists (
+      select 1 from public.gmp_branches b
+      where b.id=gmp_gold_ledger_entries.branch_id
+        and b.organization_id=gmp_gold_ledger_entries.organization_id
+    )
+  )
+  and (
+    gmp_gold_ledger_entries.product_id is null
+    or exists (
+      select 1 from public.gmp_products p
+      where p.id=gmp_gold_ledger_entries.product_id
+        and p.store_id=gmp_gold_ledger_entries.store_id
+    )
   )
 );
 
@@ -209,7 +238,7 @@ grant execute on function public.gmp_post_gold_ledger_entry(
   uuid,uuid,uuid,uuid,text,text,text,uuid,text,numeric,numeric,numeric,numeric,numeric,numeric,numeric,text,jsonb
 ) to authenticated;
 
-create or replace view public.gmp_gold_store_balances as
+create or replace view public.gmp_gold_store_balances with (security_invoker=true) as
 select
   organization_id,
   store_id,
