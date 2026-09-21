@@ -29,6 +29,7 @@ export type PublicPricePoint = {
   unit: string;
   status: string;
   observed_at: string;
+  received_at?: string | null;
   provider: string | null;
 };
 
@@ -42,7 +43,7 @@ export async function getPublicPriceHistory(instrumentCode: string, range: Histo
   const safeLimit = Math.min(1000, Math.max(1, Math.floor(limit)));
   const { data, error } = await admin
     .from("gmp_price_quotes")
-    .select("instrument_code,value,bid,ask,currency,unit,status,observed_at,provider")
+    .select("instrument_code,value,bid,ask,currency,unit,status,observed_at,received_at,provider")
     .eq("instrument_code", normalizedInstrument)
     .gte("observed_at", since)
     .order("observed_at", { ascending: true })
