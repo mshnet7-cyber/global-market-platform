@@ -1217,3 +1217,59 @@ html[data-theme="light"] .market-card:hover,html[data-theme="light"] .quote-card
 @media(max-width:900px){:root{--gmp-radius-card:16px;--gmp-radius-panel:18px}.dashboard-kpis,.kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:640px){.dashboard-kpis,.kpi-grid{grid-template-columns:1fr 1fr}.btn,.button{min-height:44px}.section-panel,.card,.kpi,.module-card,.plan-card{border-radius:16px!important}.market-card:hover,.quote-card:hover,.news-card:hover,.module-card:hover,.plan-card:hover{transform:none}}@media(max-width:420px){.dashboard-kpis,.kpi-grid{grid-template-columns:1fr}.display-preferences{gap:3px}.preference-language{max-width:154px;overflow:hidden}}
 html[data-font-scale="small"]{font-size:15px}html[data-font-scale="normal"]{font-size:16px}html[data-font-scale="large"]{font-size:18px}html[data-font-scale="large"] .nav-links a,html[data-font-scale="large"] .preference-language-button{font-size:11px}
 @media(prefers-reduced-motion:reduce){.market-card:hover,.quote-card:hover,.news-card:hover,.module-card:hover,.plan-card:hover,.plan-tile:hover{transform:none}}
+
+
+/* Theme polish v4 — hierarchy, density, states and premium consistency. */
+:root{--gmp-content-max:1280px;--gmp-readable-max:760px;--gmp-control-radius:12px;--gmp-card-radius:18px;--gmp-panel-radius:22px;--gmp-focus-ring:0 0 0 3px rgba(217,182,108,.16);--gmp-divider:rgba(218,229,232,.08)}
+body{overflow-x:hidden}
+.container,.wrap{width:min(calc(100% - (var(--gmp-gutter,24px)*2)),var(--gmp-content-max));margin-inline:auto}
+.hero-copy-wrap,.login-story{max-width:var(--gmp-readable-max)}
+.hero h1,.page-hero h1,.dashboard-title,.login-story h1,.gold-intro h1{max-width:900px}
+.lede,.section-lede,.login-story>p{max-width:var(--gmp-readable-max);line-height:1.82}
+
+/* Remove visual noise from repeated nested shadows; hierarchy comes from elevation. */
+.card,.kpi,.module-card,.plan-card,.section-panel,.quote-card,.news-card,.market-card{box-shadow:0 10px 30px rgba(0,0,0,.12)}
+.market-hero-card,.hero-panel,.login-card,.gold-history-card,.screen-card,.demo-screen{box-shadow:0 22px 64px rgba(0,0,0,.20)}
+.card:hover,.kpi:hover,.module-card:hover,.plan-card:hover,.section-panel:hover{box-shadow:0 16px 38px rgba(0,0,0,.17)}
+
+/* Consistent interactive states. */
+a,button{touch-action:manipulation}
+.btn:focus-visible,.preference-icon-button:focus-visible,.preference-language-button:focus-visible{box-shadow:var(--gmp-focus-ring);outline:2px solid var(--gmp-focus)!important;outline-offset:2px}
+.btn:disabled,button:disabled{opacity:.5;cursor:not-allowed;transform:none!important;box-shadow:none!important}
+
+/* Premium market data emphasis without excessive gold. */
+.market-price,.screen-gold-price,.demo-screen-primary strong{letter-spacing:-.035em}
+.market-unit,.market-hero-head .micro-label,.market-grid span{color:var(--gmp-text-muted,#91a2aa)}
+.market-grid strong{font-variant-numeric:tabular-nums lining-nums}
+.market-divider{border-color:var(--gmp-divider)!important}
+
+/* Empty/loading/notice states inherit the same surface system. */
+.notice,.empty-state,.loading-state,.error-state{border-radius:var(--gmp-control-radius);border:1px solid var(--gmp-border);background:var(--gmp-surface-soft);color:var(--gmp-text)}
+.notice{padding:12px 14px}
+
+/* Tables remain usable without forcing the whole page wide. */
+.table-wrap,.data-table-wrap,.table-container{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:var(--gmp-control-radius)}
+
+/* Mobile: preserve hierarchy rather than simply shrinking everything. */
+@media(max-width:760px){
+  :root{--gmp-gutter:14px}
+  .hero-premium{gap:28px}
+  .hero h1{font-size:clamp(2rem,9vw,2.8rem)}
+  .market-price{font-size:clamp(2.35rem,12vw,3.4rem)}
+  .market-hero-card,.hero-panel,.login-card,.gold-history-card,.screen-card,.demo-screen{box-shadow:0 16px 42px rgba(0,0,0,.17)}
+  .nav-actions{min-width:0}
+}
+@media(max-width:420px){
+  .container,.wrap{width:calc(100% - 24px)}
+  .btn{min-height:44px}
+  .preference-language-button{min-width:28px;padding-inline:4px}
+}
+
+/* Light mode v4: preserve depth while keeping surfaces genuinely light. */
+html[data-theme="light"] .card,html[data-theme="light"] .kpi,html[data-theme="light"] .module-card,html[data-theme="light"] .plan-card,html[data-theme="light"] .section-panel,html[data-theme="light"] .quote-card,html[data-theme="light"] .news-card,html[data-theme="light"] .market-card{box-shadow:0 10px 28px rgba(17,38,48,.065)}
+html[data-theme="light"] .market-hero-card,html[data-theme="light"] .hero-panel,html[data-theme="light"] .login-card,html[data-theme="light"] .gold-history-card,html[data-theme="light"] .screen-card,html[data-theme="light"] .demo-screen{box-shadow:0 18px 48px rgba(17,38,48,.09)}
+html[data-theme="light"] .notice,html[data-theme="light"] .empty-state,html[data-theme="light"] .loading-state,html[data-theme="light"] .error-state{background:#f7f9fa;color:#263b44;border-color:rgba(17,38,48,.11)}
+
+/* Prevent text scaling from creating clipped controls. */
+html[data-font-scale="large"] .btn,html[data-font-scale="large"] input,html[data-font-scale="large"] select,html[data-font-scale="large"] textarea{min-height:50px}
+html[data-font-scale="large"] .preference-icon-button{width:40px;height:40px}
