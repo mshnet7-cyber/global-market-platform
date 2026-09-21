@@ -1,3 +1,16 @@
+create table if not exists public.gmp_purchase_receipt_idempotency (
+  organization_id uuid not null references public.gmp_organizations(id) on delete cascade,
+  client_ref text not null,
+  purchase_id uuid not null references public.gmp_purchases(id) on delete cascade,
+  response jsonb not null,
+  created_by uuid references auth.users(id) on delete set null,
+  created_at timestamptz not null default now(),
+  primary key (organization_id, client_ref)
+);
+alter table public.gmp_purchase_receipt_idempotency enable row level security;
+create policy gmp_purchase_receipt_idempotency_member_read on public.gmp_purchase_receipt_idempotency
+for select using (exists (select 1 from public.gmp_organization_members m where m.organization_id=gmp_purchase_receipt_idempotency.organization_id and m.user_id=auth.uid()));
+
 alter table public.gmp_purchase_lines
   add column if not exists received_quantity numeric not null default 0,
   add column if not exists received_weight_grams numeric not null default 0;
@@ -22,6 +35,9 @@ declare
 begin
  if v_actor is null then raise exception 'authentication required'; end if;
  if coalesce(trim(p_client_ref),'')='' then raise exception 'client_ref_required'; end if;
+ select i.response into v_line from public.gmp_purchase_receipt_idempotency i
+ where i.organization_id=v_purchase.organization_id and i.client_ref=trim(p_client_ref);
+ if v_line is not null then return v_line; end if;
  if p_lines is null or jsonb_typeof(p_lines)<>'array' or jsonb_array_length(p_lines)=0 then raise exception 'receipt_lines_required'; end if;
  select * into v_purchase from public.gmp_purchases where id=p_purchase_id for update;
  if not found then raise exception 'purchase_not_found'; end if;
@@ -66,7 +82,10 @@ begin
  insert into public.gmp_journal_lines(journal_entry_id,account_id,debit,credit,memo) values(v_journal,v_payables_account,0,v_journal_total,'التزام المورد');
  if abs((select coalesce(sum(debit),0)-coalesce(sum(credit),0) from public.gmp_journal_lines where journal_entry_id=v_journal))>0.0005 then raise exception 'unbalanced purchase receipt'; end if;
  update public.gmp_purchases set status=v_new_status,reviewed_by=v_actor,reviewed_at=now(),updated_at=now() where id=p_purchase_id;
- return jsonb_build_object('success',true,'purchase_id',p_purchase_id,'journal_id',v_journal,'received_subtotal',round(v_received_subtotal,6),'received_vat',round(v_received_vat,6),'received_total',round(v_journal_total,6),'status',v_new_status,'client_ref',p_client_ref);
+ v_line := jsonb_build_object('success',true,'purchase_id',p_purchase_id,'journal_id',v_journal,'received_subtotal',round(v_received_subtotal,6),'received_vat',round(v_received_vat,6),'received_total',round(v_journal_total,6),'status',v_new_status,'client_ref',p_client_ref);
+ insert into public.gmp_purchase_receipt_idempotency(organization_id,client_ref,purchase_id,response,created_by)
+ values(v_purchase.organization_id,trim(p_client_ref),p_purchase_id,v_line,v_actor);
+ return v_line;
 end; $$;
 
 revoke all on function public.gmp_receive_purchase(uuid,jsonb,text) from public,anon;
