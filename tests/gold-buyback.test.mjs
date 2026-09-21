@@ -1,0 +1,13 @@
+import { readFileSync } from "node:fs";
+const s=readFileSync("supabase/migrations/20260922020000_gmp_gold_buyback_v1.sql","utf8");
+const ok=(n,c)=>{if(!c)throw new Error(n)};
+ok("table",s.includes("gmp_gold_buybacks"));
+ok("RLS",s.includes("enable row level security"));
+ok("tenant authorization",s.includes("organization_id=p_organization_id")&&s.includes("not authorized"));
+ok("product scope",s.includes("p.store_id=p_store_id"));
+ok("inventory movement",s.includes("person_gold_purchase"));
+ok("gold ledger",s.includes("gmp_post_gold_ledger_entry")&&s.includes("'buyback'"));
+ok("accounting",s.includes("gold_buyback")&&s.includes("system_key"));
+ok("idempotency",s.includes("unique(organization_id,client_ref)"));
+ok("restricted execution",s.includes("revoke all on function")&&s.includes("grant execute"));
+console.log("gold-buyback: 9 checks passed");
