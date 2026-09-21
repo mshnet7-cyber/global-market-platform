@@ -577,6 +577,5 @@ html[data-theme="light"] ::selection{
   .preference-language-button{min-width:28px;height:27px}
 }
 @media(max-width:480px){
-  .preference-language-button:nth-of-type(n+4){display:none}
   .preference-language{padding-inline:3px}
 }
