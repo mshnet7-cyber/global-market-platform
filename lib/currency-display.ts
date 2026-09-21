@@ -32,7 +32,7 @@ export function formatMoneyParts(
   } catch {
     return {
       kind: "text",
-      text: value.toLocaleString(locale, { maximumFractionDigits }) + " " + (code || OMANI_RIAL_FALLBACK),
+      text: value.toLocaleString(locale, { maximumFractionDigits, numberingSystem: "latn" }) + " " + (code || OMANI_RIAL_FALLBACK),
     };
   }
 }
