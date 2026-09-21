@@ -14,15 +14,9 @@ type Language = (typeof LANGUAGES)[number]["code"];
 type Theme = "dark" | "light";
 type FontScale = "small" | "normal" | "large";
 
-function readFontScale(): FontScale {
-  if (typeof document === "undefined") return "normal";
-  const value = document.cookie.match(/(?:^|; )gmp-font-scale=([^;]+)/)?.[1];
-  return value === "small" || value === "large" ? value : "normal";
-}
-
-export default function DisplayPreferences({ language, initialTheme }: { language: Language; initialTheme: Theme }) {
+export default function DisplayPreferences({ language, initialTheme, initialFontScale }: { language: Language; initialTheme: Theme; initialFontScale: FontScale }) {
   const [theme, setTheme] = useState<Theme>(initialTheme);
-  const [fontScale, setFontScale] = useState<FontScale>(readFontScale);
+  const [fontScale, setFontScale] = useState<FontScale>(initialFontScale);
 
   function toggleTheme() {
     const next: Theme = theme === "dark" ? "light" : "dark";
