@@ -9,4 +9,5 @@ ok("inventory movement posted",migration.includes("gmp_inventory_movements")&&mi
 ok("accounting posted",migration.includes("system_key='payables'")&&migration.includes("purchase_receipt"));
 ok("journal balanced",migration.includes("unbalanced purchase receipt"));
 ok("execution restricted",migration.includes("revoke all on function public.gmp_receive_purchase")&&migration.includes("grant execute"));
+ok("receipt is idempotent",migration.includes("gmp_purchase_receipt_idempotency")&&migration.includes("client_ref"));
 console.log("purchase-receiving: 8 checks passed");
