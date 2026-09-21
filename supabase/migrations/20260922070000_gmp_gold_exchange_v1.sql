@@ -43,7 +43,7 @@ create or replace function public.gmp_create_gold_exchange(
 ) returns jsonb language plpgsql security definer set search_path='' as $$
 declare
  v_actor uuid:=(select auth.uid()); v_existing jsonb; v_id uuid; v_branch uuid; v_old_net numeric; v_old_total numeric; v_new_total numeric; v_new_cost numeric; v_settlement numeric;
- v_payment uuid; v_inventory uuid; v_sales uuid; v_cogs uuid; v_journal uuid; v_in uuid; v_out uuid; v_old_cost_per_g numeric;
+ v_payment uuid; v_inventory uuid; v_sales uuid; v_cogs uuid; v_journal uuid; v_in uuid; v_out uuid;
 begin
  if v_actor is null then raise exception 'authentication required'; end if;
  if coalesce(trim(p_client_ref),'')='' then raise exception 'client_ref_required'; end if;
@@ -59,13 +59,12 @@ begin
  if not found then raise exception 'store_not_found'; end if;
  if p_branch_id is not null and p_branch_id<>v_branch then raise exception 'branch_store_mismatch'; end if;
  if p_customer_id is not null and not exists(select 1 from public.gmp_customers c where c.id=p_customer_id and c.organization_id=p_organization_id) then raise exception 'customer_not_found'; end if;
- select id into v_branch from public.gmp_products where id=p_old_product_id and store_id=p_store_id and active for update;
+ perform 1 from public.gmp_products where id=p_old_product_id and store_id=p_store_id and active for update;
  if not found then raise exception 'old_product_scope_invalid'; end if;
- select id,cost_price into v_in,v_new_cost from public.gmp_products where id=p_new_product_id and store_id=p_store_id and active for update;
+ select cost_price into v_new_cost from public.gmp_products where id=p_new_product_id and store_id=p_store_id and active for update;
  if not found then raise exception 'new_product_scope_invalid'; end if;
  if p_old_product_id=p_new_product_id then raise exception 'exchange_products_must_differ'; end if;
  if v_new_cost is null then v_new_cost:=0; end if;
- select current_quantity,current_weight_grams into v_new_cost,v_new_cost from public.gmp_products where id=p_new_product_id; -- overwritten below
  v_old_net:=p_old_gross_weight_grams-p_old_stone_weight_grams;
  v_old_total:=round(v_old_net*p_old_unit_value,6);
  v_new_total:=round(p_new_quantity*p_new_unit_price+p_new_making_charge-p_new_discount+p_new_vat_amount,6);
