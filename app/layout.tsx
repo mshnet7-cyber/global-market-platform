@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import PwaRegister from "./PwaRegister";
 import "./globals.css";
 import "./premium.css";
@@ -28,11 +28,13 @@ const RTL_LANGUAGES = new Set(["ar", "fa", "he", "ur"]);
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const headerStore = await headers();
-  const rawLanguage = headerStore.get("x-gmp-language")?.toLowerCase() ?? "ar";
-  const language = /^[a-z]{2,3}$/.test(rawLanguage) ? rawLanguage : "ar";
+  const cookieStore = await cookies();
+  const rawLanguage = headerStore.get("x-gmp-language")?.toLowerCase() ?? cookieStore.get("gmp-language")?.value?.toLowerCase() ?? "ar";
+  const language = /^(ar|en|tr|de)$/.test(rawLanguage) ? rawLanguage : "ar";
+  const theme = cookieStore.get("gmp-theme")?.value === "light" ? "light" : "dark";
   const dir = RTL_LANGUAGES.has(language) ? "rtl" : "ltr";
   return (
-    <html lang={language} dir={dir}>
+    <html lang={language} dir={dir} data-theme={theme} suppressHydrationWarning>
       <head>
       </head>
       <body>
