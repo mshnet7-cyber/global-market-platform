@@ -8,6 +8,7 @@ import MoneyDisplay from "../components/MoneyDisplay";
 import DisplayPreferences from "../components/DisplayPreferences";
 
 const supportedLanguageCodes = ["ar", "en", "tr", "de"] as const;
+type SupportedLanguage = (typeof supportedLanguageCodes)[number];
 
 function formatMoney(value: number | null, locale: string, currency: string, maximumFractionDigits = 3) { return <MoneyDisplay value={value} currency={currency} locale={locale} maximumFractionDigits={maximumFractionDigits} />; }
 
@@ -17,7 +18,7 @@ export default async function Home({ searchParams }: { searchParams?: Promise<{ 
   const initialTheme: "dark" | "light" = cookieStore.get("gmp-theme")?.value === "light" ? "light" : "dark";
   const country = countries.find((c) => c.code === params?.country?.toUpperCase()) ?? countries.find((c) => c.code === appConfig.defaultCountry) ?? countries[0];
   const requestedLanguage = params?.language?.toLowerCase() ?? "";
-  const language = isValidLanguage(requestedLanguage) && supportedLanguageCodes.includes(requestedLanguage as (typeof supportedLanguageCodes)[number]) ? requestedLanguage : appConfig.defaultLanguage;
+  const language: SupportedLanguage = isValidLanguage(requestedLanguage) && supportedLanguageCodes.includes(requestedLanguage as SupportedLanguage) ? requestedLanguage as SupportedLanguage : appConfig.defaultLanguage as SupportedLanguage;
   const messages = getMessages(language);
   const [snapshot, ads] = await Promise.all([getSnapshot(country.currency, language, false), getPublicAds({ country: country.code, placement: "banner", limit: 4 })]);
   const gold = snapshot.gold;
