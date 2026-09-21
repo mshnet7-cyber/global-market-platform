@@ -15,6 +15,9 @@ ok("ledger is idempotent", migration.includes("gmp_gold_ledger_idempotency_uniq"
 ok("ledger is tenant scoped", migration.includes("organization_id uuid not null references public.gmp_organizations"));
 ok("ledger has RLS", migration.includes("alter table public.gmp_gold_ledger_entries enable row level security"));
 ok("ledger has no update/delete policy", !migration.includes("gmp_gold_ledger_entries_admin_update") && !migration.includes("gmp_gold_ledger_entries_admin_delete"));
+ok("ledger enforces store tenant scope", migration.includes("s.organization_id=gmp_gold_ledger_entries.organization_id"));
+ok("ledger enforces product store scope", migration.includes("p.store_id=gmp_gold_ledger_entries.store_id"));
+ok("balance view respects caller RLS", migration.includes("with (security_invoker=true)"));
 ok("posting is authenticated and admin-gated", migration.includes("security invoker") && migration.includes("grant execute on function public.gmp_post_gold_ledger_entry") && migration.includes("m.role in ('owner','admin')"));
 ok("balance view is derived from ledger", migration.includes("create or replace view public.gmp_gold_store_balances") && migration.includes("sum(case when direction='in'"));
 console.log("gold-ledger-foundation: 11 checks passed");
