@@ -29,11 +29,11 @@ const migrationFiles = execFileSync("git",["ls-files","supabase/migrations"],{en
 const saasPlans=text("lib/saas-plans.ts");
 ok("central SaaS plan contract exists", saasPlans.includes('MerchantPlanCode') && saasPlans.includes('MERCHANT_PLANS') && saasPlans.includes('ADDITIONAL_SCREEN_PRICING') && saasPlans.includes('isMerchantPlanCode'));
 ok("SaaS trial onboarding migration is tracked", migrationFiles.some(x=>x.includes("20260920233712_gmp_saas_trial_onboarding_v1.sql")));
-ok("trial store limit consistency migration is tracked", migrationFiles.some(x=>x.includes("20260920235614_gmp_trial_store_limit_consistency_v1.sql")));
+ok("trial store limit consistency migration is tracked", migrationFiles.some(x=>x.includes("20260920235614_gmp_trial_store_limit_consistency_v1.sql")));\nok("market quote receipt migration is tracked", migrationFiles.some(x=>x.includes("20260921000056_gmp_price_quote_receipt_timestamps_v1.sql")));\nok("market quote provenance is persisted", text("lib/providers/index.ts").includes("received_at: snapshot.receivedAt") && text("lib/providers/index.ts").includes("received_at: quote.receivedAt"));
 
 ok("signup passes selected SaaS plan to bootstrap", text("app/api/auth/signup/route.ts").includes("p_plan_code: plan || \"starter\""));
 ok("merchant entitlements are centrally enforced", text("lib/merchant-access.ts").includes("requireMerchantEntitlement") && text("app/api/merchant/sales/route.ts").includes('requireMerchantEntitlement("pos")') && text("app/api/merchant/operations/route.ts").includes("entitlements"));
-ok("store provisioning recognizes trial subscriptions", migrationFiles.some(x=>x.includes("20260920235614_gmp_trial_store_limit_consistency_v1.sql")));
+ok("store provisioning recognizes trial subscriptions", migrationFiles.some(x=>x.includes("20260920235614_gmp_trial_store_limit_consistency_v1.sql")));\nok("market trust carries receipt time", text("lib/types.ts").includes("receivedAt") && text("lib/price-engine.ts").includes("receivedAt") && text("lib/market-history.ts").includes("received_at"));
 ok("billing checkout supports initial or renewal subscription", text("app/api/stage3/billing/route.ts").includes('getMerchantContext') && !text("app/api/stage3/billing/route.ts").includes("requireMerchantPlan([\"starter\",\"pro\",\"business\"])"));
 ok("pricing page consumes central SaaS contract", text("app/pricing/page.tsx").includes('MERCHANT_PLANS.map') && text("app/pricing/page.tsx").includes('ADDITIONAL_SCREEN_PRICING'));
 ok("dashboard consumes central SaaS contract", text("app/dashboard/page.tsx").includes('MERCHANT_PLANS.map') && text("app/dashboard/page.tsx").includes('getMerchantPlan'));
