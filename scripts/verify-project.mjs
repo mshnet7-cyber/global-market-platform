@@ -24,8 +24,7 @@ ok("OMR asset pack is saved", ["svg","png","pdf","eps"].every(ext=>existsSync(jo
 ok("OMR money component exists", existsSync(join(root,"components","MoneyDisplay.tsx")));
 ok("OMR money component is wired into public displays", text("app/page.tsx").includes("MoneyDisplay") && text("app/gold/GoldIntelligence.tsx").includes("MoneyDisplay") && text("app/silver/SilverIntelligence.tsx").includes("MoneyDisplay") && text("app/markets/MarketTerminal.tsx").includes("MoneyDisplay") && text("app/screen/page.tsx").includes("MoneyDisplay") && text("app/store/[slug]/page.tsx").includes("MoneyDisplay"));
 ok("OMR money component is wired into commerce and billing displays", text("app/marketplace/page.tsx").includes("MoneyDisplay") && text("app/dashboard/page.tsx").includes("MoneyDisplay") && text("app/pricing/page.tsx").includes("MoneyDisplay"));
-const migrationFiles = execFileSync("git",["ls-files","supabase/migrations"],{encoding:"utf8"}).split("
-").filter(Boolean);
+const migrationFiles = execFileSync("git",["ls-files","supabase/migrations"],{encoding:"utf8"}).split("\n").filter(Boolean);
 
 const saasPlans=text("lib/saas-plans.ts");
 ok("central SaaS plan contract exists", saasPlans.includes('MerchantPlanCode') && saasPlans.includes('MERCHANT_PLANS') && saasPlans.includes('ADDITIONAL_SCREEN_PRICING') && saasPlans.includes('isMerchantPlanCode'));
