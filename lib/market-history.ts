@@ -1,5 +1,6 @@
 import { MARKET_INDEX_SYMBOLS, MARKET_SYMBOLS } from "./providers/market-data";
-import { createSupabaseAdminClient } from "./supabase/admin";\nimport { assessTimestamp } from "./market-trust";
+import { createSupabaseAdminClient } from "./supabase/admin";
+import { assessTimestamp } from "./market-trust";
 
 export const HISTORY_RANGES = {
   "1D": 24 * 60 * 60 * 1000,
