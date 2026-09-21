@@ -1,0 +1,266 @@
+/* Final visual polish layer — presentation only.
+   Intentionally isolated from pricing, auth, data fetching, RLS, RPC and API logic. */
+
+:root{
+  color-scheme:dark;
+  --gmp-focus:var(--launch-gold-hi,#f3dca4);
+  --gmp-surface-0:#061017;
+  --gmp-surface-1:#09151c;
+  --gmp-surface-2:#0d1a22;
+  --gmp-line-soft:rgba(235,230,218,.075);
+  --gmp-line-gold:rgba(216,181,106,.24);
+}
+
+html{
+  background:var(--gmp-surface-0);
+  scrollbar-color:#263740 #061017;
+  scrollbar-width:thin;
+}
+
+body{
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  -webkit-tap-highlight-color:rgba(216,181,106,.14);
+}
+
+::selection{background:rgba(216,181,106,.28);color:#fffaf0}
+
+a,button,input,select,textarea{transition:transform .18s ease,border-color .18s ease,background-color .18s ease,box-shadow .18s ease,color .18s ease,opacity .18s ease}
+
+.topbar .nav{
+  min-width:0;
+}
+
+.topbar .nav-links{
+  min-width:0;
+  scrollbar-width:none;
+}
+.topbar .nav-links::-webkit-scrollbar{display:none}
+.topbar .nav-links a{
+  position:relative;
+  white-space:nowrap;
+}
+.topbar .nav-links a::after{
+  content:"";
+  position:absolute;
+  inset-inline:11px;
+  bottom:5px;
+  height:1px;
+  transform:scaleX(0);
+  transform-origin:center;
+  background:linear-gradient(90deg,transparent,var(--launch-gold-hi,#f3dca4),transparent);
+  transition:transform .18s ease;
+}
+.topbar .nav-links a:hover::after,
+.topbar .nav-links a:focus-visible::after{transform:scaleX(1)}
+
+.topbar .nav-actions{min-width:0}
+.topbar .nav-preferences{max-width:170px;overflow:hidden;text-overflow:ellipsis}
+
+.hero h1,.section-head h2,.page-hero h1,.dashboard-title,.login-story h1,.gold-intro h1{
+  text-wrap:balance;
+}
+
+.hero-premium,.section-page .page-hero,.dashboard-main,.demo-main,.stage1-main{
+  content-visibility:auto;
+  contain-intrinsic-size:700px;
+}
+
+.market-hero-card,.gold-history-card,.hero-panel,.login-card,.screen-card,.demo-screen{
+  isolation:isolate;
+}
+
+.market-hero-card::before,
+.gold-history-card::before,
+.hero-panel::before,
+.login-card::before,
+.screen-card::before,
+.demo-screen::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  border-radius:inherit;
+  background:
+    linear-gradient(125deg,rgba(255,255,255,.035),transparent 24%),
+    linear-gradient(310deg,rgba(216,181,106,.045),transparent 28%);
+  opacity:.8;
+  z-index:-1;
+}
+
+.market-hero-card,.gold-history-card,.hero-panel,.login-card,.screen-card,.demo-screen{
+  position:relative;
+  overflow:hidden;
+}
+
+.market-card,.quote-card,.news-card,.module-card,.plan-card,.kpi,.plan-tile,.section-panel,.card{
+  transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease,background-color .18s ease;
+}
+
+.market-card:hover,.quote-card:hover,.news-card:hover,.module-card:hover,.plan-card:hover{
+  transform:translateY(-2px);
+}
+
+.market-price,.panel-value,.quote-price,.plan-price,.kpi-value,.screen-gold-price,.demo-screen-primary strong{
+  font-variant-numeric:tabular-nums lining-nums;
+  font-feature-settings:"tnum" 1,"lnum" 1;
+}
+
+.market-price,.screen-gold-price,.demo-screen-primary strong,.gold-spot>strong{
+  text-shadow:0 1px 24px rgba(216,181,106,.08);
+}
+
+.announcement{
+  box-shadow:0 8px 22px rgba(0,0,0,.10);
+}
+
+.ticker-grid a{
+  position:relative;
+}
+.ticker-grid a::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:linear-gradient(135deg,rgba(216,181,106,.05),transparent 50%);
+  opacity:0;
+  transition:opacity .18s ease;
+}
+.ticker-grid a:hover::after,
+.ticker-grid a:focus-visible::after{opacity:1}
+
+.market-grid>div,.gold-triple div,.pricing-breakdown>div,.compare-grid>div{
+  border:1px solid rgba(255,255,255,.025);
+}
+
+.section-head{margin-bottom:23px}
+
+.text-link{
+  white-space:nowrap;
+}
+
+.btn:active{
+  transform:translateY(0)!important;
+}
+
+.select,input,.field select,.field input,textarea{
+  color-scheme:dark;
+}
+
+input[type="number"],input[inputmode="decimal"]{
+  font-variant-numeric:tabular-nums;
+}
+
+table{
+  font-variant-numeric:tabular-nums;
+}
+
+.dashboard-topbar{
+  overflow:visible;
+}
+.dashboard-nav{
+  min-width:0;
+}
+.dashboard-nav-main{
+  min-width:0;
+  scrollbar-width:none;
+}
+.dashboard-nav-main::-webkit-scrollbar{display:none}
+.dashboard-nav-main a{
+  white-space:nowrap;
+}
+
+.dashboard-user{
+  flex:0 0 auto;
+}
+
+.dashboard-user-badge{
+  box-shadow:0 7px 20px rgba(0,0,0,.16);
+}
+
+.dashboard-shell .card,
+.dashboard-shell .kpi,
+.dashboard-shell .module-card,
+.dashboard-shell .plan-tile{
+  background-image:linear-gradient(145deg,rgba(255,255,255,.012),transparent 55%);
+}
+
+.screen-card,.demo-screen{
+  box-shadow:0 30px 90px rgba(0,0,0,.28)!important;
+}
+
+.screen-gold,.demo-screen-primary{
+  background:
+    radial-gradient(circle at 50% 0,rgba(216,181,106,.075),transparent 42%),
+    #0f1c23!important;
+}
+
+@media(max-width:1120px){
+  .topbar .nav{
+    flex-wrap:wrap;
+    padding-block:9px;
+    row-gap:6px;
+  }
+  .topbar .nav>.brand{flex:0 0 auto}
+  .topbar .nav>.nav-actions{margin-inline-start:auto}
+  .topbar .nav>.nav-links{
+    order:4;
+    flex:1 0 100%;
+    justify-content:flex-start;
+    overflow-x:auto;
+    overflow-y:hidden;
+    padding-bottom:2px;
+  }
+}
+
+@media(max-width:760px){
+  .topbar .nav{
+    min-height:64px;
+    row-gap:7px;
+  }
+  .topbar .nav>.nav-actions .btn{
+    min-height:38px;
+    padding:8px 10px;
+    font-size:10px;
+  }
+  .topbar .nav>.nav-links{
+    display:flex!important;
+    gap:0;
+  }
+  .topbar .nav>.nav-links a{
+    flex:0 0 auto;
+    padding:9px 10px;
+    font-size:10px;
+  }
+  .topbar .nav>.nav-links a::after{display:none}
+  .hero-premium{
+    padding-top:48px!important;
+  }
+  .hero-copy-wrap{max-width:none}
+  .market-hero-card{box-shadow:0 20px 50px rgba(0,0,0,.22)}
+  .section-head{margin-bottom:18px}
+  .market-card,.module-card,.quote-card,.news-card,.plan-card,.section-panel{
+    min-height:0;
+  }
+  .dashboard-mobile-menu summary{
+    box-shadow:0 7px 18px rgba(0,0,0,.14);
+  }
+}
+
+@media(max-width:480px){
+  .topbar .nav>.nav-actions .btn-ghost{display:none}
+  .topbar .nav>.nav-actions .btn-primary{display:inline-flex}
+  .hero h1,.page-hero h1,.section-header h1,.login-story h1,.gold-intro h1{
+    letter-spacing:-.05em;
+  }
+  .market-hero-card,.gold-history-card,.hero-panel,.login-card,.screen-card,.demo-screen{
+    border-radius:16px;
+  }
+}
+
+@media(prefers-reduced-motion:reduce){
+  a,button,input,select,textarea,.market-card,.quote-card,.news-card,.module-card,.plan-card{
+    transition:none!important;
+  }
+  .topbar .nav-links a::after{transition:none!important}
+}
