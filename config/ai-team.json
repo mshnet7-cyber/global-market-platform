@@ -1,35 +1,8 @@
 {
-  "name": "global-market-platform-ai-team",
-  "roles": {
-    "architect": "protect module boundaries and business invariants",
-    "frontend": "theme, responsive UX, RTL/LTR and accessibility",
-    "backend": "RPC, API, workflows and idempotency",
-    "database": "Supabase migrations, RLS and integrity",
-    "gold_domain": "Gold Engine, Gold Ledger, POS, buyback, exchange, repair and workshop",
-    "accounting_tax": "ledger, VAT and e-invoicing",
-    "security": "Auth, tenant isolation, authorization and audit",
-    "qa": "tests, regression and browser E2E",
-    "devops": "CI, Vercel, Cloudflare and runtime",
-    "release": "final release gate and evidence verification"
-  },
-  "gates": [
-    "contract-tests",
-    "lint",
-    "build",
-    "database-integrity",
-    "security",
-    "e2e-browser",
-    "deployment-commit-match",
-    "runtime-health",
-    "critical-user-journeys"
-  ],
-  "protected_domains": [
-    "pricing",
-    "gold-ledger",
-    "accounting",
-    "tax",
-    "auth",
-    "rls",
-    "tenant-isolation"
-  ]
+  "name":"global-market-platform-ai-team",
+  "roles":["architect","domain","frontend","backend","database","security","qa","devops","release"],
+  "workflow":["intake","impact-classification","architecture-check","implementation","protected-domain-policy","tests","lint","build","verification","evidence","deployment","runtime","browser-e2e","release-gate"],
+  "protected_domains":["pricing","gold-engine","gold-ledger","buyback","exchange","accounting","tax","invoice","inventory","tenant","auth","rls","rpc","database"],
+  "release_requires":["local-quality-pass","exact-commit-deployment","runtime-health","browser-e2e"],
+  "fail_closed":true
 }
