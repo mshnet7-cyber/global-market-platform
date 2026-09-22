@@ -10,17 +10,20 @@ export async function GET(request:Request){
   const access=await requireStage2Permission("erp.read");
   const q=new URL(request.url).searchParams.get("action")||"all";
   if(q==="all"){
-   const [quotes,vouchers,lists,sales,purchases,customers,suppliers]=await Promise.all([
+   const [quotes,vouchers,lists,sales,purchases,customers,suppliers,products,items]=await Promise.all([
     access.supabase.from("gmp_sales_quotes").select("id,quote_no,status,customer_id,store_id,valid_until,subtotal,discount_amount,vat_amount,total,currency,created_at").eq("organization_id",access.organization.id).order("created_at",{ascending:false}).limit(200),
     access.supabase.from("gmp_cash_vouchers").select("id,voucher_no,voucher_type,party_type,customer_id,supplier_id,amount,payment_method,reference,voucher_date,status,created_at").eq("organization_id",access.organization.id).order("voucher_date",{ascending:false}).limit(200),
     access.supabase.from("gmp_price_lists").select("id,name,store_id,currency,active,valid_from,valid_until,created_at").eq("organization_id",access.organization.id).order("created_at",{ascending:false}).limit(100),
     access.supabase.from("gmp_sales").select("id,invoice_no,customer_id,total,vat_amount,status,created_at").eq("organization_id",access.organization.id).order("created_at",{ascending:false}).limit(500),
     access.supabase.from("gmp_purchases").select("id,invoice_no,supplier_id,total,vat_amount,status,created_at").eq("organization_id",access.organization.id).order("created_at",{ascending:false}).limit(500),
     access.supabase.from("gmp_customers").select("id,name,phone").eq("organization_id",access.organization.id).order("name"),
-    access.supabase.from("gmp_suppliers").select("id,name,phone").eq("organization_id",access.organization.id).order("name")
+    access.supabase.from("gmp_suppliers").select("id,name,phone").eq("organization_id",access.organization.id).order("name"),
+    access.supabase.from("gmp_products").select("id,name,sku,barcode").eq("organization_id",access.organization.id).order("name").limit(1000),
+    access.supabase.from("gmp_price_list_items").select("id,price_list_id,product_id,sell_price,buy_price,making_charge,min_quantity,max_quantity").in("price_list_id",(await access.supabase.from("gmp_price_lists").select("id").eq("organization_id",access.organization.id)).data?.map((x:any)=>x.id)||[])
    ]);
-   return json({quotes:quotes.data??[],vouchers:vouchers.data??[],priceLists:lists.data??[],sales:sales.data??[],purchases:purchases.data??[],customers:customers.data??[],suppliers:suppliers.data??[]});
+   return json({quotes:quotes.data??[],vouchers:vouchers.data??[],priceLists:lists.data??[],sales:sales.data??[],purchases:purchases.data??[],customers:customers.data??[],suppliers:suppliers.data??[],products:products.data??[],priceListItems:items.data??[]});
   }
+  if(q==="quote_action") return json({error:"quote_action_requires_post"},405);
   if(q==="statement"){
    const p=new URL(request.url).searchParams,id=txt(p.get("party_id"),80),type=txt(p.get("party_type"),20);
    if(!uuid(id)||!["customer","supplier"].includes(type))return json({error:"party_required"},400);
@@ -55,6 +58,22 @@ export async function POST(request:Request){
    const amount=num(b.amount);if(amount<=0)return json({error:"amount_required"},400);
    const no=(type==="receipt"?"RV-":"PV-")+new Date().toISOString().replace(/[-:.TZ]/g,"").slice(0,14)+"-"+Math.floor(Math.random()*900+100);
    const {data,error}=await access.supabase.from("gmp_cash_vouchers").insert({organization_id:access.organization.id,branch_id:uuid(txt(b.branch_id,80))?txt(b.branch_id,80):null,voucher_no:no,voucher_type:type,party_type:["customer","supplier","other"].includes(txt(b.party_type,20))?txt(b.party_type,20):"other",customer_id:uuid(txt(b.customer_id,80))?txt(b.customer_id,80):null,supplier_id:uuid(txt(b.supplier_id,80))?txt(b.supplier_id,80):null,amount,payment_method:txt(b.payment_method,20)||"cash",reference:txt(b.reference,150)||null,notes:txt(b.notes,1000)||null,voucher_date:txt(b.voucher_date,20)||new Date().toISOString().slice(0,10),status:"posted",created_by:access.user.id}).select("*").single();
+   if(error)return json({error:error.message},400);return json({success:true,row:data},201);
+  }
+  if(action==="quote_status"){
+   const quoteId=txt(b.quote_id,80),status=txt(b.status,20);if(!uuid(quoteId))return json({error:"quote_required"},400);
+   const {data,error}=await access.supabase.rpc("gmp_set_sales_quote_status",{p_organization_id:access.organization.id,p_quote_id:quoteId,p_status:status});
+   if(error)return json({error:error.message},400);return json({success:true,row:data});
+  }
+  if(action==="quote_convert"){
+   const quoteId=txt(b.quote_id,80),paymentMethod=txt(b.payment_method,20)||"cash";if(!uuid(quoteId))return json({error:"quote_required"},400);
+   const {data,error}=await access.supabase.rpc("gmp_convert_sales_quote",{p_organization_id:access.organization.id,p_quote_id:quoteId,p_payment_method:paymentMethod,p_notes:txt(b.notes,1500)||null});
+   if(error)return json({error:error.message},400);return json({success:true,row:data});
+  }
+  if(action==="price_list_item"){
+   const listId=txt(b.price_list_id,80),productId=txt(b.product_id,80);if(!uuid(listId)||!uuid(productId))return json({error:"price_list_and_product_required"},400);
+   const payload={price_list_id:listId,product_id:productId,sell_price:b.sell_price===""||b.sell_price==null?null:num(b.sell_price),buy_price:b.buy_price===""||b.buy_price==null?null:num(b.buy_price),making_charge:num(b.making_charge),min_quantity:b.min_quantity===""||b.min_quantity==null?null:num(b.min_quantity),max_quantity:b.max_quantity===""||b.max_quantity==null?null:num(b.max_quantity)};
+   const {data,error}=await access.supabase.from("gmp_price_list_items").upsert(payload,{onConflict:"price_list_id,product_id"}).select("*").single();
    if(error)return json({error:error.message},400);return json({success:true,row:data},201);
   }
   if(action==="price_list"){
