@@ -1,13 +1,13 @@
 "use client";
-import {useEffect,useState} from "react";
+import {useCallback,useEffect,useState} from "react";
 import Link from "next/link";
 type D={quotes:any[];vouchers:any[];priceLists:any[];priceItems:any[];products:any[];sales:any[];purchases:any[];customers:any[];suppliers:any[]};
 const money=(n:any)=>Number(n||0).toLocaleString("en-OM",{minimumFractionDigits:3,maximumFractionDigits:3});
 export default function CommercialPage(){
  const [d,setD]=useState<D|null>(null),[tab,setTab]=useState("quotes"),[msg,setMsg]=useState(""),[busy,setBusy]=useState(false);
  const [customer,setCustomer]=useState(""),[store,setStore]=useState(""),[party,setParty]=useState("customer"),[selectedList,setSelectedList]=useState(""),[statementRows,setStatementRows]=useState<any[]|null>(null);
- async function load(){const r=await fetch("/api/commercial?action=all",{cache:"no-store"});const x=await r.json();if(!r.ok)throw Error(x.error);setD(x);if(!store&&x.priceLists?.[0]?.store_id)setStore(x.priceLists[0].store_id);if(!selectedList&&x.priceLists?.[0]?.id)setSelectedList(x.priceLists[0].id);}
- useEffect(()=>{const id=window.setTimeout(()=>{void load().catch(e=>setMsg(e.message));},0);return()=>window.clearTimeout(id);},[]);
+ const load=useCallback(async()=>{const r=await fetch("/api/commercial?action=all",{cache:"no-store"});const x=await r.json();if(!r.ok)throw Error(x.error);setD(x);if(!store&&x.priceLists?.[0]?.store_id)setStore(x.priceLists[0].store_id);if(!selectedList&&x.priceLists?.[0]?.id)setSelectedList(x.priceLists[0].id);},[store,selectedList]);
+ useEffect(()=>{const id=window.setTimeout(()=>{void load().catch(e=>setMsg(e.message));},0);return()=>window.clearTimeout(id);},[load]);
  const customers=d?.customers||[],suppliers=d?.suppliers||[],products=d?.products||[],priceLists=d?.priceLists||[];
  const customerName=(id:string)=>customers.find(x=>x.id===id)?.name||"—";
  const productName=(id:string)=>products.find(x=>x.id===id)?.name||"—";
