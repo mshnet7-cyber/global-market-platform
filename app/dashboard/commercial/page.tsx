@@ -1,5 +1,5 @@
 "use client";
-import {useEffect,useMemo,useState} from "react";
+import {useEffect,useState} from "react";
 import Link from "next/link";
 type D={quotes:any[];vouchers:any[];priceLists:any[];priceItems:any[];products:any[];sales:any[];purchases:any[];customers:any[];suppliers:any[]};
 const money=(n:any)=>Number(n||0).toLocaleString("en-OM",{minimumFractionDigits:3,maximumFractionDigits:3});
