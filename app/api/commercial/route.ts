@@ -71,29 +71,15 @@ export async function POST(request:Request){
   if(action==="quote_status"){
    const quoteId=txt(b.quote_id,80),status=txt(b.status,20);
    if(!uuid(quoteId)||!["sent","accepted","rejected","expired","cancelled"].includes(status))return json({error:"invalid_quote_transition"},400);
-   const {data:quote,error}=await access.supabase.from("gmp_sales_quotes").select("id,status,valid_until").eq("id",quoteId).eq("organization_id",access.organization.id).single();
-   if(error||!quote)return json({error:"quote_not_found"},404);
-   const allowed:Record<string,string[]>={draft:["sent","cancelled"],sent:["accepted","rejected","expired","cancelled"],accepted:["rejected","cancelled"]};
-   if(!(allowed[quote.status]||[]).includes(status))return json({error:"invalid_quote_transition"},409);
-   const {data:updated,error:updateError}=await access.supabase.from("gmp_sales_quotes").update({status,updated_at:new Date().toISOString()}).eq("id",quoteId).eq("organization_id",access.organization.id).select("*").single();
-   if(updateError)return json({error:updateError.message},400);
-   return json({success:true,row:updated});
+   const {data,error}=await access.supabase.rpc("gmp_set_sales_quote_status",{p_organization_id:access.organization.id,p_quote_id:quoteId,p_status:status});
+   if(error)return json({error:error.message},400);
+   return json({success:true,row:data});
   }
   if(action==="quote_convert"){
    const quoteId=txt(b.quote_id,80);if(!uuid(quoteId))return json({error:"quote_required"},400);
-   const {data:quote,error:quoteError}=await access.supabase.from("gmp_sales_quotes").select("*").eq("id",quoteId).eq("organization_id",access.organization.id).single();
-   if(quoteError||!quote)return json({error:"quote_not_found"},404);
-   if(quote.status!=="accepted")return json({error:"quote_must_be_accepted"},409);
-   const {data:existing}=await access.supabase.from("gmp_sales").select("id,invoice_no").eq("organization_id",access.organization.id).eq("notes","quote:"+quoteId).maybeSingle();
-   if(existing)return json({success:true,already_converted:true,sale:existing});
-   const {data:lines,error:lineError}=await access.supabase.from("gmp_sales_quote_lines").select("product_id,quantity,weight_grams,unit_price,making_charge,discount_amount,vat_amount").eq("quote_id",quoteId);
-   if(lineError||!lines?.length||lines.some((l:any)=>!l.product_id))return json({error:"quote_lines_not_convertible"},409);
-   const productIds=[...new Set(lines.map((l:any)=>l.product_id).filter(Boolean))] as string[];const {data:ownedProducts}=await access.supabase.from("gmp_products").select("id").eq("organization_id",access.organization.id).in("id",productIds);if((ownedProducts??[]).length!==productIds.length)return json({error:"quote_product_not_found"},409);
-   const {data:sale,error:saleError}=await access.supabase.rpc("gmp_create_and_post_sale",{p_organization_id:access.organization.id,p_branch_id:quote.branch_id,p_store_id:quote.store_id,p_customer_id:quote.customer_id,p_payment_method:txt(b.payment_method,20)||"cash",p_notes:"quote:"+quoteId,p_lines:lines});
-   if(saleError)return json({error:saleError.message},400);
-   const {data:updated,error:updateError}=await access.supabase.from("gmp_sales_quotes").update({status:"converted",updated_at:new Date().toISOString()}).eq("id",quoteId).eq("organization_id",access.organization.id).eq("status","accepted").select("*").single();
-   if(updateError)return json({error:updateError.message},400);
-   return json({success:true,converted:true,sale,quote:updated});
+   const {data,error}=await access.supabase.rpc("gmp_convert_sales_quote",{p_organization_id:access.organization.id,p_quote_id:quoteId,p_payment_method:txt(b.payment_method,20)||"cash",p_notes:txt(b.notes,1500)||null});
+   if(error)return json({error:error.message},400);
+   return json({success:true,row:data});
   }
   if(action==="price_item"){
    const priceListId=txt(b.price_list_id,80),productId=txt(b.product_id,80);
