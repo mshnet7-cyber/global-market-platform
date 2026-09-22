@@ -8,8 +8,8 @@ test("commercial workflow APIs and UI are present",()=>{
  const migration=fs.readFileSync("supabase/migrations/20260923010000_commercial_quote_workflows.sql","utf8");
  assert.match(api,/gmp_set_sales_quote_status/);
  assert.match(api,/gmp_convert_sales_quote/);
- assert.match(api,/price_list_item/);
- assert.match(page,/تحويل لفاتورة/);
+ assert.match(api,/price_item/);
+ assert.match(page,/تحويل إلى فاتورة/);
  assert.match(page,/price_list_item/);
  assert.match(migration,/organization_write_forbidden/);
  assert.match(migration,/for update/);
