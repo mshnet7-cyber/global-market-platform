@@ -98,7 +98,7 @@ export async function POST(request:Request){
   if(action==="price_item"){
    const priceListId=txt(b.price_list_id,80),productId=txt(b.product_id,80);
    if(!uuid(priceListId)||!uuid(productId))return json({error:"price_item_ids_required"},400);
-   const {data:list}=await access.supabase.from("gmp_price_lists").select("id").eq("id",priceListId).eq("organization_id",access.organization.id).maybeSingle();
+   const {data:list}=await access.supabase.from("gmp_price_lists").select("id,store_id").eq("id",priceListId).eq("organization_id",access.organization.id).maybeSingle();
    if(!list)return json({error:"price_list_not_found"},404);
    if(!(await belongsToOrg(access,"gmp_products",productId)))return json({error:"product_not_found"},404);
    if(list.store_id){const {data:product}=await access.supabase.from("gmp_products").select("store_id").eq("id",productId).eq("organization_id",access.organization.id).maybeSingle();if(product?.store_id&&product.store_id!==list.store_id)return json({error:"product_store_mismatch"},409);}
