@@ -1,12 +1,13 @@
 "use client";
 import {useEffect,useMemo,useState} from "react";
+import Link from "next/link";
 type D={quotes:any[];vouchers:any[];priceLists:any[];sales:any[];purchases:any[];customers:any[];suppliers:any[]};
 const money=(n:any)=>Number(n||0).toLocaleString("en-OM",{minimumFractionDigits:3,maximumFractionDigits:3});
 export default function CommercialPage(){
  const [d,setD]=useState<D|null>(null),[tab,setTab]=useState("quotes"),[msg,setMsg]=useState(""),[busy,setBusy]=useState(false);
  const [customer,setCustomer]=useState(""),[store,setStore]=useState(""),[amount,setAmount]=useState(""),[party,setParty]=useState("customer");
  async function load(){const r=await fetch("/api/commercial?action=all",{cache:"no-store"});const x=await r.json();if(!r.ok)throw Error(x.error);setD(x);if(!store&&x.priceLists?.[0]?.store_id)setStore(x.priceLists[0].store_id);}
- useEffect(()=>{void load().catch(e=>setMsg(e.message));},[]);
+ useEffect(()=>{const id=window.setTimeout(()=>{void load().catch(e=>setMsg(e.message));},0);return()=>window.clearTimeout(id);},[]);
  const customers=d?.customers||[],suppliers=d?.suppliers||[];
  const customerName=(id:string)=>customers.find(x=>x.id===id)?.name||"—";
  const supplierName=(id:string)=>suppliers.find(x=>x.id===id)?.name||"—";
