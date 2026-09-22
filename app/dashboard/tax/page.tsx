@@ -12,7 +12,7 @@ export default async function TaxPage(){
   supabase.from("gmp_sales").select("total,vat_amount,status,issued_at").eq("organization_id",organization.id).limit(1000),
   supabase.from("gmp_purchases").select("total,vat_amount,status,purchase_date").eq("organization_id",organization.id).limit(1000),
   supabase.from("gmp_expenses").select("amount,vat_amount,status,expense_date").eq("organization_id",organization.id).limit(1000),
-  supabase.from("gmp_country_invoice_profiles").select("country_code,tax_number,vat_rate,e_invoice_enabled,store_id").eq("organization_id",organization.id).limit(100)
+  supabase.from("gmp_country_invoice_profiles").select("id,country_code,tax_number,vat_rate,e_invoice_enabled,store_id").eq("organization_id",organization.id).limit(100)
  ]);
  const postedSales=(sales??[]).filter(x=>x.status==="posted"||x.status==="completed");
  const postedPurchases=(purchases??[]).filter(x=>x.status==="received"||x.status==="posted"||x.status==="completed");
