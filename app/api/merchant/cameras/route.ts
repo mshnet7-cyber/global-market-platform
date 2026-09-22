@@ -1,3 +1,5 @@
+import { isSameOriginRequest } from "../../../../lib/request-security";
+import { readBoundedRequestJson } from "../../../../lib/bounded-body";
 import { NextResponse } from "next/server";
 import { requireMerchantPlan } from "../../../../lib/merchant-access";
 
@@ -41,9 +43,11 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  if (!isSameOriginRequest(request)) return new Response(JSON.stringify({ error: "cross_site_request" }), { status: 403, headers: { "content-type": "application/json", "cache-control": "no-store" } });
+
   try {
     const { supabase, user, organization } = await requireMerchantPlan(["business"]);
-    const body = await request.json().catch(() => null) as Record<string, unknown> | null;
+    const body = await readBoundedRequestJson(request, 64 * 1024).catch(() => null) as Record<string, unknown> | null;
     if (!body) return NextResponse.json({ error: "invalid_json" }, { status: 400 });
     const name = String(body.name ?? "").trim();
     const cameraType = String(body.camera_type ?? "ip");
@@ -68,9 +72,11 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
+  if (!isSameOriginRequest(request)) return new Response(JSON.stringify({ error: "cross_site_request" }), { status: 403, headers: { "content-type": "application/json", "cache-control": "no-store" } });
+
   try {
     const { supabase, organization } = await requireMerchantPlan(["business"]);
-    const body = await request.json().catch(() => null) as Record<string, unknown> | null;
+    const body = await readBoundedRequestJson(request, 64 * 1024).catch(() => null) as Record<string, unknown> | null;
     const id = String(body?.id ?? "");
     if (!body || !id) return NextResponse.json({ error: "camera_id_required" }, { status: 400 });
     const patch: Record<string, unknown> = {};
@@ -94,6 +100,8 @@ export async function PATCH(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  if (!isSameOriginRequest(request)) return new Response(JSON.stringify({ error: "cross_site_request" }), { status: 403, headers: { "content-type": "application/json", "cache-control": "no-store" } });
+
   try {
     const { supabase, organization } = await requireMerchantPlan(["business"]);
     const id = new URL(request.url).searchParams.get("id") ?? "";

@@ -1,16 +1,17 @@
 import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes, randomUUID } from "crypto";
-import { lookup } from "dns/promises";
+import dns from "node:dns";
 import { isIP } from "net";
 import { createSupabaseAdminClient } from "./supabase/admin";
 
 function isPrivateIPv4(address: string) {
   const parts = address.split(".").map(Number);
   if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return true;
-  const [a, b] = parts;
+  const [a, b, c] = parts;
   return a === 0 || a === 10 || a === 127 || (a === 100 && b >= 64 && b <= 127) ||
     (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) ||
-    (a === 192 && (b === 0 || b === 168)) || (a === 198 && (b === 18 || b === 19)) ||
-    (a === 203 && b === 0) || a >= 224;
+    (a === 192 && (b === 0 && (c === 0 || c === 2) || b === 168)) ||
+    (a === 198 && (b === 18 || b === 19 || (b === 51 && c === 100))) ||
+    (a === 203 && b === 0 && c === 113) || a >= 224;
 }
 
 function ipv6Words(address: string) {
@@ -67,12 +68,12 @@ export async function validateWebhookUrl(value: string) {
   const host = url.hostname.replace(/^\[|\]$/g, "").toLowerCase();
   if (host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") || host.endsWith(".internal") || host === "metadata.google.internal") return false;
   if (isIP(host)) return !isPrivateIp(host);
-  try {
-    const addresses = await lookup(host, { all: true, verbatim: true });
-    return addresses.length > 0 && addresses.every((entry) => !isPrivateIp(entry.address));
-  } catch {
-    return false;
-  }
+  const results = await Promise.allSettled([
+    dns.promises.resolve4(host),
+    dns.promises.resolve6(host),
+  ]);
+  const addresses = results.flatMap((result) => result.status === "fulfilled" ? result.value : []);
+  return addresses.length > 0 && addresses.every((address) => !isPrivateIp(address));
 }
 
 function encryptionKey() {

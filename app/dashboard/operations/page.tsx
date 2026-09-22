@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 type Data = {
   role: string; planCode: string; stores: any[]; branches: any[]; products: any[]; customers: any[]; suppliers: any[];
@@ -27,7 +28,10 @@ function displayValue(column:string,value:any){
 }
 
 export default function OperationsPage(){
-  const [tab,setTab]=useState("overview"),[data,setData]=useState<Data|null>(null),[loading,setLoading]=useState(true),[message,setMessage]=useState(""),[busy,setBusy]=useState(false);
+  const searchParams = useSearchParams();
+  const requestedTab = searchParams.get("tab") || "overview";
+  const initialTab=tabs.some(([key])=>key===requestedTab)?requestedTab:"overview";
+  const [tab,setTab]=useState(initialTab),[data,setData]=useState<Data|null>(null),[loading,setLoading]=useState(true),[message,setMessage]=useState(""),[busy,setBusy]=useState(false);
   const [displayData,setDisplayData]=useState<any>(null),[team,setTeam]=useState<any>(null),[dooh,setDooh]=useState<any>(null),[directory,setDirectory]=useState<any[]>([]);
   const [storeId,setStoreId]=useState(""),[productId,setProductId]=useState(""),[qty,setQty]=useState("1"),[weight,setWeight]=useState("0"),[price,setPrice]=useState("0"),[payment,setPayment]=useState("cash");
   const get=useCallback(async(url:string)=>{const r=await fetch(url,{cache:"no-store"});const d=await r.json().catch(()=>null);if(!r.ok)throw new Error(d?.error||"request_failed");return d;},[]);

@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { IntegrationState } from "./types";
+import { readBoundedText } from "./provider-http";
 
 function cfg() {
   return {
@@ -14,7 +15,7 @@ function cfg() {
 
 export function getWhatsAppStatus() {
   const c = cfg();
-  const state: IntegrationState = c.messagesUrl && c.accessToken && c.senderId && c.approved ? "live" : "integration_ready";
+  const state: IntegrationState = c.provider && c.messagesUrl && c.accessToken && c.senderId && c.webhookSecret && c.approved ? "live" : "integration_ready";
   return { state, provider: c.provider, reason: state === "live" ? undefined : "provider_credentials_or_commercial_approval_not_configured" };
 }
 
@@ -46,17 +47,29 @@ export async function sendWhatsAppMessage(input: WhatsAppMessageInput) {
   if (input.messageType === "template") body.template = { name: input.templateName, language: input.languageCode ?? "ar", parameters: input.parameters ?? [] };
   if (input.messageType === "document") body.document = { url: input.documentUrl, filename: input.fileName ?? "invoice.pdf", caption: input.caption ?? "" };
   if (input.messageType === "text") body.text = input.text;
-  const response = await fetch(c.messagesUrl, {
-    method: "POST",
-    headers: { "content-type": "application/json", authorization: `Bearer ${c.accessToken}` },
-    body: JSON.stringify(body),
-    cache: "no-store",
-  });
-  const raw = await response.text();
-  let data: Record<string, unknown> = {};
-  try { data = JSON.parse(raw) as Record<string, unknown>; } catch { data = { raw: raw.slice(0, 2000) }; }
-  if (!response.ok) throw new Error(`whatsapp_provider_http_${response.status}`);
-  return data;
+  let providerUrl: URL;
+  try { providerUrl = new URL(c.messagesUrl); } catch { throw new Error("whatsapp_endpoint_invalid"); }
+  if (providerUrl.protocol !== "https:" || providerUrl.username || providerUrl.password) throw new Error("whatsapp_endpoint_invalid");
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10_000);
+  let response: Response;
+  try {
+    response = await fetch(providerUrl, {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${c.accessToken}` },
+      body: JSON.stringify(body),
+      cache: "no-store",
+      signal: controller.signal,
+      redirect: "error",
+    });
+    const raw = await readBoundedText(response);
+    let data: Record<string, unknown> = {};
+    try { data = JSON.parse(raw) as Record<string, unknown>; } catch { data = { raw: raw.slice(0, 2000) }; }
+    if (!response.ok) throw new Error(`whatsapp_provider_http_${response.status}`);
+    return data;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export type WhatsAppTemplateMessage = {

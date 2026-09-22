@@ -1,0 +1,8 @@
+{
+  "name":"global-market-platform-ai-team",
+  "roles":["architect","domain","frontend","backend","database","security","qa","devops","release"],
+  "workflow":["intake","impact-classification","architecture-check","implementation","protected-domain-policy","tests","lint","build","verification","evidence","deployment","runtime","browser-e2e","release-gate"],
+  "protected_domains":["pricing","gold-engine","gold-ledger","buyback","exchange","accounting","tax","invoice","inventory","tenant","auth","rls","rpc","database"],
+  "release_requires":["local-quality-pass","exact-commit-deployment","runtime-health","browser-e2e"],
+  "fail_closed":true
+}

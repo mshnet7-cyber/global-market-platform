@@ -4,22 +4,42 @@ import { queueCustomerWhatsApp } from "../../../../../lib/operational-notificati
 import { createSupabaseAdminClient } from "../../../../../lib/supabase/admin";
 import { assertTransition, verifyPaymentWebhook } from "../../../../../lib/stage3/payments";
 import { recordAuditEvent } from "../../../../../lib/provider-observability";
+import { readBoundedRequestText } from "../../../../../lib/bounded-body";
 
 const json = (data: unknown, status = 200) =>
   NextResponse.json(data, { status, headers: { "cache-control": "no-store" } });
 
 function deriveNextStatus(eventType: string) {
-  if (eventType.includes("succeeded") || eventType.includes("renew") || eventType === "subscription.activated" || eventType === "subscription.reactivated") return "active";
-  if (eventType.includes("failed") || eventType === "subscription.past_due") return "past_due";
-  if (eventType.includes("cancel")) return "canceled";
-  if (eventType.includes("suspend")) return "suspended";
-  if (eventType.includes("grace")) return "grace_period";
-  if (eventType.includes("expire")) return "expired";
+  const normalized = eventType.toLowerCase();
+  if (normalized.includes("failed") || normalized.includes("failure") || normalized === "subscription.past_due") return "past_due";
+  if (normalized.includes("cancel")) return "canceled";
+  if (normalized.includes("suspend")) return "suspended";
+  if (normalized.includes("grace")) return "grace_period";
+  if (normalized.includes("expire")) return "expired";
+  if (
+    normalized.includes("succeeded") ||
+    normalized === "subscription.activated" ||
+    normalized === "subscription.reactivated" ||
+    normalized.includes("renewed") ||
+    normalized.includes("renewal_succeeded")
+  ) return "active";
   return null;
 }
 
+function canReactivate(from: string, eventType: string) {
+  if (from !== "canceled" && from !== "expired") return true;
+  const normalized = eventType.toLowerCase();
+  return normalized === "subscription.reactivated" || normalized.includes("renewed") || normalized.includes("renewal_succeeded");
+}
+
 export async function POST(request: Request) {
-  const raw = await request.text();
+  let raw: string;
+  try {
+    raw = await readBoundedRequestText(request);
+  } catch (error) {
+    if (error instanceof Error && error.message === "request_body_too_large") return json({ error: "request_body_too_large" }, 413);
+    return json({ error: "invalid_request_body" }, 400);
+  }
   if (!verifyPaymentWebhook(raw, request.headers.get("x-gmp-signature"))) return json({ error: "invalid_signature" }, 401);
 
   let payload: Record<string, unknown>;
@@ -75,6 +95,14 @@ export async function POST(request: Request) {
   const eventId = String(claim.event_id);
 
   try {
+    if (nextStatus === "active" && !canReactivate(subscription.status, eventType)) {
+      await admin.from("gmp_billing_events").update({
+        status: "ignored",
+        error_message: "reactivation_requires_explicit_event",
+      }).eq("id", eventId);
+      return json({ received: true, ignored: "reactivation_requires_explicit_event", current_status: subscription.status, next_status: nextStatus }, 409);
+    }
+
     try {
       assertTransition(subscription.status, nextStatus);
     } catch {
@@ -129,12 +157,37 @@ export async function POST(request: Request) {
     if (typeof payload.cancel_at_period_end === "boolean") subscriptionPatch.cancel_at_period_end = payload.cancel_at_period_end;
     if (payload.grace_until) subscriptionPatch.grace_until = payload.grace_until;
 
-    const { error: subscriptionUpdateError } = await admin
+    const { data: updatedSubscription, error: subscriptionUpdateError } = await admin
       .from("gmp_subscriptions")
       .update(subscriptionPatch)
       .eq("id", subscription.id)
-      .eq("organization_id", subscription.organization_id);
+      .eq("organization_id", subscription.organization_id)
+      .eq("status", subscription.status)
+      .select("id,status")
+      .maybeSingle();
     if (subscriptionUpdateError) throw new Error("subscription_update_failed");
+    if (!updatedSubscription) {
+      const { data: latestSubscription, error: latestSubscriptionError } = await admin
+        .from("gmp_subscriptions")
+        .select("status")
+        .eq("id", subscription.id)
+        .eq("organization_id", subscription.organization_id)
+        .maybeSingle();
+      if (latestSubscriptionError) throw new Error("subscription_recheck_failed");
+      const latestStatus = String(latestSubscription?.status ?? "");
+      await admin.from("gmp_billing_events").update({
+        status: latestStatus === nextStatus ? "processed" : "ignored",
+        payment_id: paymentId,
+        error_message: latestStatus === nextStatus ? null : "concurrent_subscription_state_change",
+      }).eq("id", eventId);
+      return json({
+        received: true,
+        idempotent: latestStatus === nextStatus,
+        ignored: latestStatus === nextStatus ? undefined : "concurrent_subscription_state_change",
+        event_id: eventId,
+        status: latestStatus || null,
+      });
+    }
 
     const { error: eventUpdateError } = await admin
       .from("gmp_billing_events")

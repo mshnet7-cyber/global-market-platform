@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import type { IntegrationState } from "./types";
+import { readBoundedText } from "./provider-http";
 
 type AiResponse = {
   output?: unknown;
@@ -29,21 +30,36 @@ export function getAiStatus(): { state: IntegrationState; provider: string | nul
 async function invoke(path: string, payload: Record<string, unknown>): Promise<AiResponse> {
   const c = cfg();
   if (!c.baseUrl || !c.apiKey || !c.model) throw new Error("ai_not_configured");
-  const response = await fetch(`${c.baseUrl}${path}`, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      authorization: `Bearer ${c.apiKey}`,
-      "x-gmp-model": c.model,
-    },
-    body: JSON.stringify({ model: c.model, ...payload }),
-    cache: "no-store",
-  });
-  const raw = await response.text();
-  let data: AiResponse = {};
-  try { data = JSON.parse(raw) as AiResponse; } catch { data = { text: raw.slice(0, 10000) }; }
-  if (!response.ok) throw new Error(`ai_provider_http_${response.status}`);
-  return data;
+
+  let baseUrl: URL;
+  try { baseUrl = new URL(c.baseUrl); } catch { throw new Error("ai_endpoint_invalid"); }
+  if (baseUrl.protocol !== "https:" || baseUrl.username || baseUrl.password) throw new Error("ai_endpoint_invalid");
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10_000);
+  let response: Response;
+  try {
+    const endpoint = `${baseUrl.toString().replace(/\/$/, "")}${path.startsWith("/") ? path : `/${path}`}`;
+    response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${c.apiKey}`,
+        "x-gmp-model": c.model,
+      },
+      body: JSON.stringify({ model: c.model, ...payload }),
+      cache: "no-store",
+      signal: controller.signal,
+      redirect: "error",
+    });
+    const raw = await readBoundedText(response);
+    let data: AiResponse = {};
+    try { data = JSON.parse(raw) as AiResponse; } catch { data = { text: raw.slice(0, 10000) }; }
+    if (!response.ok) throw new Error(`ai_provider_http_${response.status}`);
+    return data;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export async function extractDocumentFields(input: {

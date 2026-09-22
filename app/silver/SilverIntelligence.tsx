@@ -4,10 +4,11 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { MetalSnapshot } from "../../lib/types";
 import type { PublicPricePoint } from "../../lib/market-history";
+import MoneyDisplay from "../../components/MoneyDisplay";
 import { formatMoneyDisplay } from "../../lib/currency-display";
 
 function money(value: number | null | undefined, currency: string, digits = 3) {
-  return formatMoneyDisplay(value, currency, "en-US", digits);
+  return <MoneyDisplay value={value} currency={currency} locale="en-US" maximumFractionDigits={digits} />;
 }
 
 function MiniChart({ points, currency }: { points: PublicPricePoint[]; currency: string }) {
@@ -131,7 +132,7 @@ export default function SilverIntelligence({
             <span>999 / {language === "ar" ? "غرام" : "GRAM"}</span>
             <strong>{money(silver.perGram24k, currency)}</strong>
             <em>{silver.status}</em>
-            <small>{silver.provider || "مصدر البيانات غير متاح"}</small>
+            <small>{silver.provider || "مصدر البيانات غير متاح"}</small><small>مصدر: {silver.timestamp ? new Date(silver.timestamp).toLocaleString(language) : "—"} · استلام: {silver.receivedAt ? new Date(silver.receivedAt).toLocaleString(language) : "—"}</small>
           </div>
         </section>
 
@@ -181,7 +182,7 @@ export default function SilverIntelligence({
             </div>
             <div className="alert-form">
               <label>نبّهني عندما يتجاوز XAG هذه القيمة
-                <input inputMode="decimal" value={threshold} onChange={(e) => setThreshold(e.target.value)} placeholder={money(silver.spot, currency, 2)} />
+                <input inputMode="decimal" value={threshold} onChange={(e) => setThreshold(e.target.value)} placeholder={formatMoneyDisplay(silver.spot, currency,"en-US",2)} />
               </label>
               <button type="button" className="btn btn-primary" disabled={busy} onClick={() => void createAlert()}>إنشاء التنبيه</button>
               {message && <div className="terminal-footnote" role="status">{message}</div>}

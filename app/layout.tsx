@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import PwaRegister from "./PwaRegister";
 import "./globals.css";
 import "./premium.css";
@@ -8,6 +8,7 @@ import "./launch-refinement.css";
 import "./stage1-core.css";
 import "./stage2.css";
 import "./stage3.css";
+import "./visual-polish.css";
 
 export const metadata: Metadata = {
   title: "Global Market Platform | Global market prices",
@@ -24,22 +25,18 @@ export const viewport: Viewport = {
 };
 
 const RTL_LANGUAGES = new Set(["ar", "fa", "he", "ur"]);
-const CSS_PAINT_GATE = `html[data-css-paint-gate="true"] body{visibility:hidden}html[data-css-paint-gate="true"] body:before{content:"";position:fixed;inset:0;background:#061017;z-index:2147483647;pointer-events:none}html[data-css-paint-gate="true"] body:after{content:"";position:fixed;inset:0;background:#061017;z-index:2147483646;pointer-events:none}`;
-const CSS_PAINT_SCRIPT = `(()=>{const ready=()=>document.documentElement.removeAttribute("data-css-paint-gate");if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",ready,{once:true});else ready();window.setTimeout(ready,1600);})();`;
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const headerStore = await headers();
-  const rawLanguage = headerStore.get("x-gmp-language")?.toLowerCase() ?? "ar";
-  const language = /^[a-z]{2,3}$/.test(rawLanguage) ? rawLanguage : "ar";
+  const cookieStore = await cookies();
+  const rawLanguage = headerStore.get("x-gmp-language")?.toLowerCase() ?? cookieStore.get("gmp-language")?.value?.toLowerCase() ?? "ar";
+  const language = /^(ar|en|tr|de)$/.test(rawLanguage) ? rawLanguage : "ar";
+  const theme = cookieStore.get("gmp-theme")?.value === "light" ? "light" : "dark";
+  const fontScale = cookieStore.get("gmp-font-scale")?.value === "small" || cookieStore.get("gmp-font-scale")?.value === "large" ? cookieStore.get("gmp-font-scale")!.value : "normal";
   const dir = RTL_LANGUAGES.has(language) ? "rtl" : "ltr";
   return (
-    <html lang={language} dir={dir} data-css-paint-gate="true">
+    <html lang={language} dir={dir} data-theme={theme} data-font-scale={fontScale} suppressHydrationWarning>
       <head>
-        <style dangerouslySetInnerHTML={{ __html: CSS_PAINT_GATE }} />
-        <script dangerouslySetInnerHTML={{ __html: CSS_PAINT_SCRIPT }} />
-        <noscript>
-          <style>{`html[data-css-paint-gate="true"] body{visibility:visible}html[data-css-paint-gate="true"] body:before,html[data-css-paint-gate="true"] body:after{display:none}`}</style>
-        </noscript>
       </head>
       <body>
         <PwaRegister />

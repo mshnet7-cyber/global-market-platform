@@ -1,0 +1,10 @@
+import { readFileSync } from "node:fs";
+const css=readFileSync("app/visual-polish.css","utf8");
+const page=readFileSync("app/page.tsx","utf8");
+const prefs=readFileSync("components/DisplayPreferences.tsx","utf8");
+const i18n=readFileSync("lib/i18n.ts","utf8");
+for (const x of ["Theme system v5","--gmp-control-h","--gmp-page-max","preference-font-reset","data-font-scale","html[data-theme=\"light\"]"]) if(!css.includes(x)) throw new Error("missing CSS contract: "+x);
+for (const x of ["messages.announcement","messages.marketAccess","messages.shopBannerTitle","messages.merchantWorkspace"]) if(!page.includes(x)) throw new Error("missing page localization: "+x);
+for (const x of ["preference-font-reset","labels.reset","aria-current"]) if(!prefs.includes(x)) throw new Error("missing preference control: "+x);
+for (const x of ["announcement","marketWatch","heroIntelligence","merchantWorkspace"]) if(!i18n.includes(x)) throw new Error("missing i18n key: "+x);
+console.log("theme system v5: PASS");

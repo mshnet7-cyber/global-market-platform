@@ -35,7 +35,7 @@ test("dashboard exposes all three business workflows",()=>{
 });
 
 test("database migration enforces workflow transitions",()=>{
- const src=read("supabase/migrations/20260916224000_gmp_workflow_transition_integrity_v1.sql");
+ const src=read("supabase/migrations/20260916223644_gmp_workflow_transition_integrity_v1.sql");
  assert.match(src,/gmp_check_camera_scope/);
  assert.match(src,/gmp_check_compliance_case_transition/);
  assert.match(src,/gmp_check_einvoice_transition/);

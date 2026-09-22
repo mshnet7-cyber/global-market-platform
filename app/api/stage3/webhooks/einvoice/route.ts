@@ -3,6 +3,7 @@ import { queueCustomerWhatsApp } from "../../../../../lib/operational-notificati
 import { createSupabaseAdminClient } from "../../../../../lib/supabase/admin";
 import { verifyEInvoiceWebhook } from "../../../../../lib/stage3/einvoice";
 import { recordAuditEvent } from "../../../../../lib/provider-observability";
+import { readBoundedRequestText } from "../../../../../lib/bounded-body";
 
 const json = (data: unknown, status = 200) =>
   NextResponse.json(data, { status, headers: { "cache-control": "no-store" } });
@@ -18,7 +19,13 @@ function canAdvance(from: string, to: string) {
 }
 
 export async function POST(request: Request) {
-  const raw = await request.text();
+  let raw: string;
+  try {
+    raw = await readBoundedRequestText(request);
+  } catch (error) {
+    if (error instanceof Error && error.message === "request_body_too_large") return json({ error: "request_body_too_large" }, 413);
+    return json({ error: "invalid_request_body" }, 400);
+  }
   if (!verifyEInvoiceWebhook(raw, request.headers.get("x-gmp-signature"))) return json({ error: "invalid_signature" }, 401);
 
   let payload: Record<string, unknown>;

@@ -1,8 +1,9 @@
 name: CI
 
 on:
+  workflow_dispatch:
   push:
-    branches: [main, stage3-ai-integrations-global]
+    branches: [main, stage3-ai-integrations-global, 'stage3-*', 'cloudflare-workers-*']
   pull_request:
 
 permissions:
@@ -11,12 +12,12 @@ permissions:
 jobs:
   quality:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 20
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 24
       - name: Install dependencies
@@ -27,3 +28,12 @@ jobs:
         run: npm run lint
       - name: Build
         run: npm run build
+      - name: Cloudflare vinext compatibility check
+        if: startsWith(github.head_ref, 'cloudflare-workers-') || startsWith(github.ref, 'refs/heads/cloudflare-workers-')
+        run: npm run check:vinext
+      - name: Cloudflare Workers production build
+        if: startsWith(github.head_ref, 'cloudflare-workers-') || startsWith(github.ref, 'refs/heads/cloudflare-workers-')
+        run: npm run build:vinext
+      - name: Cloudflare Workers deploy dry-run
+        if: startsWith(github.head_ref, 'cloudflare-workers-') || startsWith(github.ref, 'refs/heads/cloudflare-workers-')
+        run: npm run deploy:cloudflare:dry-run

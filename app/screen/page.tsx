@@ -3,6 +3,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import MoneyDisplay from "../../components/MoneyDisplay";
 
 const SESSION_KEY = "gmp_screen_session";
 const SNAPSHOT_KEY = "gmp_screen_snapshot";
@@ -10,16 +11,12 @@ const SNAPSHOT_KEY = "gmp_screen_snapshot";
 type DisplayPayload = {
   screen: { id: string; name: string; template: string };
   store: { id: string; name: string; currency: string; timezone: string; logo_path?: string | null; phone?: string | null; whatsapp?: string | null };
-  snapshot: { perGram24k: number | null; purities: Record<string, number | null>; currency: string; spot: number | null; bid: number | null; ask: number | null; timestamp: string | null; provider: string; status: string } | null;
+  snapshot: { perGram24k: number | null; purities: Record<string, number | null>; currency: string; spot: number | null; bid: number | null; ask: number | null; timestamp: string | null; receivedAt?: string | null; provider: string; status: string } | null;
   status: string;
   server_time: string;
   content?: Array<{id:string;content_type:string;title:string;body?:string|null;media_path?:string|null;payload?:Record<string,unknown>;priority:number}>;
   ads?: Array<{placement:{id:string;weight:number};campaign?:{title:string;body?:string|null;image_path?:string|null;target_url?:string|null;advertiser_name?:string|null};creative?:{name:string;creative_type:string;asset_path?:string|null;target_url?:string|null}}>;
 };
-
-function formatNumber(value: number | null, digits = 3) {
-  return value == null || !Number.isFinite(value) ? "—" : new Intl.NumberFormat("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(value);
-}
 
 export default function ScreenPage() {
   const [session, setSession] = useState<string | null>(null);
@@ -137,19 +134,19 @@ export default function ScreenPage() {
             <div className="screen-connected-view">
               <div className="screen-header">
                 <div><div className="eyebrow">{payload?.store.name ?? "Global Market"}</div><h1>{payload?.screen.name ?? "شاشة الأسعار"}</h1></div>
-                <div className="notice"><strong>{statusLabel}</strong><div className="screen-status-meta">{payload?.snapshot?.timestamp ? new Date(payload.snapshot.timestamp).toLocaleString() : "—"}</div></div>
+                <div className="notice"><strong>{statusLabel}</strong><div className="screen-status-meta">{payload?.snapshot?.timestamp ? new Date(payload.snapshot.timestamp).toLocaleString() : "—"} · {payload?.snapshot?.provider || "—"}</div><div className="screen-status-meta">استلام: {payload?.snapshot?.receivedAt ? new Date(payload.snapshot.receivedAt).toLocaleString() : "—"}</div></div>
               </div>
               <div className="gold-card screen-gold">
                 <div className="screen-price-caption">ذهب 24K / غرام · {payload?.store.currency ?? "OMR"}</div>
-                <div className="screen-gold-price">{formatNumber(snapshot?.perGram24k ?? null, 3)}</div>
+                <div className="screen-gold-price"><MoneyDisplay value={snapshot?.perGram24k ?? null} currency={payload?.store.currency ?? "OMR"} locale="en-US" maximumFractionDigits={3} /></div>
                 <div className="screen-meta-grid">
-                  <div className="card"><div>السعر الفوري / الأونصة</div><strong>{formatNumber(snapshot?.spot ?? null, 3)}</strong></div>
-                  <div className="card"><div>شراء مرجعي</div><strong>{formatNumber(snapshot?.bid ?? null, 3)}</strong></div>
-                  <div className="card"><div>بيع مرجعي</div><strong>{formatNumber(snapshot?.ask ?? null, 3)}</strong></div>
+                  <div className="card"><div>السعر الفوري / الأونصة</div><strong><MoneyDisplay value={snapshot?.spot ?? null} currency={payload?.store.currency ?? "OMR"} locale="en-US" maximumFractionDigits={3} /></strong></div>
+                  <div className="card"><div>شراء مرجعي</div><strong><MoneyDisplay value={snapshot?.bid ?? null} currency={payload?.store.currency ?? "OMR"} locale="en-US" maximumFractionDigits={3} /></strong></div>
+                  <div className="card"><div>بيع مرجعي</div><strong><MoneyDisplay value={snapshot?.ask ?? null} currency={payload?.store.currency ?? "OMR"} locale="en-US" maximumFractionDigits={3} /></strong></div>
                 </div>
               </div>
               <div className="screen-purity-grid">
-                {["22K", "21K", "18K", "14K"].map((k) => <div className="card" key={k}><div>{k}</div><strong>{formatNumber(snapshot?.purities?.[k] ?? null, 3)}</strong></div>)}
+                {["22K", "21K", "18K", "14K"].map((k) => <div className="card" key={k}><div>{k}</div><strong><MoneyDisplay value={snapshot?.purities?.[k] ?? null} currency={payload?.store.currency ?? "OMR"} locale="en-US" maximumFractionDigits={3} /></strong></div>)}
               </div>
               {(payload?.content?.length || payload?.ads?.length) ? <section className="screen-content-area">
                 {(payload.content || []).map((item) => <article className="card screen-content-card" key={item.id}>

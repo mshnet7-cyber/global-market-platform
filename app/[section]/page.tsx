@@ -4,14 +4,11 @@ import { getSnapshot } from "../../lib/providers";
 import type { Quote } from "../../lib/types";
 import { appConfig, countries, isValidLanguage } from "../../lib/config";
 import { getDisplayName, getMessages, isRtlLanguage, formatStatus } from "../../lib/i18n";
+import MoneyDisplay from "../../components/MoneyDisplay";
 
 const publicSections = new Set(["gold", "silver", "markets", "stocks", "news", "demo"]);
 
-function formatMoney(value: number | null | undefined, locale: string, currency: string, maximumFractionDigits = 2) {
-  if (value == null || !Number.isFinite(value)) return "—";
-  try { return new Intl.NumberFormat(locale, { style: "currency", currency, maximumFractionDigits }).format(value); }
-  catch { return `${value.toLocaleString(locale, { maximumFractionDigits })} ${currency}`; }
-}
+function formatMoney(value: number | null | undefined, locale: string, currency: string, maximumFractionDigits = 2) { return <MoneyDisplay value={value} currency={currency} locale={locale} maximumFractionDigits={maximumFractionDigits} />; }
 function formatPercent(value: number | null | undefined, locale: string) {
   if (value == null || !Number.isFinite(value)) return "—";
   const sign = value > 0 ? "+" : "";

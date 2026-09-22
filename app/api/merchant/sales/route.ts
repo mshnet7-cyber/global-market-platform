@@ -1,14 +1,18 @@
+import { isSameOriginRequest } from "../../../../lib/request-security";
+import { readBoundedRequestJson } from "../../../../lib/bounded-body";
 import { NextResponse } from "next/server";
-import { requireMerchantPlan } from "../../../../lib/merchant-access";
+import { requireMerchantEntitlement } from "../../../../lib/merchant-access";
 import { queueCustomerWhatsApp } from "../../../../lib/operational-notifications";
 
 const MAX_SALE_LINES = 100;
 const PAYMENT_METHODS = new Set(["cash", "bank", "card", "wallet", "other"]);
 
 export async function POST(request: Request) {
+  if (!isSameOriginRequest(request)) return new Response(JSON.stringify({ error: "cross_site_request" }), { status: 403, headers: { "content-type": "application/json", "cache-control": "no-store" } });
+
   try {
-    const { supabase, organization } = await requireMerchantPlan(["pro", "business"]);
-    const body = await request.json().catch(() => null) as Record<string, unknown> | null;
+    const { supabase, organization } = await requireMerchantEntitlement("pos");
+    const body = await readBoundedRequestJson(request, 64 * 1024).catch(() => null) as Record<string, unknown> | null;
     if (!body) return NextResponse.json({ error: "invalid_json" }, { status: 400 });
     const storeId = body.store_id ? String(body.store_id) : null;
     const branchId = body.branch_id ? String(body.branch_id) : null;
@@ -55,7 +59,7 @@ export async function POST(request: Request) {
     return NextResponse.json(data, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "unexpected_error";
-    const status = message === "merchant_plan_required" ? 403 : 500;
+    const status = message === "merchant_entitlement_required" ? 403 : 500;
     return NextResponse.json({ error: message }, { status });
   }
 }
