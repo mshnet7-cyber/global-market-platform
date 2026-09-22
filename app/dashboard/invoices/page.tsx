@@ -47,7 +47,7 @@ export default async function InvoicesPage(){
       <td><MoneyDisplay value={Number(s.vat_amount||0)} currency={st?.currency||"OMR"} locale="ar-OM" maximumFractionDigits={3}/></td>
       <td>{paymentLabel[s.payment_method??""]??s.payment_method??"—"}</td><td>{statusLabel[s.status]??s.status}</td>
       <td>{s.issued_at?new Date(s.issued_at).toLocaleString("ar-OM"):new Date(s.created_at).toLocaleString("ar-OM")}</td>
-      <td><div className="actions"><Link className="btn" href="/dashboard/invoicing">إرسال إلكتروني</Link><button className="btn" type="button" disabled>طباعة/PDF</button></div></td>
+      <td><div className="actions"><Link className="btn" href="/dashboard/invoicing">إرسال إلكتروني</Link><Link className="btn" href={"/dashboard/invoices/"+s.id}>طباعة/PDF</Link></div></td>
     </tr>})}</tbody></table></div>}
    </section>
    <section className="grid three" style={{marginTop:20}}>
