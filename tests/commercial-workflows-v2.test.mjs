@@ -8,7 +8,8 @@ test("commercial workflow APIs and UI are present",()=>{
  const migration=fs.readFileSync("supabase/migrations/20260923010000_commercial_quote_workflows.sql","utf8");
  assert.match(api,/gmp_set_sales_quote_status/);
  assert.match(api,/gmp_convert_sales_quote/);
- assert.match(api,/gmp_create_sales_quote/);\n assert.doesNotMatch(api,/from\("gmp_sales_quotes"\)\\.insert/);
+ assert.match(api,/gmp_create_sales_quote/);
+ assert.doesNotMatch(api,/from\("gmp_sales_quotes"\)\.insert/);
  assert.match(api,/price_item/);
  assert.match(page,/تحويل إلى فاتورة/);
  assert.match(page,/حفظ سعر المنتج/);
@@ -17,8 +18,9 @@ test("commercial workflow APIs and UI are present",()=>{
  const atomicMigration=fs.readFileSync("supabase/migrations/20260923022000_commercial_quote_creation_atomic.sql","utf8");
  assert.match(atomicMigration,/security invoker/);
  assert.match(atomicMigration,/gmp_sales_quotes/);
- assert.match(atomicMigration,/gmp_sales_quote_lines/);\n assert.match(atomicMigration,/insert into public\\.gmp_sales_quotes/);\n assert.match(atomicMigration,/insert into public\\.gmp_sales_quote_lines/);
-
+ assert.match(atomicMigration,/gmp_sales_quote_lines/);
+ assert.match(atomicMigration,/insert into public.gmp_sales_quotes/);
+ assert.match(atomicMigration,/insert into public.gmp_sales_quote_lines/);
 });
 
 test("commercial database hardening is encoded",()=>{
