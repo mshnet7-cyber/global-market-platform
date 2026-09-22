@@ -6,3 +6,5 @@ test("commercial center includes core ERP layers",()=>{const p=fs.readFileSync("
 test("commercial API has tenant-scoped operations",()=>{const p=fs.readFileSync("app/api/commercial/route.ts","utf8");for(const s of ["organization_id","requireStage2Permission","gmp_sales_quotes","gmp_cash_vouchers","gmp_price_lists"])assert.match(p,new RegExp(s));});
 
 test("commercial workflow exposes quote lifecycle and price list items",()=>{const p=fs.readFileSync("app/api/commercial/route.ts","utf8"),u=fs.readFileSync("app/dashboard/commercial/page.tsx","utf8");for(const s of ["quote_status","quote_convert","price_item","gmp_create_and_post_sale"])assert.match(p,new RegExp(s));for(const s of ["تحويل إلى فاتورة","إضافة منتج للقائمة","حفظ سعر المنتج"])assert.match(u,new RegExp(s));});
+
+test("commercial write paths enforce organization ownership for referenced records",()=>{const p=fs.readFileSync("app/api/commercial/route.ts","utf8");for(const s of ["belongsToOrg(access,\"gmp_stores\"","belongsToOrg(access,\"gmp_customers\"","belongsToOrg(access,\"gmp_products\"","partyType==="])assert.match(p,new RegExp(s));});
