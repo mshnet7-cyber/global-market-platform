@@ -10,7 +10,7 @@ test("commercial workflow APIs and UI are present",()=>{
  assert.match(api,/gmp_convert_sales_quote/);
  assert.match(api,/price_item/);
  assert.match(page,/تحويل إلى فاتورة/);
- assert.match(page,/price_list_item/);
+ assert.match(page,/حفظ سعر المنتج/);
  assert.match(migration,/organization_write_forbidden/);
  assert.match(migration,/for update/);
 });
