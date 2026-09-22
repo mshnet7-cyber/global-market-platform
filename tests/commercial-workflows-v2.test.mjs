@@ -24,3 +24,11 @@ test("commercial database hardening is encoded",()=>{
  assert.match(migration,/gmp_gold_price_rules_admin_insert/);
  assert.doesNotMatch(migration,/for all to authenticated/);
 });
+
+test("quote RPCs use invoker security and fail-closed conversion state",()=>{
+ const migration=fs.readFileSync("supabase/migrations/20260923021000_commercial_quote_least_privilege.sql","utf8");
+ assert.match(migration,/gmp_set_sales_quote_status[\\s\\S]*security invoker/i);
+ assert.match(migration,/gmp_convert_sales_quote[\\s\\S]*security invoker/i);
+ assert.match(migration,/quote_conversion_state_invalid/);
+ assert.match(migration,/sale_conversion_missing_id/);
+});
