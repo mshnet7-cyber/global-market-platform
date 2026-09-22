@@ -50,9 +50,19 @@ export async function POST(request:Request){
    ]);
    const context={sales:sales.count??0,purchases:purchases.count??0,expenses:expenses.count??0,repairs:repairs.count??0};
    if(getAiStatus().state!=="live")return json({error:"ai_not_configured",integration_state:"integration_ready",context},503);
-   const result=await askCopilot({question,context:{organization_id:organization.id,...context}});
-   await recordAuditEvent({action:"stage3.ai.copilot",organizationId:organization.id,userId:user.id,entityType:"ai_job",metadata:{question_hash:createHash("sha256").update(question).digest("hex").slice(0,16)}});
-   return json({success:true,result});
+   const admin=createSupabaseAdminClient();if(!admin)return json({error:"service_not_configured"},503);
+   const inputHash=createHash("sha256").update(question).digest("hex");
+   const {data:job,error:jobError}=await admin.from("gmp_ai_jobs").insert({organization_id:organization.id,job_type:"copilot",status:"running",provider:getAiStatus().provider,model:getAiStatus().model,input_hash:inputHash,created_by:user.id}).select("id").single();
+   if(jobError)return json({error:jobError.message},400);
+   try{
+    const result=await askCopilot({question,context:{organization_id:organization.id,...context}});
+    await admin.from("gmp_ai_jobs").update({status:"succeeded",result,updated_at:new Date().toISOString()}).eq("id",job.id).eq("organization_id",organization.id);
+    await recordAuditEvent({action:"stage3.ai.copilot",organizationId:organization.id,userId:user.id,entityType:"ai_job",entityId:job.id,metadata:{question_hash:inputHash.slice(0,16)}});
+    return json({success:true,job_id:job.id,result});
+   }catch(e){
+    await admin.from("gmp_ai_jobs").update({status:"failed",error_code:"provider_error",error_message:e instanceof Error?e.message.slice(0,500):"provider_error",retry_count:1,updated_at:new Date().toISOString()}).eq("id",job.id).eq("organization_id",organization.id);
+    return json({error:"ai_provider_failed",job_id:job.id,retryable:true},502);
+   }
   }
   return json({error:"unsupported_action"},400);
  }catch(e){const m=e instanceof Error?e.message:"unexpected_error";return json({error:m},m==="merchant_plan_required"?403:500)}

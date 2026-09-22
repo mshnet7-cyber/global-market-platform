@@ -15,3 +15,16 @@ test("AI team evidence records deployment and runtime as independent gates", () 
   assert.match(text,/runtime_health/);
   assert.match(text,/browser_e2e/);
 });
+
+
+test("AI copilot persists tenant-scoped jobs and records provider failures", () => {
+  const route = readFileSync("app/api/stage3/ai/route.ts","utf8");
+  assert.match(route,/job_type:"copilot"/);
+  assert.match(route,/organization_id:organization\.id/);
+  assert.match(route,/status:"running"/);
+  assert.match(route,/status:"succeeded"/);
+  assert.match(route,/status:"failed"/);
+  assert.match(route,/ai_provider_failed/);
+  assert.match(route,/job_id:job\.id/);
+  assert.match(route,/gmp_ai_jobs/);
+});
