@@ -15,7 +15,7 @@ export default function CommercialPage(){
  const statement=useMemo(()=>{if(!d)return null;const id=customer;return party==="customer"?d.sales.filter(x=>x.customer_id===id):d.purchases.filter(x=>x.supplier_id===id)},[d,customer,party]);
  if(!d)return <main className="stage2-page"><div className="stage2-empty">{msg||"جارٍ تحميل المركز التجاري…"}</div></main>;
  return <main className="stage2-page">
-  <header className="stage2-page-head"><div><div className="eyebrow">ERP التجاري</div><h1>المبيعات التجارية والفواتير</h1><p>عروض أسعار، سندات قبض وصرف، قوائم أسعار، وكشوف حساب — ضمن بيانات المؤسسة المعزولة.</p></div><a className="btn" href="/dashboard/invoices">مركز الفواتير</a></header>
+  <header className="stage2-page-head"><div><div className="eyebrow">ERP التجاري</div><h1>المبيعات التجارية والفواتير</h1><p>عروض أسعار، سندات قبض وصرف، قوائم أسعار، وكشوف حساب — ضمن بيانات المؤسسة المعزولة.</p></div><Link className="btn" href="/dashboard/invoices">مركز الفواتير</Link></header>
   <nav className="stage2-tabs">{[["quotes","عروض الأسعار"],["vouchers","سندات القبض والصرف"],["prices","قوائم الأسعار"],["statements","كشوف الحساب"],["export","تصدير البيانات"]].map(x=><button key={x[0]} className={tab===x[0]?"active":""} onClick={()=>setTab(x[0])}>{x[1]}</button>)}</nav>
   {msg&&<div className="stage2-alert">{msg}</div>}
   {tab==="quotes"&&<section className="stage2-section">
