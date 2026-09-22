@@ -46,18 +46,57 @@ export async function POST(request:Request){
    const storeId=txt(b.store_id,80);if(!uuid(storeId))return json({error:"store_required"},400);
    if(!(await belongsToOrg(access,"gmp_stores",storeId)))return json({error:"store_not_found"},404);
    const customerId=txt(b.customer_id,80);if(customerId&&!await belongsToOrg(access,"gmp_customers",customerId))return json({error:"customer_not_found"},404);
-   const branchId=txt(b.branch_id,80);if(branchId&&!await belongsToOrg(access,"gmp_branches",branchId))return json({error:"branch_not_found"},404);if(branchId){const {data:branch}=await access.supabase.from("gmp_branches").select("store_id").eq("id",branchId).eq("organization_id",access.organization.id).maybeSingle();if(branch?.store_id&&branch.store_id!==storeId)return json({error:"branch_store_mismatch"},409);}
+   const branchId=txt(b.branch_id,80);if(branchId&&!await belongsToOrg(access,"gmp_branches",branchId))return json({error:"branch_not_found"},404);
+   if(branchId){
+    const {data:branch}=await access.supabase.from("gmp_branches").select("store_id").eq("id",branchId).eq("organization_id",access.organization.id).maybeSingle();
+    if(branch?.store_id&&branch.store_id!==storeId)return json({error:"branch_store_mismatch"},409);
+   }
    const lines=Array.isArray(b.lines)?b.lines.slice(0,100):[];if(!lines.length)return json({error:"lines_required"},400);
-   const normalized=lines.map((l:any)=>{const q=num(l.quantity)||1,p=num(l.unit_price),m=num(l.making_charge),d=num(l.discount_amount),v=num(l.vat_amount);return {description:txt(l.description,300),product_id:uuid(txt(l.product_id,80))?txt(l.product_id,80):null,quantity:q,weight_grams:num(l.weight_grams),unit_price:p,making_charge:m,discount_amount:d,vat_amount:v,line_total:Math.max(0,q*p+m-d+v)};});
+   const normalized=lines.map((l:any)=>{
+    const q=num(l.quantity)||1,p=num(l.unit_price),m=num(l.making_charge),d=num(l.discount_amount),v=num(l.vat_amount);
+    return {
+     description:txt(l.description,300),
+     product_id:uuid(txt(l.product_id,80))?txt(l.product_id,80):null,
+     quantity:q,
+     weight_grams:num(l.weight_grams),
+     unit_price:p,
+     making_charge:m,
+     discount_amount:d,
+     vat_amount:v,
+     line_total:Math.max(0,q*p+m-d+v)
+    };
+   });
    const productIds=[...new Set(normalized.map((l:any)=>l.product_id).filter(Boolean))] as string[];
-   if(productIds.length){const {data:ownedProducts}=await access.supabase.from("gmp_products").select("id,store_id").eq("organization_id",access.organization.id).in("id",productIds);if((ownedProducts??[]).length!==productIds.length)return json({error:"product_not_found"},404);if(storeId&&(ownedProducts??[]).some((p:any)=>p.store_id&&p.store_id!==storeId))return json({error:"product_store_mismatch"},409);}
-   const subtotal=normalized.reduce((s:number,l:any)=>s+l.quantity*l.unit_price+l.making_charge,0),discount=num(b.discount_amount)||normalized.reduce((s:number,l:any)=>s+l.discount_amount,0),vat=num(b.vat_amount)||normalized.reduce((s:number,l:any)=>s+l.vat_amount,0),total=Math.max(0,subtotal-discount+vat);
-   const no="QT-"+new Date().toISOString().replace(/[-:.TZ]/g,"").slice(0,14)+"-"+Math.floor(Math.random()*900+100);
-   const {data:quote,error}=await access.supabase.from("gmp_sales_quotes").insert({organization_id:access.organization.id,store_id:storeId,branch_id:branchId&&uuid(branchId)?branchId:null,customer_id:customerId&&uuid(customerId)?customerId:null,quote_no:no,status:"draft",valid_until:txt(b.valid_until,20)||null,currency:txt(b.currency,8)||"OMR",subtotal,discount_amount:discount,vat_amount:vat,total,notes:txt(b.notes,1500)||null,created_by:access.user.id}).select("*").single();
-   if(error)return json({error:error.message},400);
-   const {error:lineError}=await access.supabase.from("gmp_sales_quote_lines").insert(normalized.map((l:any)=>({...l,quote_id:quote.id})));
-   if(lineError){await access.supabase.from("gmp_sales_quotes").delete().eq("id",quote.id);return json({error:lineError.message},400);}
-   return json({success:true,row:quote},201);
+   if(productIds.length){
+    const {data:ownedProducts}=await access.supabase.from("gmp_products").select("id,store_id").eq("organization_id",access.organization.id).in("id",productIds);
+    if((ownedProducts??[]).length!==productIds.length)return json({error:"product_not_found"},404);
+    if(storeId&&(ownedProducts??[]).some((p:any)=>p.store_id&&p.store_id!==storeId))return json({error:"product_store_mismatch"},409);
+   }
+   const subtotal=normalized.reduce((s:number,l:any)=>s+l.quantity*l.unit_price+l.making_charge,0);
+   const discount=num(b.discount_amount)||normalized.reduce((s:number,l:any)=>s+l.discount_amount,0);
+   const vat=num(b.vat_amount)||normalized.reduce((s:number,l:any)=>s+l.vat_amount,0);
+   const total=Math.max(0,subtotal-discount+vat);
+   const {data:created,error}=await access.supabase.rpc("gmp_create_sales_quote",{
+    p_organization_id:access.organization.id,
+    p_store_id:storeId,
+    p_branch_id:branchId&&uuid(branchId)?branchId:null,
+    p_customer_id:customerId&&uuid(customerId)?customerId:null,
+    p_valid_until:txt(b.valid_until,20)||null,
+    p_currency:txt(b.currency,8)||"OMR",
+    p_subtotal:subtotal,
+    p_discount_amount:discount,
+    p_vat_amount:vat,
+    p_total:total,
+    p_notes:txt(b.notes,1500)||null,
+    p_lines:normalized
+   });
+   if(error){
+    const message=error.message||"quote_create_failed";
+    if(["store_not_found","branch_not_found","customer_not_found","product_not_found"].includes(message))return json({error:message},404);
+    if(["branch_store_mismatch","product_store_mismatch"].includes(message))return json({error:message},409);
+    return json({error:message},400);
+   }
+   return json({success:true,row:created?.quote??created},201);
   }
   if(action==="voucher"){
    const type=txt(b.voucher_type,20);if(!["receipt","payment"].includes(type))return json({error:"voucher_type_required"},400);
