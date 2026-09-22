@@ -10,16 +10,19 @@ export async function GET(request:Request){
   const access=await requireStage2Permission("erp.read");
   const q=new URL(request.url).searchParams.get("action")||"all";
   if(q==="all"){
-   const [quotes,vouchers,lists,sales,purchases,customers,suppliers]=await Promise.all([
+   const [quotes,vouchers,lists,sales,purchases,customers,suppliers,products]=await Promise.all([
     access.supabase.from("gmp_sales_quotes").select("id,quote_no,status,customer_id,store_id,valid_until,subtotal,discount_amount,vat_amount,total,currency,created_at").eq("organization_id",access.organization.id).order("created_at",{ascending:false}).limit(200),
     access.supabase.from("gmp_cash_vouchers").select("id,voucher_no,voucher_type,party_type,customer_id,supplier_id,amount,payment_method,reference,voucher_date,status,created_at").eq("organization_id",access.organization.id).order("voucher_date",{ascending:false}).limit(200),
     access.supabase.from("gmp_price_lists").select("id,name,store_id,currency,active,valid_from,valid_until,created_at").eq("organization_id",access.organization.id).order("created_at",{ascending:false}).limit(100),
     access.supabase.from("gmp_sales").select("id,invoice_no,customer_id,total,vat_amount,status,created_at").eq("organization_id",access.organization.id).order("created_at",{ascending:false}).limit(500),
     access.supabase.from("gmp_purchases").select("id,invoice_no,supplier_id,total,vat_amount,status,created_at").eq("organization_id",access.organization.id).order("created_at",{ascending:false}).limit(500),
     access.supabase.from("gmp_customers").select("id,name,phone").eq("organization_id",access.organization.id).order("name"),
-    access.supabase.from("gmp_suppliers").select("id,name,phone").eq("organization_id",access.organization.id).order("name")
+    access.supabase.from("gmp_suppliers").select("id,name,phone").eq("organization_id",access.organization.id).order("name"),
+    access.supabase.from("gmp_products").select("id,name,sku,store_id").eq("organization_id",access.organization.id).eq("active",true).order("name").limit(1000)
    ]);
-   return json({quotes:quotes.data??[],vouchers:vouchers.data??[],priceLists:lists.data??[],sales:sales.data??[],purchases:purchases.data??[],customers:customers.data??[],suppliers:suppliers.data??[]});
+   const priceListIds=(lists.data??[]).map((x:any)=>x.id);
+   const {data:priceItems}=priceListIds.length?await access.supabase.from("gmp_price_list_items").select("id,price_list_id,product_id,sell_price,buy_price,making_charge,min_quantity,max_quantity").in("price_list_id",priceListIds):{data:[]};
+   return json({quotes:quotes.data??[],vouchers:vouchers.data??[],priceLists:lists.data??[],priceItems:priceItems??[],products:products.data??[],sales:sales.data??[],purchases:purchases.data??[],customers:customers.data??[],suppliers:suppliers.data??[]});
   }
   if(q==="statement"){
    const p=new URL(request.url).searchParams,id=txt(p.get("party_id"),80),type=txt(p.get("party_type"),20);
@@ -56,6 +59,40 @@ export async function POST(request:Request){
    const no=(type==="receipt"?"RV-":"PV-")+new Date().toISOString().replace(/[-:.TZ]/g,"").slice(0,14)+"-"+Math.floor(Math.random()*900+100);
    const {data,error}=await access.supabase.from("gmp_cash_vouchers").insert({organization_id:access.organization.id,branch_id:uuid(txt(b.branch_id,80))?txt(b.branch_id,80):null,voucher_no:no,voucher_type:type,party_type:["customer","supplier","other"].includes(txt(b.party_type,20))?txt(b.party_type,20):"other",customer_id:uuid(txt(b.customer_id,80))?txt(b.customer_id,80):null,supplier_id:uuid(txt(b.supplier_id,80))?txt(b.supplier_id,80):null,amount,payment_method:txt(b.payment_method,20)||"cash",reference:txt(b.reference,150)||null,notes:txt(b.notes,1000)||null,voucher_date:txt(b.voucher_date,20)||new Date().toISOString().slice(0,10),status:"posted",created_by:access.user.id}).select("*").single();
    if(error)return json({error:error.message},400);return json({success:true,row:data},201);
+  }
+  if(action==="quote_status"){
+   const quoteId=txt(b.quote_id,80),status=txt(b.status,20);
+   if(!uuid(quoteId)||!["sent","accepted","rejected","expired","cancelled"].includes(status))return json({error:"invalid_quote_transition"},400);
+   const {data:quote,error}=await access.supabase.from("gmp_sales_quotes").select("id,status,valid_until").eq("id",quoteId).eq("organization_id",access.organization.id).single();
+   if(error||!quote)return json({error:"quote_not_found"},404);
+   const allowed:Record<string,string[]>={draft:["sent","cancelled"],sent:["accepted","rejected","expired","cancelled"],accepted:["rejected","cancelled"]};
+   if(!(allowed[quote.status]||[]).includes(status))return json({error:"invalid_quote_transition"},409);
+   const {data:updated,error:updateError}=await access.supabase.from("gmp_sales_quotes").update({status,updated_at:new Date().toISOString()}).eq("id",quoteId).eq("organization_id",access.organization.id).select("*").single();
+   if(updateError)return json({error:updateError.message},400);
+   return json({success:true,row:updated});
+  }
+  if(action==="quote_convert"){
+   const quoteId=txt(b.quote_id,80);if(!uuid(quoteId))return json({error:"quote_required"},400);
+   const {data:quote,error:quoteError}=await access.supabase.from("gmp_sales_quotes").select("*").eq("id",quoteId).eq("organization_id",access.organization.id).single();
+   if(quoteError||!quote)return json({error:"quote_not_found"},404);
+   if(quote.status!=="accepted")return json({error:"quote_must_be_accepted"},409);
+   const {data:existing}=await access.supabase.from("gmp_sales").select("id,invoice_no").eq("organization_id",access.organization.id).eq("notes","quote:"+quoteId).maybeSingle();
+   if(existing)return json({success:true,already_converted:true,sale:existing});
+   const {data:lines,error:lineError}=await access.supabase.from("gmp_sales_quote_lines").select("product_id,quantity,weight_grams,unit_price,making_charge,discount_amount,vat_amount").eq("quote_id",quoteId);
+   if(lineError||!lines?.length||lines.some((l:any)=>!l.product_id))return json({error:"quote_lines_not_convertible"},409);
+   const {data:sale,error:saleError}=await access.supabase.rpc("gmp_create_and_post_sale",{p_organization_id:access.organization.id,p_branch_id:quote.branch_id,p_store_id:quote.store_id,p_customer_id:quote.customer_id,p_payment_method:txt(b.payment_method,20)||"cash",p_notes:"quote:"+quoteId,p_lines:lines});
+   if(saleError)return json({error:saleError.message},400);
+   const {data:updated,error:updateError}=await access.supabase.from("gmp_sales_quotes").update({status:"converted",updated_at:new Date().toISOString()}).eq("id",quoteId).eq("organization_id",access.organization.id).eq("status","accepted").select("*").single();
+   if(updateError)return json({error:updateError.message},400);
+   return json({success:true,converted:true,sale,quote:updated});
+  }
+  if(action==="price_item"){
+   const priceListId=txt(b.price_list_id,80),productId=txt(b.product_id,80);
+   if(!uuid(priceListId)||!uuid(productId))return json({error:"price_item_ids_required"},400);
+   const {data:list}=await access.supabase.from("gmp_price_lists").select("id").eq("id",priceListId).eq("organization_id",access.organization.id).maybeSingle();
+   if(!list)return json({error:"price_list_not_found"},404);
+   const {data:item,error}=await access.supabase.from("gmp_price_list_items").upsert({price_list_id:priceListId,product_id:productId,sell_price:num(b.sell_price)||null,buy_price:num(b.buy_price)||null,making_charge:num(b.making_charge),min_quantity:b.min_quantity===null||b.min_quantity===undefined?null:num(b.min_quantity),max_quantity:b.max_quantity===null||b.max_quantity===undefined?null:num(b.max_quantity)},{onConflict:"price_list_id,product_id"}).select("*").single();
+   if(error)return json({error:error.message},400);return json({success:true,row:item});
   }
   if(action==="price_list"){
    const name=txt(b.name,150);if(!name)return json({error:"name_required"},400);
