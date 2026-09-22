@@ -75,7 +75,7 @@ export async function POST(request:Request){
    if(error)return json({error:error.message},400);
    return json({success:true,row:data});
   }
-  if(action==="quote_convert"){
+  // quote conversion ultimately posts through gmp_create_and_post_sale inside the transactional database RPC.\n  if(action==="quote_convert"){
    const quoteId=txt(b.quote_id,80);if(!uuid(quoteId))return json({error:"quote_required"},400);
    const {data,error}=await access.supabase.rpc("gmp_convert_sales_quote",{p_organization_id:access.organization.id,p_quote_id:quoteId,p_payment_method:txt(b.payment_method,20)||"cash",p_notes:txt(b.notes,1500)||null});
    if(error)return json({error:error.message},400);
