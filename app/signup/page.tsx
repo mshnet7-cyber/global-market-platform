@@ -19,7 +19,7 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
       <nav className="nav-links" aria-label="التنقل الرئيسي">
         <Link href="/gold">الذهب</Link><Link href="/silver">الفضة</Link><Link href="/markets">الأسواق</Link><Link href="/stocks">الأسهم</Link><Link href="/currencies">العملات</Link><Link href="/news">الأخبار</Link><Link href="/pricing">الباقات</Link>
       </nav>
-      <div className="nav-actions"><Link className="btn btn-ghost" href="/login">تسجيل الدخول</Link><Link className="btn btn-primary" href="/demo">المعاينة</Link></div>
+      <details className="mobile-site-menu"><summary aria-label="فتح قائمة التنقل">☰</summary><nav aria-label="التنقل السريع"><Link href="/gold">الذهب</Link><Link href="/silver">الفضة</Link><Link href="/markets">الأسواق</Link><Link href="/stocks">الأسهم</Link><Link href="/currencies">العملات</Link><Link href="/news">الأخبار</Link><Link href="/pricing">الباقات</Link><Link href="/login">تسجيل الدخول</Link></nav></details><div className="nav-actions"><Link className="btn btn-ghost" href="/login">تسجيل الدخول</Link><Link className="btn btn-primary" href="/demo">المعاينة</Link></div>
     </div></header>
     <main className="container login-layout signup-layout">
       <section className="login-story">
