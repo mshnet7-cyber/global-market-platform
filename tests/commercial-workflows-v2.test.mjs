@@ -42,3 +42,13 @@ test("quote RPCs use invoker security and fail-closed conversion state",()=>{
  assert.match(migration,/quote_conversion_state_invalid/);
  assert.match(migration,/sale_conversion_missing_id/);
 });
+
+test("quote creation enforces financial totals at the database boundary",()=>{
+ const migration=fs.readFileSync("supabase/migrations/20260923023000_commercial_quote_total_integrity.sql","utf8");
+ assert.match(migration,/calculated_subtotal/);
+ assert.match(migration,/quote_subtotal_mismatch/);
+ assert.match(migration,/quote_total_mismatch/);
+ assert.match(migration,/calculated_total/);
+ assert.match(migration,/round\(calculated_subtotal,3\)/);
+ assert.match(migration,/security invoker/);
+});
