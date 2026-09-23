@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { cookies, headers } from "next/headers";
+import { SUPPORTED_PUBLIC_LANGUAGES } from "../lib/config";
 import PwaRegister from "./PwaRegister";
 import "./globals.css";
 import "./premium.css";
@@ -30,7 +31,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   const headerStore = await headers();
   const cookieStore = await cookies();
   const rawLanguage = headerStore.get("x-gmp-language")?.toLowerCase() ?? cookieStore.get("gmp-language")?.value?.toLowerCase() ?? "ar";
-  const language = /^(ar|en|tr|de)$/.test(rawLanguage) ? rawLanguage : "ar";
+  const language = SUPPORTED_PUBLIC_LANGUAGES.includes(rawLanguage as (typeof SUPPORTED_PUBLIC_LANGUAGES)[number]) ? rawLanguage : "ar";
   const theme = cookieStore.get("gmp-theme")?.value === "light" ? "light" : "dark";
   const fontScale = cookieStore.get("gmp-font-scale")?.value === "small" || cookieStore.get("gmp-font-scale")?.value === "large" ? cookieStore.get("gmp-font-scale")!.value : "normal";
   const dir = RTL_LANGUAGES.has(language) ? "rtl" : "ltr";
