@@ -69,8 +69,8 @@ export async function POST(request:Request){
     if(storeId&&(ownedProducts??[]).some((p:any)=>p.store_id&&p.store_id!==storeId))return json({error:"product_store_mismatch"},409);
    }
    const subtotal=normalized.reduce((s:number,l:any)=>s+l.quantity*l.unit_price+l.making_charge,0);
-   const discount=num(b.discount_amount)||normalized.reduce((s:number,l:any)=>s+l.discount_amount,0);
-   const vat=num(b.vat_amount)||normalized.reduce((s:number,l:any)=>s+l.vat_amount,0);
+   const discount=b.discount_amount===null||b.discount_amount===undefined?normalized.reduce((s:number,l:any)=>s+l.discount_amount,0):num(b.discount_amount);
+   const vat=b.vat_amount===null||b.vat_amount===undefined?normalized.reduce((s:number,l:any)=>s+l.vat_amount,0):num(b.vat_amount);
    const total=Math.max(0,subtotal-discount+vat);
    const {data:created,error}=await access.supabase.rpc("gmp_create_sales_quote",{
     p_organization_id:access.organization.id,
