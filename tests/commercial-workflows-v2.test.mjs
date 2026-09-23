@@ -107,7 +107,7 @@ test("public localization and Omani Rial sign are wired consistently",()=>{
  assert.match(section,/currencies/);
  assert.match(section,/snapshot\.currencies/);
  assert.match(money,/U\+20C4 OMANI RIAL SIGN/);
- assert.match(money,/\\\\u20C4/);
+ assert.match(money,/\\u20C4/);
  assert.match(moneyComponent,/omr-symbol/);
 });
 
