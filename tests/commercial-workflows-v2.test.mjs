@@ -121,4 +121,6 @@ test("public snapshot exposes reference FX data and licensed market/news provide
  assert.match(marketData,/MARKET_DATA_DISPLAY_LICENSED/);
  assert.match(freeData,/fetchMarketaux/);
  assert.match(freeData,/fetchNewsData/);
+ assert.match(freeData,/fetchGdeltNews/);
+ assert.match(providers,/GDELT/);
 });
