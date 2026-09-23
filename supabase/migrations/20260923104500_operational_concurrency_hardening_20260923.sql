@@ -64,6 +64,7 @@ begin
  if v_org is null then raise exception 'repair_not_found'; end if;
  if not exists(select 1 from public.gmp_organization_members m where m.organization_id=v_org and m.user_id=v_actor and m.role in ('owner','admin')) then raise exception 'not authorized'; end if;
  select * into v_repair from public.gmp_repair_orders where id=p_repair_id for update;
+ perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('gmp-repair-operation:'||v_org::text||':'||trim(p_client_ref),0));
  select response into v_existing from public.gmp_repair_operation_idempotency where organization_id=v_org and client_ref=trim(p_client_ref);
  if v_existing is not null then return jsonb_build_object('success',true,'idempotent',true,'result',v_existing); end if;
  if p_action not in ('receive','ready','deliver') then raise exception 'invalid_repair_action'; end if;
