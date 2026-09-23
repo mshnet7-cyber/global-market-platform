@@ -55,7 +55,6 @@ test("quote creation enforces financial totals at the database boundary",()=>{
  assert.doesNotMatch(migration,/b\.store_id/);
 });
 
-
 test("cash vouchers use the atomic database numbering boundary",()=>{
  const api=fs.readFileSync("app/api/commercial/route.ts","utf8");
  const migration=fs.readFileSync("supabase/migrations/20260923024000_commercial_cash_voucher_atomic.sql","utf8");
@@ -67,7 +66,6 @@ test("cash vouchers use the atomic database numbering boundary",()=>{
  assert.match(migration,/grant execute.*authenticated/si);
 });
 
-
 test("price list writes enforce database scope and preserve zero prices",()=>{
  const api=fs.readFileSync("app/api/commercial/route.ts","utf8");
  const migration=fs.readFileSync("supabase/migrations/20260923025000_commercial_price_list_scope.sql","utf8");
@@ -78,5 +76,15 @@ test("price list writes enforce database scope and preserve zero prices",()=>{
  assert.match(migration,/product_store_mismatch/);
  assert.match(migration,/gmp_price_lists_scope_trg/);
  assert.match(migration,/gmp_price_list_items_scope_trg/);
+ assert.match(migration,/security invoker/);
+});
+
+test("merchant operation writes enforce database tenant scope",()=>{
+ const migration=fs.readFileSync("supabase/migrations/20260923026000_merchant_operation_scope.sql","utf8");
+ assert.match(migration,/gmp_repair_orders_scope_trg/);
+ assert.match(migration,/gmp_person_gold_purchases_scope_trg/);
+ assert.match(migration,/branch_organization_mismatch/);
+ assert.match(migration,/customer_organization_mismatch/);
+ assert.match(migration,/store_organization_mismatch/);
  assert.match(migration,/security invoker/);
 });
