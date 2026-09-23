@@ -25,12 +25,13 @@ async function safeJson<T = any>(url: string, init?: RequestInit): Promise<T> {
   }
 }
 
-export async function fetchFrankfurterRate(from: string, to: string): Promise<number | null> {
+export async function fetchFrankfurterRate(from: string, to: string, provider?: string): Promise<number | null> {
   const source = from.toUpperCase();
   const target = to.toUpperCase();
   if (source === target) return 1;
   try {
     const url = new URL(`https://api.frankfurter.dev/v2/rate/${encodeURIComponent(source)}/${encodeURIComponent(target)}`);
+    if (provider) url.searchParams.set("providers", provider);
     const json = await safeJson<{ rate?: unknown }>(url.toString());
     return typeof json.rate === 'number' && Number.isFinite(json.rate) && json.rate > 0 ? json.rate : null;
   } catch {
