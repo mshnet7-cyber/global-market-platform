@@ -66,3 +66,17 @@ test("cash vouchers use the atomic database numbering boundary",()=>{
  assert.match(migration,/organization_write_forbidden/);
  assert.match(migration,/grant execute.*authenticated/si);
 });
+
+
+test("price list writes enforce database scope and preserve zero prices",()=>{
+ const api=fs.readFileSync("app/api/commercial/route.ts","utf8");
+ const migration=fs.readFileSync("supabase/migrations/20260923025000_commercial_price_list_scope.sql","utf8");
+ assert.match(api,/sell_price:b\.sell_price===null\|\|b\.sell_price===undefined\?null:num\(b\.sell_price\)/);
+ assert.match(api,/buy_price:b\.buy_price===null\|\|b\.buy_price===undefined\?null:num\(b\.buy_price\)/);
+ assert.match(migration,/store_organization_mismatch/);
+ assert.match(migration,/product_organization_mismatch/);
+ assert.match(migration,/product_store_mismatch/);
+ assert.match(migration,/gmp_price_lists_scope_trg/);
+ assert.match(migration,/gmp_price_list_items_scope_trg/);
+ assert.match(migration,/security invoker/);
+});
