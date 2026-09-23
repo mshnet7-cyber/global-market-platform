@@ -99,9 +99,8 @@ export async function POST(request:Request){
    const partyType=txt(b.party_type,20)||"other";if(!["customer","supplier","other"].includes(partyType))return json({error:"party_type_required"},400);
    const customerId=txt(b.customer_id,80),supplierId=txt(b.supplier_id,80),branchId=txt(b.branch_id,80);if(branchId&&!(await belongsToOrg(access,"gmp_branches",branchId)))return json({error:"branch_not_found"},404);if(partyType==="customer"&&!(await belongsToOrg(access,"gmp_customers",customerId)))return json({error:"customer_not_found"},404);if(partyType==="supplier"&&!(await belongsToOrg(access,"gmp_suppliers",supplierId)))return json({error:"supplier_not_found"},404);
    const amount=num(b.amount);if(amount<=0)return json({error:"amount_required"},400);
-   const no=(type==="receipt"?"RV-":"PV-")+new Date().toISOString().replace(/[-:.TZ]/g,"").slice(0,14)+"-"+Math.floor(Math.random()*900+100);
-   const {data,error}=await access.supabase.from("gmp_cash_vouchers").insert({organization_id:access.organization.id,branch_id:uuid(branchId)?branchId:null,voucher_no:no,voucher_type:type,party_type:partyType,customer_id:partyType==="customer"&&uuid(customerId)?customerId:null,supplier_id:partyType==="supplier"&&uuid(supplierId)?supplierId:null,amount,payment_method:txt(b.payment_method,20)||"cash",reference:txt(b.reference,150)||null,notes:txt(b.notes,1000)||null,voucher_date:txt(b.voucher_date,20)||new Date().toISOString().slice(0,10),status:"posted",created_by:access.user.id}).select("*").single();
-   if(error)return json({error:error.message},400);return json({success:true,row:data},201);
+   const {data,error}=await access.supabase.rpc("gmp_create_cash_voucher",{p_organization_id:access.organization.id,p_branch_id:uuid(branchId)?branchId:null,p_voucher_type:type,p_party_type:partyType,p_customer_id:partyType==="customer"&&uuid(customerId)?customerId:null,p_supplier_id:partyType==="supplier"&&uuid(supplierId)?supplierId:null,p_amount:amount,p_payment_method:txt(b.payment_method,20)||"cash",p_reference:txt(b.reference,150)||null,p_notes:txt(b.notes,1000)||null,p_voucher_date:txt(b.voucher_date,20)||new Date().toISOString().slice(0,10)});
+   if(error)return json({error:error.message},400);return json({success:true,row:data?.voucher??data},201);
   }
   if(action==="quote_status"){
    const quoteId=txt(b.quote_id,80),status=txt(b.status,20);
