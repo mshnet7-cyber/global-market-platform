@@ -54,3 +54,15 @@ test("quote creation enforces financial totals at the database boundary",()=>{
  assert.match(migration,/security invoker/);
  assert.doesNotMatch(migration,/b\.store_id/);
 });
+
+
+test("cash vouchers use the atomic database numbering boundary",()=>{
+ const api=fs.readFileSync("app/api/commercial/route.ts","utf8");
+ const migration=fs.readFileSync("supabase/migrations/20260923024000_commercial_cash_voucher_atomic.sql","utf8");
+ assert.match(api,/gmp_create_cash_voucher/);
+ assert.doesNotMatch(api,/Math\.random\(\)/);
+ assert.match(migration,/pg_advisory_xact_lock/);
+ assert.match(migration,/gmp-cash-voucher/);
+ assert.match(migration,/organization_write_forbidden/);
+ assert.match(migration,/grant execute.*authenticated/si);
+});
