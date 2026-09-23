@@ -124,3 +124,22 @@ test("public snapshot exposes reference FX data and licensed market/news provide
  assert.match(freeData,/fetchGdeltNews/);
  assert.match(providers,/GDELT/);
 });
+
+test("commercial security-definer RPCs have hardened search paths and no anonymous execute",()=>{
+ const migration=fs.readFileSync("supabase/migrations/20260923082729_commercial_security_definer_search_path_hardening.sql","utf8");
+ for (const fn of [
+  "gmp_complete_manufacturing","gmp_create_and_post_expense","gmp_create_and_post_sale",
+  "gmp_create_gold_buyback","gmp_create_gold_exchange","gmp_create_inventory_product",
+  "gmp_create_manual_journal","gmp_create_manufacturing_order","gmp_create_purchase",
+  "gmp_process_repair","gmp_receive_purchase"
+ ]) assert.match(migration,new RegExp("alter function public\\."+fn));
+ assert.match(migration,/set search_path = ''/);
+ assert.match(migration,/revoke execute .* from anon/si);
+});
+
+test("commercial inventory cannot become negative",()=>{
+ const migration=fs.readFileSync("supabase/migrations/20260923082832_commercial_inventory_nonnegative_invariant.sql","utf8");
+ assert.match(migration,/gmp_products_inventory_nonnegative_chk/);
+ assert.match(migration,/current_quantity >= 0/);
+ assert.match(migration,/current_weight_grams >= 0/);
+});
