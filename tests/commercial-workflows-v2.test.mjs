@@ -116,7 +116,8 @@ test("public snapshot exposes reference FX data and licensed market/news provide
  const marketData=fs.readFileSync("lib/providers/market-data.ts","utf8");
  const freeData=fs.readFileSync("lib/free-data.ts","utf8");
  assert.match(providers,/getPublicCurrencyQuotes/);
- assert.match(providers,/Frankfurter \/ ECB reference/);
+ assert.match(providers,/Central Bank of Oman via Frankfurter/);
+ assert.match(providers,/provider = local === "OMR" \? "cbo"/);
  assert.match(marketData,/MARKET_DATA_DISPLAY_LICENSED/);
  assert.match(freeData,/fetchMarketaux/);
  assert.match(freeData,/fetchNewsData/);
