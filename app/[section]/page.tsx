@@ -37,7 +37,7 @@ export default async function SectionPage({ params, searchParams }: { params: Pr
   const isRtl = isRtlLanguage(language);
   const locale = `${language}-${country.code}`;
   const countryName = getDisplayName("region", country.code, language, country.name);
-  const quotes = section === "markets" ? snapshot.markets : section === "stocks" ? snapshot.stocks : snapshot.currencies;
+  const quotes: Quote[] = section === "markets" ? snapshot.markets : section === "stocks" ? snapshot.stocks : snapshot.currencies;
   const quoteLabels = { change: messages.change, percent: messages.percent, close: messages.close };
   const sectionDescription = section === "currencies" ? (language === "ar" ? "أسعار صرف مرجعية للعملات، مع توضيح مصدر البيانات وحالتها." : "Reference foreign-exchange rates with explicit source and data status.") : section === "gold" ? (language === "ar" ? "سعر مرجعي للذهب مع تفاصيل السوق الأساسية." : "Reference gold pricing with core market details.") : section === "silver" ? (language === "ar" ? "بيانات مرجعية للفضة للمتابعة اليومية." : "Reference silver data for daily monitoring.") : section === "markets" ? (language === "ar" ? "مؤشرات وأسواق مرجعية في بطاقات واضحة وسريعة القراءة." : "Reference markets and indices in a clear, quick-reading view.") : section === "stocks" ? (language === "ar" ? "أسهم مرجعية عند توفر مصدر بيانات مرخّص." : "Reference equities when a licensed data source is enabled.") : section === "news" ? (language === "ar" ? "موجز الأخبار المتاحة من مصادر البيانات المفعّلة." : "Available news from enabled data sources.") : messages.demoPreview;
 
