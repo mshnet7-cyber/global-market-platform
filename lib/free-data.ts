@@ -215,7 +215,10 @@ export async function fetchGdeltNews(language: string): Promise<NewsItem[] | nul
     if (!Array.isArray(json.articles)) return [];
     return json.articles.map((item: any, i: number) => {
       const title = String(item.title ?? "Untitled");
-      const published = String(item.seendate ?? new Date().toISOString()).replace(/^(\\d{4})(\\d{2})(\\d{2})(\\d{2})(\\d{2})(\\d{2}).*$/, "$1-$2-$3T$4:$5:$6Z");
+      const rawDate = String(item.seendate ?? "");
+      const published = /^\\d{8}T\\d{6}Z$/.test(rawDate)
+        ? rawDate.replace(/^(\\d{4})(\\d{2})(\\d{2})T(\\d{2})(\\d{2})(\\d{2})Z$/, "$1-$2-$3T$4:$5:$6Z")
+        : parseTimestamp(rawDate) ?? new Date().toISOString();
       const category = /gold|silver|precious metal|ذهب|فضة/i.test(title) ? "gold" : /stock|share|equity|سهم|أسهم/i.test(title) ? "stocks" : "markets";
       return {
         id: String(item.url ?? `gdelt-${i}`),
