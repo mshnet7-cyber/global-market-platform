@@ -1,4 +1,5 @@
 const OMANI_RIAL_FALLBACK = "OMR";
+const OMANI_RIAL_SIGN = "\u20C4"; // U+20C4 OMANI RIAL SIGN; SVG is used in the UI for device/font compatibility.
 
 export type MoneyDisplayParts =
   | { kind: "empty"; text: "—" }
@@ -47,7 +48,7 @@ export function formatMoneyDisplay(
 ) {
   const parts = formatMoneyParts(value, currency, locale, maximumFractionDigits);
   if (parts.kind === "empty") return parts.text;
-  if (parts.kind === "omr") return OMANI_RIAL_FALLBACK + " " + parts.text;
+  if (parts.kind === "omr") return OMANI_RIAL_SIGN + " " + parts.text;
   return parts.text;
 }
 

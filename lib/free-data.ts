@@ -25,12 +25,13 @@ async function safeJson<T = any>(url: string, init?: RequestInit): Promise<T> {
   }
 }
 
-export async function fetchFrankfurterRate(from: string, to: string): Promise<number | null> {
+export async function fetchFrankfurterRate(from: string, to: string, provider?: string): Promise<number | null> {
   const source = from.toUpperCase();
   const target = to.toUpperCase();
   if (source === target) return 1;
   try {
     const url = new URL(`https://api.frankfurter.dev/v2/rate/${encodeURIComponent(source)}/${encodeURIComponent(target)}`);
+    if (provider) url.searchParams.set("providers", provider);
     const json = await safeJson<{ rate?: unknown }>(url.toString());
     return typeof json.rate === 'number' && Number.isFinite(json.rate) && json.rate > 0 ? json.rate : null;
   } catch {
@@ -196,6 +197,43 @@ export async function fetchMarketaux(language: string): Promise<NewsItem[] | nul
         status: newsStatus(String(item.published_at ?? new Date().toISOString())),
       } satisfies NewsItem;
     }).sort((a: NewsItem, b: NewsItem) => (b.urgency + b.confidence) - (a.urgency + a.confidence));
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchGdeltNews(language: string): Promise<NewsItem[] | null> {
+  try {
+    const url = new URL("https://api.gdeltproject.org/api/v2/doc/doc");
+    url.searchParams.set("query", '("gold" OR "silver" OR "precious metals" OR "financial markets" OR "central bank" OR "interest rates" OR "currency")');
+    url.searchParams.set("mode", "artlist");
+    url.searchParams.set("format", "json");
+    url.searchParams.set("maxrecords", "25");
+    url.searchParams.set("timespan", "6h");
+    url.searchParams.set("sort", "datedesc");
+    const json = await safeJson<{ articles?: unknown }>(url.toString());
+    if (!Array.isArray(json.articles)) return [];
+    return json.articles.map((item: any, i: number) => {
+      const title = String(item.title ?? "Untitled");
+      const rawDate = String(item.seendate ?? "");
+      const published = /^\\d{8}T\\d{6}Z$/.test(rawDate)
+        ? rawDate.replace(/^(\\d{4})(\\d{2})(\\d{2})T(\\d{2})(\\d{2})(\\d{2})Z$/, "$1-$2-$3T$4:$5:$6Z")
+        : parseTimestamp(rawDate) ?? new Date().toISOString();
+      const category = /gold|silver|precious metal|ذهب|فضة/i.test(title) ? "gold" : /stock|share|equity|سهم|أسهم/i.test(title) ? "stocks" : "markets";
+      return {
+        id: String(item.url ?? `gdelt-${i}`),
+        title,
+        source: String(item.domain ?? item.sourcecountry ?? "GDELT"),
+        url: String(item.url ?? "#"),
+        publishedAt: published,
+        language: String(item.language ?? language),
+        country: item.sourcecountry ? String(item.sourcecountry) : undefined,
+        category,
+        urgency: /breaking|urgent|alert|عاجل/i.test(title) ? 94 : 66,
+        confidence: 72,
+        status: newsStatus(published),
+      } satisfies NewsItem;
+    }).filter((item: NewsItem) => item.url !== "#");
   } catch {
     return null;
   }

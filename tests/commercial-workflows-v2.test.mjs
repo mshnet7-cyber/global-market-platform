@@ -88,3 +88,39 @@ test("merchant operation writes enforce database tenant scope",()=>{
  assert.match(migration,/store_organization_mismatch/);
  assert.match(migration,/security invoker/);
 });
+
+
+test("public localization and Omani Rial sign are wired consistently",()=>{
+ const config=fs.readFileSync("lib/config.ts","utf8");
+ const layout=fs.readFileSync("app/layout.tsx","utf8");
+ const home=fs.readFileSync("app/page.tsx","utf8");
+ const prefs=fs.readFileSync("components/DisplayPreferences.tsx","utf8");
+ const i18n=fs.readFileSync("lib/i18n.ts","utf8");
+ const money=fs.readFileSync("lib/currency-display.ts","utf8");
+ const moneyComponent=fs.readFileSync("components/MoneyDisplay.tsx","utf8");
+ const section=fs.readFileSync("app/[section]/page.tsx","utf8");
+ assert.match(config,/SUPPORTED_PUBLIC_LANGUAGES = \["ar", "en", "bn", "ur", "hi"\]/);
+ assert.match(layout,/SUPPORTED_PUBLIC_LANGUAGES/);
+ for (const code of ["ar","en","bn","ur","hi"]) assert.match(i18n,new RegExp("\\b"+code+": \\{"));
+ assert.match(prefs,/bn/); assert.match(prefs,/ur/); assert.match(prefs,/hi/);
+ assert.match(home,/SUPPORTED_PUBLIC_LANGUAGES/);
+ assert.match(section,/currencies/);
+ assert.match(section,/snapshot\.currencies/);
+ assert.match(money,/U\+20C4 OMANI RIAL SIGN/);
+ assert.match(money,/\\u20C4/);
+ assert.match(moneyComponent,/omr-symbol/);
+});
+
+test("public snapshot exposes reference FX data and licensed market/news providers",()=>{
+ const providers=fs.readFileSync("lib/providers/index.ts","utf8");
+ const marketData=fs.readFileSync("lib/providers/market-data.ts","utf8");
+ const freeData=fs.readFileSync("lib/free-data.ts","utf8");
+ assert.match(providers,/getPublicCurrencyQuotes/);
+ assert.match(providers,/Central Bank of Oman via Frankfurter/);
+ assert.match(providers,/provider = local === "OMR" \? "cbo"/);
+ assert.match(marketData,/MARKET_DATA_DISPLAY_LICENSED/);
+ assert.match(freeData,/fetchMarketaux/);
+ assert.match(freeData,/fetchNewsData/);
+ assert.match(freeData,/fetchGdeltNews/);
+ assert.match(providers,/GDELT/);
+});

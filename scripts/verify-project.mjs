@@ -132,5 +132,5 @@ ok("demo session is cleared on logout", logoutRoute.includes("clearDemoSession")
 const loginPage=text("app/login/page.tsx");
 const loginActions=text("app/login/actions.ts");
 ok("demo login is credential-bound and signed", loginActions.includes("\"use server\"") && loginActions.includes("matchDemoCredentials") && loginActions.includes("setDemoSession") && !loginActions.includes("demoLoginAction") && !loginPage.includes("demoLoginAction") && demoAuth.includes("gmp_demo_session") && demoAuth.includes("crypto.subtle.verify"));
-ok("OMR fallback stays ASCII-safe", text("lib/currency-display.ts").includes("OMR") && !text("lib/currency-display.ts").includes("⃄") && !text("lib/currency-display.ts").includes("\\u20C4"));
+ok("OMR formatter keeps an ASCII fallback", text("lib/currency-display.ts").includes('const OMANI_RIAL_FALLBACK = "OMR"') && text("lib/currency-display.ts").includes("OMR"));
 console.log(`verify-project: ${checks.length} checks passed`);
