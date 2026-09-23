@@ -20,11 +20,11 @@ test("compliance workflow has duplicate protection and event idempotency",()=>{
 });
 
 test("e-invoice queue is fail-closed",()=>{
- const src=read("app/api/merchant/invoicing/route.ts");
+ const src=read("app/api/merchant/invoicing/route.ts"); assert.match(src,/gmp_claim_einvoice_send/);
  assert.match(src,/sale\.status !== "issued"/);
  assert.match(src,/connector\.status !== "active"/);
  assert.match(src,/idempotency_key/);
- assert.match(src,/organization_id,idempotency_key/);
+ assert.match(src,/\.eq\("organization_id", organization\.id\)/); assert.match(src,/\.eq\("idempotency_key", key\)/); assert.match(src,/idempotent:\s*true/); assert.match(src,/\.insert\(/); assert.doesNotMatch(src,/gmp_einvoice_submissions[^\n]*\.upsert/);
 });
 
 test("dashboard exposes all three business workflows",()=>{
@@ -35,7 +35,7 @@ test("dashboard exposes all three business workflows",()=>{
 });
 
 test("database migration enforces workflow transitions",()=>{
- const src=read("supabase/migrations/20260916224000_gmp_workflow_transition_integrity_v1.sql");
+ const src=read("supabase/migrations/20260916223644_gmp_workflow_transition_integrity_v1.sql");
  assert.match(src,/gmp_check_camera_scope/);
  assert.match(src,/gmp_check_compliance_case_transition/);
  assert.match(src,/gmp_check_einvoice_transition/);

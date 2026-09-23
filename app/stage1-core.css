@@ -96,3 +96,6 @@
   .pricing-breakdown .total{grid-column:auto}
   .terminal-primary-metrics>div{padding:13px}
 }
+
+.terminal-instrument-row{display:grid;grid-template-columns:minmax(0,1fr) 34px;gap:4px;align-items:stretch}.terminal-instrument-row .terminal-instrument{min-width:0}.terminal-watch-toggle{border:1px solid transparent;background:transparent;color:#d8b56a;border-radius:9px;font-size:15px;cursor:pointer}.terminal-watch-toggle:hover,.terminal-watch-toggle:focus-visible{background:#0f1d25;border-color:rgba(216,181,106,.16);outline:2px solid #d8b56a;outline-offset:2px}
+@media(max-width:900px){.terminal-watch-toggle{min-height:44px}}

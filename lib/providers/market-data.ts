@@ -1,6 +1,8 @@
 import type { Quote } from "../types";
+import { readBoundedJson } from "../stage3/provider-http";
 
 const TIMEOUT_MS = 5000;
+const MAX_PROVIDER_JSON_BYTES = 512 * 1024;
 const MAX_EOD_AGE_MS = 72 * 60 * 60 * 1000;
 
 type MarketProvider = "Alpha Vantage" | "EODHD";
@@ -24,7 +26,7 @@ function isFresh(timestamp: string | null) {
   return Number.isFinite(age) && age >= -24 * 60 * 60 * 1000 && age <= MAX_EOD_AGE_MS;
 }
 
-async function safeJson(url: string) {
+async function safeJson<T = any>(url: string): Promise<T> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
@@ -34,7 +36,7 @@ async function safeJson(url: string) {
       headers: { Accept: "application/json" },
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return await response.json();
+    return await readBoundedJson<T>(response, MAX_PROVIDER_JSON_BYTES);
   } finally {
     clearTimeout(timer);
   }
@@ -100,6 +102,7 @@ function alphaQuote(item: SymbolDef, q: Record<string, unknown>): Quote | null {
     timestamp: date,
     provider: "Alpha Vantage",
     status: "DELAYED",
+    receivedAt: new Date().toISOString(),
   };
 }
 
@@ -108,7 +111,7 @@ async function fetchAlpha(symbols: readonly SymbolDef[]): Promise<ProviderResult
   const url = alphaUrl({ function: "TOP_GAINERS_LOSERS" });
   if (!url) return null;
   try {
-    const json = await safeJson(url);
+    const json = await safeJson<Record<string, any>>(url);
     const allowed = new Map(symbols.map((item) => [item.symbol, item]));
     const rows = [
       ...(Array.isArray(json?.top_gainers) ? json.top_gainers : []),
@@ -143,20 +146,19 @@ async function fetchEodhd(symbols: readonly SymbolDef[]): Promise<ProviderResult
   if (!commercialDisplayAllowed()) return null;
   const key = process.env.EODHD_API_KEY;
   if (!key) return null;
-  const quotes: Quote[] = [];
-  for (const item of symbols) {
+  const results: Array<Quote | null> = await Promise.all(symbols.map(async (item): Promise<Quote | null> => {
     try {
       const url = new URL(`https://eodhd.com/api/real-time/${encodeURIComponent(item.symbol)}.US`);
       url.searchParams.set("api_token", key);
       url.searchParams.set("fmt", "json");
-      const json = await safeJson(url.toString());
+      const json = await safeJson<Record<string, any>>(url.toString());
       const close = parseNumber(json?.close ?? json?.previousClose);
       const timestamp = json?.timestamp ? new Date(Number(json.timestamp) * 1000).toISOString() : validTimestamp(json?.date);
       const previousClose = parseNumber(json?.previousClose);
-      if (close == null || !timestamp || !isFresh(timestamp)) continue;
+      if (close == null || !timestamp || !isFresh(timestamp)) return null;
       const change = previousClose == null ? null : close - previousClose;
       const changePercent = previousClose ? (change! / previousClose) * 100 : null;
-      quotes.push({
+      return {
         instrument: `${item.name} (${item.symbol})`,
         symbol: item.symbol,
         exchange: item.exchange,
@@ -171,12 +173,19 @@ async function fetchEodhd(symbols: readonly SymbolDef[]): Promise<ProviderResult
         timestamp,
         provider: "EODHD",
         status: "DELAYED",
-      });
+        receivedAt: new Date().toISOString(),
+      } satisfies Quote;
     } catch {
-      // Continue with remaining instruments; one provider failure is non-fatal.
+      return null;
     }
-  }
+  }));
+  const quotes = results.filter((quote): quote is Quote => quote !== null);
   return quotes.length ? { quotes, provider: "EODHD" } : null;
+}
+
+export function marketDataDisplayState() {
+  const licensed = commercialDisplayAllowed();
+  return { commercialDisplayAllowed: licensed, providerConfigured: configuredProvider(), reason: licensed ? "licensed_display_enabled" : "display_license_not_enabled" } as const;
 }
 
 export async function getPublicMarketQuotes(kind: "stocks" | "markets"): Promise<ProviderResult> {

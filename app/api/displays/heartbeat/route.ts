@@ -1,3 +1,4 @@
+import { readBoundedRequestJson } from "../../../../lib/bounded-body";
 import { NextResponse } from "next/server";
 import crypto from "node:crypto";
 import { createSupabaseAdminClient } from "../../../../lib/supabase/admin";
@@ -14,7 +15,13 @@ function subscriptionIsUsable(subscription: { status?: string | null; current_pe
 export async function POST(request: Request) {
   const admin = createSupabaseAdminClient();
   if (!admin) return NextResponse.json({ ok: false, error: "not_configured" }, { status: 503, headers: noStore });
-  const body = await request.json().catch(() => null) as { session?: string } | null;
+  let body: { session?: string } | null;
+  try {
+    body = await readBoundedRequestJson<{ session?: string }>(request, 64 * 1024);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "invalid_json";
+    return NextResponse.json({ ok: false, error: message }, { status: message === "request_body_too_large" ? 413 : 400, headers: noStore });
+  }
   const session = String(body?.session ?? "").trim();
   if (session.length < 32) return NextResponse.json({ ok: false, error: "invalid_session" }, { status: 401, headers: noStore });
   const { data } = await admin.from("gmp_screen_sessions").select("id,screen_id,expires_at,revoked_at").eq("session_hash", hash(session)).maybeSingle();

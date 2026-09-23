@@ -1,3 +1,5 @@
+import { isSameOriginRequest } from "../../../../lib/request-security";
+import { readBoundedRequestJson } from "../../../../lib/bounded-body";
 import { NextResponse } from "next/server";
 import { requireMerchantPlan } from "../../../../lib/merchant-access";
 
@@ -42,9 +44,11 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  if (!isSameOriginRequest(request)) return new Response(JSON.stringify({ error: "cross_site_request" }), { status: 403, headers: { "content-type": "application/json", "cache-control": "no-store" } });
+
   try {
     const { supabase, user, organization } = await requireMerchantPlan(["business"]);
-    const body = await request.json().catch(() => null) as Record<string, any> | null;
+    const body = await readBoundedRequestJson(request, 64 * 1024).catch(() => null) as Record<string, any> | null;
     if (!body) return NextResponse.json({ error: "invalid_json" }, { status: 400 });
     if (body.action === "event") {
       const caseId = String(body.case_id ?? "");
@@ -71,7 +75,13 @@ export async function POST(request: Request) {
       if (existing?.length) return NextResponse.json({ error: "active_case_exists", case_id: existing[0].id }, { status: 409 });
     }
     const { data, error } = await supabase.from("gmp_compliance_cases").insert({ organization_id: organization.id, branch_id: branchId, entity_type: entityType, entity_id: body.entity_id ? String(body.entity_id) : null, case_type: caseType, status: "open", connector_id: body.connector_id ? String(body.connector_id) : null, government_reference: body.government_reference ? String(body.government_reference).slice(0, 200) : null, notes: body.notes ? String(body.notes).slice(0, 4000) : null, created_by: user.id }).select("*").single();
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    if (error) {
+      if (String(error.code) === "23505" && String(error.message).includes("gmp_compliance_active_entity_uniq")) {
+        const { data: active } = await supabase.from("gmp_compliance_cases").select("id").eq("organization_id", organization.id).eq("entity_type", entityType).eq("entity_id", String(body.entity_id)).in("status", ["open", "under_review", "submitted"]).limit(1);
+        return NextResponse.json({ error: "active_case_exists", case_id: active?.[0]?.id ?? null }, { status: 409 });
+      }
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
     return NextResponse.json({ success: true, row: data }, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "unexpected_error";
@@ -80,9 +90,11 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
+  if (!isSameOriginRequest(request)) return new Response(JSON.stringify({ error: "cross_site_request" }), { status: 403, headers: { "content-type": "application/json", "cache-control": "no-store" } });
+
   try {
     const { supabase, organization } = await requireMerchantPlan(["business"]);
-    const body = await request.json().catch(() => null) as Record<string, any> | null;
+    const body = await readBoundedRequestJson(request, 64 * 1024).catch(() => null) as Record<string, any> | null;
     const id = String(body?.id ?? "");
     if (!body || !id) return NextResponse.json({ error: "case_id_required" }, { status: 400 });
     const patch: Record<string, unknown> = {};

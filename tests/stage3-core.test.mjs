@@ -1,0 +1,175 @@
+import test from"node:test";import assert from"node:assert/strict";import{readFileSync}from"node:fs";const read=p=>readFileSync(p,"utf8");
+// Stage 3 contract suite: provider limits are enforced by the shared streaming helper.
+test("Stage 3 adapters fail closed and are provider agnostic",()=>{assert.match(read("lib/stage3/ai.ts"),/ai_not_configured/);assert.match(read("lib/stage3/whatsapp.ts"),/whatsapp_not_configured/);assert.match(read("lib/stage3/payments.ts"),/payments_not_configured/);assert.match(read("lib/stage3/einvoice.ts"),/einvoice_not_configured/);assert.match(read("lib/stage3/payments.ts"),/assertTransition/);});
+test("Webhook verification and secrets boundaries exist",()=>{for(const p of["lib/stage3/whatsapp.ts","lib/stage3/payments.ts","lib/stage3/einvoice.ts"])assert.match(read(p),/createHmac|timingSafeEqual/);assert.doesNotMatch(read("supabase/migrations/20260918015303_gmp_stage3_integrations.sql"),/card_number|cvv|pan/i);});
+test("Stage 3 database layer is additive and tenant scoped",()=>{for(const p of["supabase/migrations/20260918015303_gmp_stage3_integrations.sql","supabase/migrations/20260918015705_gmp_stage3_security_hardening.sql"])assert.doesNotMatch(read(p),/drop table|truncate table|delete from/i);const s=read("supabase/migrations/20260918015303_gmp_stage3_integrations.sql");for(const key of["gmp_ai_jobs","gmp_whatsapp_messages","gmp_billing_events","gmp_api_usage_events","gmp_einvoice_attempts"])assert.match(s,new RegExp(key));assert.match(s,/organization_id uuid/);});
+test("Stage 3 scope hardening protects cross-tenant references",()=>{const s=read("supabase/migrations/20260918015705_gmp_stage3_security_hardening.sql");for(const key of["cross_tenant_document_reference","cross_tenant_subscription_reference","cross_tenant_payment_reference","cross_tenant_api_key_reference"])assert.match(s,new RegExp(key));});
+test("Subscription lifecycle state machine covers failure, grace, suspension and reactivation",()=>{const s=read("lib/stage3/payments.ts");for(const key of["past_due","grace_period","suspended","active","canceled"])assert.match(s,new RegExp(key));});
+test("PWA shell is present and offline never caches API routes",()=>{assert.match(read("app/manifest.ts"),/standalone/);assert.match(read("app/PwaRegister.tsx"),/serviceWorker\.register/);assert.ok(read("public/sw.js").includes('pathname.startsWith("/api/")'));});
+test("Developer API v2 has auth, IDs and usage telemetry",()=>{assert.match(read("app/api/v2/market/gold/route.ts"),/authenticateApiKey/);assert.match(read("app/api/v2/market/gold/route.ts"),/recordApiUsage/);assert.match(read("app/api/v2/market/gold/route.ts"),/request_id/);assert.match(read("lib/stage3/developer-api.ts"),/gmp_api_usage_events/);});
+test("Stage 3 UI exposes real integration states and webhook management",()=>{const page=read("app/dashboard/integrations/page.tsx");const workspace=read("app/dashboard/integrations/Stage3Workspace.tsx");assert.match(page,/aiState=\{ai\.state\}/);assert.match(page,/whatsappState=\{wa\.state\}/);assert.match(workspace,/statusLabel\(aiState\)/);assert.match(workspace,/statusLabel\(whatsappState\)/);assert.match(read("app/dashboard/api-keys/page.tsx"),/WebhooksWorkspace/);assert.match(read("app/api/dashboard/webhooks/route.ts"),/encryptWebhookSecret/);assert.match(read("app/dashboard/api-keys/WebhooksWorkspace.tsx"),/market\.alert\.triggered/);assert.doesNotMatch(read("app/dashboard/api-keys/WebhooksWorkspace.tsx"),/secret_ciphertext/);});
+test("Retry workers use Vercel Hobby-compatible daily schedules",()=>{const v=read("vercel.json");assert.match(v,/\/api\/cron\/webhooks/);assert.match(v,/\/api\/cron\/whatsapp/);assert.match(v,/0 0 \* \* \*/);assert.match(v,/5 0 \* \* \*/);assert.doesNotMatch(v,/0 \* \* \* \*/);assert.match(v,/"crons"/);});
+test("P0 marketplace abuse protection and atomic idempotency are present",()=>{const s=read("supabase/migrations/20260918204134_gmp_p0_p1_hardening_20260919.sql");assert.match(s,/gmp_public_order_rate_limits/);assert.match(s,/for update skip locked|on conflict \(store_id,idempotency_key\)/i);const route=read("app/api/stage2/route.ts");assert.match(route,/gmp_allow_public_marketplace_order/);assert.match(route,/rate_limited/);});
+test("P1 OCR workflow has upload, OCR, review and private storage",()=>{const api=read("app/api/merchant/documents/route.ts");const page=read("app/dashboard/documents/page.tsx");assert.match(api,/storage\.from/);assert.match(api,/gmp_documents/);assert.match(api,/action===\"ocr\"/);assert.match(api,/action===\"review\"/);assert.ok(page.includes('integration?.state==="live"?"رفع وتشغيل OCR":"رفع المستند"'));assert.match(page,/اعتماد/);assert.match(page,/رفض/);});
+test("Webhook destinations reject SSRF targets and redirects",()=>{const src=read("lib/webhooks.ts");assert.match(src,/validateWebhookUrl/);assert.match(src,/node:dns/);assert.match(src,/resolve4/);assert.match(src,/resolve6/);assert.doesNotMatch(src,/dns\/promises|\blookup\(/);assert.match(src,/redirect:"error"/);assert.match(read("app/api/dashboard/webhooks/route.ts"),/invalid_webhook_destination/);});
+test("Cloudflare cron batches stay within the Workers subrequest budget",()=>{for(const p of["app/api/cron/webhooks/route.ts","app/api/cron/whatsapp/route.ts"]){const src=read(p);assert.match(src,/CF_SAFE_BATCH_LIMIT\s*=\s*10/);assert.match(src,/p_limit\s*:\s*CF_SAFE_BATCH_LIMIT/);}});
+test("WhatsApp retry worker is authenticated and atomically claimed",()=>{const route=read("app/api/cron/whatsapp/route.ts");const sql=read("supabase/migrations/20260919004928_gmp_whatsapp_retry_claim.sql");assert.match(route,/CRON_SECRET/);assert.match(route,/export async function GET/);assert.match(route,/gmp_claim_due_whatsapp_messages/);assert.match(route,/status: "sent"/);assert.match(route,/retryDelay/);assert.match(sql,/for update skip locked/);assert.match(sql,/revoke execute on function public\.gmp_claim_due_whatsapp_messages/);});
+test("P1 webhook retry queue and dead-letter handling are present",()=>{assert.match(read("lib/webhooks.ts"),/next_attempt_at/);assert.match(read("lib/webhooks.ts"),/dead_lettered/);assert.match(read("lib/webhooks.ts"),/blocked \|\| attempt>=max/);assert.match(read("lib/webhooks.ts"),/Math\.pow/);assert.match(read("app/api/cron/webhooks/route.ts"),/export async function GET/);assert.match(read("app/api/cron/webhooks/route.ts"),/gmp_claim_due_webhook_deliveries/);});
+test("P1 e-invoicing has one canonical merchant endpoint with compatibility facade",()=>{assert.match(read("app/api/merchant/invoicing/route.ts"),/action === "send"/);assert.match(read("app/api/merchant/invoicing/route.ts"),/source_document_id/);assert.match(read("app/api/stage3/einvoice/route.ts"),/canonical_endpoint/);});
+test("Operational WhatsApp notifications are idempotent",()=>{const n=read("lib/operational-notifications.ts");const m=read("supabase/migrations/20260919011236_gmp_whatsapp_idempotency.sql");assert.match(n,/idempotency_key/);assert.match(n,/23505/);assert.match(m,/create unique index/i);assert.match(m,/gmp_whatsapp_messages_org_idempotency_key/);});
+test("P1 operational WhatsApp notifications are integration-ready",()=>{const n=read("lib/operational-notifications.ts");assert.match(n,/sale/);assert.match(n,/invoice/);assert.match(n,/repair_ready/);assert.match(n,/payment_reminder/);assert.match(n,/order/);});
+test("Security headers and payment provider isolation are enforced",()=>{const config=read("next.config.ts");const payment=read("app/api/stage3/webhooks/payments/route.ts");assert.match(config,/X-Content-Type-Options/);assert.match(config,/Referrer-Policy/);assert.match(config,/X-Frame-Options/);assert.match(config,/Permissions-Policy/);assert.match(payment,/eq\("provider",\s*provider\)/);});
+test("P1 API v1/v2 market endpoints support currency and telemetry",()=>{assert.match(read("app/api/v1/markets/route.ts"),/recordApiUsage/);assert.match(read("app/api/v2/market/markets/route.ts"),/recordApiUsage/);assert.match(read("app/api/v2/market/markets/route.ts"),/currency/);});
+test("Billing webhook updates subscription conditionally on the verified prior state",()=>{
+  const src=read("app/api/stage3/webhooks/payments/route.ts");
+  assert.match(src,/\.eq\("status", subscription\.status\)/);
+  assert.match(src,/concurrent_subscription_state_change/);
+  assert.match(src,/latestSubscription/);
+});
+test("Payment webhook classifies failure before renewal and guards reactivation",()=>{
+  const src=read("app/api/stage3/webhooks/payments/route.ts");
+  assert.match(src,/includes\("failed"\)/);
+  assert.match(src,/includes\("renewed"\)/);
+  assert.match(src,/function canReactivate/);
+  assert.match(src,/reactivation_requires_explicit_event/);
+});
+test("Payment and e-invoice event claims are atomic and server-only",()=>{const payment=read("app/api/stage3/webhooks/payments/route.ts");const billing=read("supabase/migrations/20260919112835_gmp_billing_event_claim_v2.sql");const invoice=read("supabase/migrations/20260919010816_gmp_einvoice_send_claim.sql");assert.match(payment,/gmp_claim_billing_event/);assert.match(payment,/billing_event_claim_failed/);assert.match(payment,/billing_processing_failed/);assert.match(billing,/for update/);assert.match(billing,/on conflict \(provider,event_key\) do nothing/i);assert.match(billing,/revoke execute on function public\.gmp_claim_billing_event/);assert.match(invoice,/gmp_claim_einvoice_send/);assert.match(invoice,/for update/);});
+test("Public health endpoint does not expose environment variable names",()=>{const health=read("app/api/health/route.ts");assert.doesNotMatch(health,/missingEnvironmentVariables/);assert.match(health,/supabaseConfigured/);assert.match(health,/adminConfigured/);});
+test("E-invoice webhook is monotonic and replay-safe",()=>{const src=read("app/api/stage3/webhooks/einvoice/route.ts");assert.match(src,/current\.status === status/);assert.match(src,/stale_or_invalid_status/);assert.match(src,/\.eq\("status", current\.status\)/);assert.match(src,/previous_status/);});
+test("Webhook retry claim uses a lease to prevent concurrent delivery",()=>{const migration=read("supabase/migrations/20260919121436_gmp_webhook_claim_lease.sql");const code=read("lib/webhooks.ts");assert.match(migration,/for update skip locked/);assert.match(migration,/next_attempt_at=now\(\)\+interval '5 minutes'/);assert.match(code,/next_attempt_at:new Date\(Date\.now\(\)\+5\*60_000\)/);});
+test("Provider response limits are streaming, not post-buffer checks",()=>{const helper=read("lib/stage3/provider-http.ts");for(const p of["lib/stage3/payments.ts","lib/stage3/ai.ts","lib/stage3/einvoice.ts","lib/stage3/whatsapp.ts"]){assert.match(read(p),/readBoundedText/);assert.doesNotMatch(read(p),/const raw = await response\.text\(\)/);}assert.match(helper,/getReader\(\)/);assert.match(helper,/value\.byteLength/);assert.match(helper,/1_000_000/);assert.match(helper,/Number\.isInteger\(maxBytes\)/);assert.match(helper,/reader\.cancel\(\)/);});
+test("WhatsApp webhook ignores stale regressions and rejects unknown provider statuses",()=>{
+  const src=read("app/api/stage3/webhooks/whatsapp/route.ts");
+  assert.match(src,/function canAdvance/);
+  assert.match(src,/from==="delivered"\)return to==="read"/);
+  assert.match(src,/invalid_event_status/);
+  assert.match(src,/\.eq\("status",current\.status\)/);
+  assert.match(src,/maybeSingle\(\)/);
+});
+test("Live payment, e-invoice, and WhatsApp states require complete inbound webhook configuration",()=>{
+  for(const p of["lib/stage3/payments.ts","lib/stage3/einvoice.ts","lib/stage3/whatsapp.ts"]){
+    const src=read(p);
+    assert.match(src,/webhookSecret/);
+    assert.match(src,/provider/);
+    assert.match(src,/integration_ready/);
+  }
+});
+test("Provider timeout remains active through bounded body reads",()=>{
+  for(const p of["lib/stage3/ai.ts","lib/stage3/payments.ts","lib/stage3/einvoice.ts","lib/stage3/whatsapp.ts"]){
+    const src=read(p);
+    const readAt=src.indexOf("readBoundedText(response)");
+    const clearAt=src.indexOf("clearTimeout(timer)",readAt);
+    assert.ok(readAt>=0);
+    assert.ok(clearAt>readAt);
+  }
+});
+test("Provider endpoints are HTTPS-only and use the bounded streaming helper",()=>{for(const p of["lib/stage3/ai.ts","lib/stage3/whatsapp.ts","lib/stage3/payments.ts","lib/stage3/einvoice.ts"]){const src=read(p);assert.match(src,/protocol !== ["']https:/);assert.match(src,/redirect:\s*["']error["']/);assert.match(src,/10_000/);assert.match(src,/readBoundedText/);}});
+test("Incoming provider webhooks are body-bounded before JSON parsing",()=>{const helper=read("lib/bounded-body.ts");const payment=read("app/api/stage3/webhooks/payments/route.ts");const invoice=read("app/api/stage3/webhooks/einvoice/route.ts");assert.match(helper,/readBoundedRequestText/);assert.match(helper,/getReader\(\)/);assert.match(helper,/request_body_too_large/);assert.match(helper,/Number\.isInteger\(maxBytes\)/);assert.match(helper,/reader\.cancel\(\)/);for(const src of[payment,invoice]){assert.match(src,/readBoundedRequestText\(request\)/);assert.match(src,/413/);}});
+test("Public provider feeds have bounded JSON responses and health checks are cached",()=>{assert.ok(read("lib/stage3/provider-http.ts").includes("readBoundedJson"));assert.ok(read("lib/free-data.ts").includes("readBoundedJson"));assert.ok(read("lib/providers/market-data.ts").includes("readBoundedJson"));assert.ok(read("lib/free-data.ts").includes("MAX_PROVIDER_JSON_BYTES"));assert.ok(read("lib/providers/market-data.ts").includes("MAX_PROVIDER_JSON_BYTES"));const health=read("app/api/health/data/route.ts");assert.ok(health.includes("CACHE_TTL_MS"));assert.ok(health.includes("inFlight"));assert.ok(health.includes("stale-while-revalidate"));});
+test("Public JSON endpoints bound request bodies before parsing",()=>{
+  const helper=read("lib/bounded-body.ts");
+  assert.ok(helper.includes("readBoundedRequestJson"));
+  for(const p of["app/api/displays/heartbeat/route.ts","app/api/displays/pair-code/route.ts","app/api/displays/pair/route.ts","app/api/displays/snapshot/route.ts","app/api/stage2/route.ts"]){
+    const src=read(p);
+    assert.ok(src.includes("readBoundedRequestJson"));
+    assert.ok(src.includes("64 * 1024"));
+    assert.ok(src.includes("request_body_too_large"));
+    assert.ok(src.includes("413"));
+  }
+});
+test("Document uploads validate real file signatures after MIME checks",()=>{
+  const src=read("app/api/merchant/documents/route.ts");
+  assert.ok(src.includes("matchesFileSignature"));
+  assert.ok(src.includes("%PDF-"));
+  assert.ok(src.includes("0xff"));
+  assert.ok(src.includes("0x89"));
+  assert.ok(src.includes('"WEBP"'));
+  assert.ok(src.includes("file_signature_invalid"));
+});
+test("Authenticated JSON APIs also enforce bounded request parsing",()=>{
+  for(const p of["app/api/alerts/rules/route.ts","app/api/notifications/route.ts","app/api/stage3/ai/route.ts","app/api/stage3/billing/route.ts","app/api/stage3/einvoice/route.ts","app/api/stage3/whatsapp/route.ts","app/api/v1/webhooks/route.ts","app/api/v1/keys/route.ts","app/api/admin/overview/route.ts","app/api/dashboard/webhooks/route.ts"]){
+    const src=read(p);
+    assert.ok(src.includes("readBoundedRequestJson"));
+    assert.ok(src.includes("64 * 1024"));
+  }
+});
+test("Public history access is restricted to a known public instrument set",()=>{
+  const helper=read("lib/market-history.ts");
+  assert.ok(helper.includes("PUBLIC_HISTORY_INSTRUMENTS"));
+  assert.ok(helper.includes("isPublicHistoryInstrument"));
+  assert.ok(read("app/api/gold/history/route.ts").includes("isPublicHistoryInstrument"));
+  assert.ok(read("app/api/market/terminal/route.ts").includes("isPublicHistoryInstrument"));
+  assert.ok(read("app/api/market/terminal/route.ts").includes("history=isPublicHistoryInstrument(selected)"));
+});
+test("E-invoice rejects unknown actions before queue/send side effects",()=>{
+  assert.ok(read("app/api/stage3/einvoice/route.ts").includes('["validate","queue","send"].includes(action)'));
+});
+test("Merchant operational JSON APIs enforce bounded request parsing",()=>{
+  for(const p of["app/api/merchant/cameras/route.ts","app/api/merchant/compliance/route.ts","app/api/merchant/operations/route.ts","app/api/merchant/sales/route.ts","app/api/merchant/invoicing/route.ts"]){
+    const src=read(p);
+    assert.ok(src.includes("readBoundedRequestJson"));
+    assert.ok(src.includes("64 * 1024"));
+  }
+});
+test("E-invoice canonical facade uses trusted application origin",()=>{
+  const src=read("app/api/stage3/einvoice/route.ts");
+  const helper=read("lib/trusted-origin.ts");
+  assert.ok(src.includes("getTrustedAppOrigin"));
+  for(const key of["NEXT_PUBLIC_SITE_URL","GMP_APP_URL","VERCEL_URL","canonical_origin_not_configured","canonical_origin_invalid","localhost"]) assert.ok(helper.includes(key));
+});
+
+test("Form and WhatsApp webhook payloads have explicit transport bounds",()=>{
+  const helper=read("lib/bounded-body.ts");
+  assert.ok(helper.includes("requestContentLengthExceeds"));
+  assert.ok(helper.includes("readBoundedRequestBytes"));
+  assert.ok(helper.includes("readBoundedRequestFormData"));
+  const whatsapp=read("app/api/stage3/webhooks/whatsapp/route.ts");
+  assert.ok(whatsapp.includes("readBoundedRequestText"));
+  assert.ok(whatsapp.includes("256*1024"));
+  assert.ok(whatsapp.includes("MAX_EVENTS=100"));
+  assert.ok(whatsapp.includes("status:413"));
+  assert.ok(whatsapp.includes("invalid_event"));
+  for(const p of["app/api/merchant/documents/route.ts","app/api/stores/create/route.ts","app/api/displays/create/route.ts","app/api/displays/revoke/route.ts","app/api/auth/login/route.ts","app/api/auth/signup/route.ts","app/api/displays/pair/route.ts"]){
+    const src=read(p);
+    assert.ok(src.includes("readBoundedRequestFormData"));
+    assert.ok(!src.includes("request.formData()"));
+    assert.ok(src.includes("413"));
+  }
+});
+
+test("Trusted callback origin is centralized and request-host independent",()=>{
+  const helper=read("lib/trusted-origin.ts");
+  const billing=read("app/api/stage3/billing/route.ts");
+  const einvoice=read("app/api/stage3/einvoice/route.ts");
+  assert.ok(helper.includes("NEXT_PUBLIC_SITE_URL"));
+  assert.ok(helper.includes("GMP_APP_URL"));
+  assert.ok(helper.includes("VERCEL_URL"));
+  assert.ok(helper.includes("canonical_origin_not_configured"));
+  assert.ok(helper.includes("canonical_origin_invalid"));
+  assert.ok(helper.includes("url.username || url.password"));
+  assert.ok(billing.includes("getTrustedAppOrigin"));
+  assert.ok(einvoice.includes("getTrustedAppOrigin"));
+  assert.doesNotMatch(billing,/new URL\(request\.url\)\.origin/);
+  assert.doesNotMatch(einvoice,/new URL\(request\.url\)\.origin/);
+});
+
+test("Regional public endpoint bounds country selector",()=>{
+  const route=read("app/api/stage3/regional/route.ts");
+  assert.match(route,/\^\[A-Z\]\{2\}\$/);
+  assert.ok(route.includes("invalid_country"));
+  assert.ok(route.includes("getRegionalProfile"));
+});
+
+test("Webhook IP guard does not overblock public IPv4 space",()=>{
+  const src=read("lib/webhooks.ts");
+  assert.match(src,/b === 0 && \(c === 0 \|\| c === 2\)/);
+  assert.match(src,/b === 51 && c === 100/);
+  assert.match(src,/b === 0 && c === 113/);
+  assert.doesNotMatch(src,/\(a === 203 && b === 0\)\s*\|\|/);
+});
+
+test("OMR currency display is device-independent",()=>{const comp=read("components/MoneyDisplay.tsx");const helper=read("lib/currency-display.ts");const svg=read("public/omr-symbol.svg");assert.match(comp,/formatMoneyParts/);assert.match(comp,/omr-symbol/);assert.match(comp,/<svg className="omr-symbol"/);assert.match(comp,/currentColor/);assert.match(svg,/viewBox=/);assert.match(svg,/currentColor/);assert.match(helper,/U\+20C4 OMANI RIAL SIGN/);assert.match(helper,/\\u20C4/);assert.match(helper,/OMR/);});
+test("Cloudflare deployment exposes a credential-free dry-run",()=>{const pkg=JSON.parse(read("package.json"));assert.equal(pkg.scripts["deploy:cloudflare:dry-run"],"vinext-cloudflare deploy --dry-run");assert.match(read(".github/workflows/ci.yml"),/Cloudflare Workers deploy dry-run/);assert.match(read(".github/workflows/ci.yml"),/npm run deploy:cloudflare:dry-run/);});
+test("Cloudflare Workers deployment path is configured without replacing Next.js",()=>{const pkg=JSON.parse(read("package.json"));assert.ok(pkg.dependencies.next);assert.ok(pkg.dependencies.react);assert.ok(pkg.devDependencies.vinext);assert.ok(pkg.devDependencies["@cloudflare/vite-plugin"]);assert.ok(pkg.devDependencies.wrangler);assert.equal(typeof pkg.scripts["build:vinext"],"string");assert.equal(typeof pkg.scripts["check:vinext"],"string");assert.equal(typeof pkg.scripts["deploy:cloudflare"],"string");assert.ok(read("vite.config.ts").includes("cloudflare({"));assert.ok(read("vite.config.ts").includes('viteEnvironment: { name: "rsc", childEnvironments: ["ssr"] }'));});
+test("Cloudflare Worker preserves the existing cron endpoints",()=>{const w=read("worker/index.ts");const c=read("wrangler.jsonc");assert.match(w,/\/api\/cron\/webhooks/);assert.match(w,/\/api\/cron\/whatsapp/);assert.match(w,/controller\.cron/);assert.match(w,/authorization/);assert.match(c,/"main": "\.\/worker\/index\.ts"/);assert.match(c,/"crons"/);assert.match(c,/0 0 \* \* \*/);assert.match(c,/5 0 \* \* \*/);});
+test("Cloudflare deployment ignores generated local state",()=>{const g=read(".gitignore");for(const p of["dist/",".vinext/",".wrangler/"])assert.ok(g.includes(p));});

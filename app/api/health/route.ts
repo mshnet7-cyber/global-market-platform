@@ -1,25 +1,24 @@
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const missing: string[] = [];
   const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   const adminKey = process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL) missing.push("NEXT_PUBLIC_SUPABASE_URL");
-  if (!publishableKey) missing.push("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY");
-  if (!adminKey) missing.push("SUPABASE_SECRET_KEY");
+  const supabaseConfigured = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && publishableKey);
+  const adminConfigured = Boolean(adminKey);
+  const ok = supabaseConfigured && adminConfigured;
 
   return NextResponse.json({
-    ok: missing.length === 0,
+    ok,
     service: "global-market-platform",
     version: "0.3.2",
-    supabaseConfigured: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && publishableKey),
-    adminConfigured: Boolean(adminKey),
-    missingEnvironmentVariables: missing,
+    supabaseConfigured,
+    adminConfigured,
     timestamp: new Date().toISOString(),
   }, {
-    status: missing.length === 0 ? 200 : 503,
+    status: ok ? 200 : 503,
     headers: { "Cache-Control": "no-store" },
   });
 }

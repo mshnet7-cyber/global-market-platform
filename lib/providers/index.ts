@@ -1,7 +1,7 @@
 import { unstable_cache } from "next/cache";
 import { mockGold, mockMarkets, mockNews, mockSilver, mockStocks } from "./mock";
 import { getPublicMarketQuotes } from "./market-data";
-import { fetchMarketaux, fetchNewsData, getFreeMetal, rankAndDeduplicateNews } from "../free-data";
+import { fetchFrankfurterRate, fetchGdeltNews, fetchMarketaux, fetchNewsData, getFreeMetal, rankAndDeduplicateNews } from "../free-data";
 import { createSupabaseAdminClient } from "../supabase/admin";
 import { withTrustStatus } from "../market-trust";
 import { evaluateMarketAlerts } from "../alerts";
@@ -14,7 +14,7 @@ export const providerRegistry = {
   fx: ["Frankfurter", "CBO for OMR", "Demo fallback"],
   markets: ["Alpha Vantage (EOD/delayed, licensed display required)", "EODHD (EOD, licensed display required)", "Demo fallback"],
   stocks: ["Alpha Vantage (EOD/delayed, licensed display required)", "EODHD (EOD, licensed display required)", "Demo fallback"],
-  news: ["Marketaux", "NewsData.io", "Official feeds / RSS where permitted", "Demo fallback"],
+  news: ["Marketaux", "NewsData.io", "GDELT", "Official feeds / RSS where permitted", "Demo fallback"],
 } as const;
 
 function quoteInstrumentCode(metal: "gold" | "silver", currency: string) {
@@ -36,7 +36,7 @@ async function persistMetalSnapshot(snapshot: Awaited<ReturnType<typeof getFreeM
   try {
     const { data: latest } = await admin
       .from("gmp_price_quotes")
-      .select("observed_at,value")
+      .select("observed_at,value,received_at")
       .eq("instrument_code", instrumentCode)
       .order("observed_at", { ascending: false })
       .limit(1)
@@ -52,6 +52,7 @@ async function persistMetalSnapshot(snapshot: Awaited<ReturnType<typeof getFreeM
         unit: snapshot.unit,
         status: snapshot.status,
         observed_at: observedAt,
+        received_at: snapshot.receivedAt ?? new Date().toISOString(),
         provider,
       });
     }
@@ -108,6 +109,7 @@ async function persistPublicQuotes(quotes: Quote[]) {
           unit: quote.unit,
           status: quote.status,
           observed_at: observedAt,
+          received_at: quote.receivedAt ?? new Date().toISOString(),
           provider: quote.provider,
         });
       }
@@ -128,18 +130,63 @@ async function persistPublicQuotes(quotes: Quote[]) {
   }
 }
 
+const PUBLIC_CURRENCIES = [
+  { code: "USD", name: "US Dollar" },
+  { code: "EUR", name: "Euro" },
+  { code: "GBP", name: "British Pound" },
+  { code: "CHF", name: "Swiss Franc" },
+  { code: "JPY", name: "Japanese Yen" },
+  { code: "INR", name: "Indian Rupee" },
+  { code: "TRY", name: "Turkish Lira" },
+] as const;
+
+async function getPublicCurrencyQuotes(localCurrency: string): Promise<Quote[]> {
+  const local = localCurrency.toUpperCase();
+  const provider = local === "OMR" ? "cbo" : undefined;
+  const usdToLocal = await fetchFrankfurterRate("USD", local, provider);
+  if (usdToLocal == null || usdToLocal <= 0) return [];
+  const results = await Promise.all(PUBLIC_CURRENCIES.map(async (item) => {
+    const usdToForeign = await fetchFrankfurterRate("USD", item.code, provider);
+    if (usdToForeign == null || usdToForeign <= 0) return null;
+    const rate = usdToLocal / usdToForeign;
+    if (!Number.isFinite(rate) || rate <= 0) return null;
+    const timestamp = new Date().toISOString();
+    return {
+      instrument: `1 ${item.code} — ${item.name}`,
+      symbol: `FX:${item.code}`,
+      exchange: "Frankfurter / ECB",
+      spot: rate,
+      bid: rate,
+      ask: rate,
+      previousClose: null,
+      change: null,
+      changePercent: null,
+      currency: local,
+      unit: item.code,
+      timestamp,
+      provider: provider === "cbo" ? "Central Bank of Oman via Frankfurter" : "Frankfurter reference",
+      status: "DELAYED" as const,
+      receivedAt: timestamp,
+    } as Quote;
+  }));
+  return results.filter((quote): quote is Quote => quote !== null);
+}
+
 async function buildSnapshot(currency = "OMR", language = "ar", allowDemo = false, includePublicMarkets = false) {
-  const marketPromises = includePublicMarkets
+  const emptyMarketResult: Awaited<ReturnType<typeof getPublicMarketQuotes>> = { quotes: [], provider: "Alpha Vantage" };
+  const marketPromises: [Promise<Awaited<ReturnType<typeof getPublicMarketQuotes>>>, Promise<Awaited<ReturnType<typeof getPublicMarketQuotes>>>] = includePublicMarkets
     ? [getPublicMarketQuotes("markets"), getPublicMarketQuotes("stocks")]
-    : [Promise.resolve({ quotes: [], provider: "Alpha Vantage" as const }), Promise.resolve({ quotes: [], provider: "Alpha Vantage" as const })];
+    : [Promise.resolve(emptyMarketResult), Promise.resolve(emptyMarketResult)];
 
   const started = Date.now();
-  const [liveGold, liveSilver, marketauxNews, newsdataNews, publicMarkets, publicStocks] = await Promise.all([
+  const [liveGold, liveSilver, marketauxNews, newsdataNews, gdeltNews, publicMarkets, publicStocks, currencies] = await Promise.all([
     getFreeMetal(currency, "XAU", "gold"),
     getFreeMetal(currency, "XAG", "silver"),
     fetchMarketaux(language),
     fetchNewsData(language),
+    fetchGdeltNews(language),
     ...marketPromises,
+    getPublicCurrencyQuotes(currency),
   ]);
 
   await Promise.all([
@@ -155,7 +202,7 @@ async function buildSnapshot(currency = "OMR", language = "ar", allowDemo = fals
   }
   if (!liveSilver) await recordProviderOutcome("Gold API", "failure");
 
-  const news = rankAndDeduplicateNews([...(marketauxNews ?? []), ...(newsdataNews ?? [])]);
+  const news = rankAndDeduplicateNews([...(marketauxNews ?? []), ...(newsdataNews ?? []), ...(gdeltNews ?? [])]);
   const unavailableGold = mockGold(currency);
   const unavailableSilver = mockSilver(currency);
   return {
@@ -163,6 +210,7 @@ async function buildSnapshot(currency = "OMR", language = "ar", allowDemo = fals
     silver: liveSilver ?? (allowDemo ? unavailableSilver : { ...unavailableSilver, status: "UNAVAILABLE" as const, spot: null, bid: null, ask: null, perGram24k: null, purities: { "999": null } }),
     markets: allowDemo ? mockMarkets() : publicMarkets.quotes,
     stocks: allowDemo ? mockStocks() : publicStocks.quotes,
+    currencies: currencies,
     news: news.length ? news : (allowDemo ? mockNews(language) : []),
     providers: providerRegistry,
     generatedAt: new Date().toISOString(),

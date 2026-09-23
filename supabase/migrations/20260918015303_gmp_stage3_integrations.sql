@@ -1,0 +1,41 @@
+-- Stage 3 additive integration foundation. No data deletion or destructive migration.
+alter table public.gmp_subscriptions add column if not exists current_period_start timestamptz;
+alter table public.gmp_subscriptions add column if not exists cancel_at_period_end boolean not null default false;
+alter table public.gmp_subscriptions add column if not exists grace_until timestamptz;
+
+create table if not exists public.gmp_ai_jobs (id uuid primary key default gen_random_uuid(),organization_id uuid not null references public.gmp_organizations(id) on delete cascade,document_id uuid references public.gmp_documents(id) on delete set null,job_type text not null check(job_type in('ocr','classification','extraction','copilot','analysis')),status text not null default 'queued' check(status in('queued','running','succeeded','failed','needs_review','cancelled')),provider text,model text,input_hash text,result jsonb not null default '{}'::jsonb,confidence numeric,error_code text,error_message text,retry_count integer not null default 0 check(retry_count>=0),created_by uuid references auth.users(id) on delete set null,created_at timestamptz not null default now(),updated_at timestamptz not null default now());
+create table if not exists public.gmp_whatsapp_messages (id uuid primary key default gen_random_uuid(),organization_id uuid not null references public.gmp_organizations(id) on delete cascade,recipient text not null,message_type text not null check(message_type in('template','document','notification','text')),template_name text,payload jsonb not null default '{}'::jsonb,status text not null default 'queued' check(status in('queued','sent','delivered','read','failed','cancelled')),provider text,external_id text,attempts integer not null default 0 check(attempts>=0),next_retry_at timestamptz,last_error text,sent_at timestamptz,delivered_at timestamptz,read_at timestamptz,created_by uuid references auth.users(id) on delete set null,created_at timestamptz not null default now(),updated_at timestamptz not null default now());
+create table if not exists public.gmp_billing_events (id uuid primary key default gen_random_uuid(),organization_id uuid not null references public.gmp_organizations(id) on delete cascade,subscription_id uuid references public.gmp_subscriptions(id) on delete set null,payment_id uuid references public.gmp_payments(id) on delete set null,event_key text not null,event_type text not null,payload_hash text,provider text,status text not null default 'received' check(status in('received','processed','ignored','failed')),error_message text,created_at timestamptz not null default now(),unique(provider,event_key));
+create table if not exists public.gmp_api_usage_events (id uuid primary key default gen_random_uuid(),api_key_id uuid not null references public.gmp_api_keys(id) on delete cascade,organization_id uuid references public.gmp_organizations(id) on delete cascade,request_id uuid not null,api_version text not null,route text not null,method text not null,status_code integer not null,latency_ms integer not null default 0,created_at timestamptz not null default now());
+create table if not exists public.gmp_einvoice_attempts (id uuid primary key default gen_random_uuid(),submission_id uuid not null references public.gmp_einvoice_submissions(id) on delete cascade,attempt_no integer not null,status text not null check(status in('started','submitted','accepted','rejected','failed')),http_status integer,request_hash text,response_hash text,error_code text,error_message text,created_at timestamptz not null default now(),unique(submission_id,attempt_no));
+
+alter table public.gmp_subscriptions drop constraint if exists gmp_subscriptions_status_check;
+alter table public.gmp_subscriptions add constraint gmp_subscriptions_status_check check(status = any(array['created','payment_pending','active','past_due','grace_period','expired','canceled','suspended']::text[]));
+
+create index if not exists gmp_ai_jobs_org_idx on public.gmp_ai_jobs(organization_id,created_at desc);
+create index if not exists gmp_ai_jobs_document_idx on public.gmp_ai_jobs(document_id,created_at desc);
+create index if not exists gmp_whatsapp_messages_org_idx on public.gmp_whatsapp_messages(organization_id,created_at desc);
+create index if not exists gmp_whatsapp_messages_retry_idx on public.gmp_whatsapp_messages(status,next_retry_at);
+create index if not exists gmp_billing_events_org_idx on public.gmp_billing_events(organization_id,created_at desc);
+create index if not exists gmp_api_usage_events_org_idx on public.gmp_api_usage_events(organization_id,created_at desc);
+create index if not exists gmp_api_usage_events_key_idx on public.gmp_api_usage_events(api_key_id,created_at desc);
+create index if not exists gmp_einvoice_attempts_submission_idx on public.gmp_einvoice_attempts(submission_id,created_at desc);
+
+alter table public.gmp_ai_jobs enable row level security;
+alter table public.gmp_whatsapp_messages enable row level security;
+alter table public.gmp_billing_events enable row level security;
+alter table public.gmp_api_usage_events enable row level security;
+alter table public.gmp_einvoice_attempts enable row level security;
+
+create policy gmp_ai_jobs_member_read on public.gmp_ai_jobs for select to authenticated using(exists(select 1 from public.gmp_organization_members m where m.organization_id=gmp_ai_jobs.organization_id and m.user_id=(select auth.uid())));
+create policy gmp_ai_jobs_admin_write on public.gmp_ai_jobs for all to authenticated using(exists(select 1 from public.gmp_organization_members m where m.organization_id=gmp_ai_jobs.organization_id and m.user_id=(select auth.uid()) and m.role in('owner','admin'))) with check(exists(select 1 from public.gmp_organization_members m where m.organization_id=gmp_ai_jobs.organization_id and m.user_id=(select auth.uid()) and m.role in('owner','admin')));
+create policy gmp_whatsapp_messages_member_read on public.gmp_whatsapp_messages for select to authenticated using(exists(select 1 from public.gmp_organization_members m where m.organization_id=gmp_whatsapp_messages.organization_id and m.user_id=(select auth.uid())));
+create policy gmp_whatsapp_messages_admin_write on public.gmp_whatsapp_messages for all to authenticated using(exists(select 1 from public.gmp_organization_members m where m.organization_id=gmp_whatsapp_messages.organization_id and m.user_id=(select auth.uid()) and m.role in('owner','admin'))) with check(exists(select 1 from public.gmp_organization_members m where m.organization_id=gmp_whatsapp_messages.organization_id and m.user_id=(select auth.uid()) and m.role in('owner','admin')));
+create policy gmp_billing_events_member_read on public.gmp_billing_events for select to authenticated using(exists(select 1 from public.gmp_organization_members m where m.organization_id=gmp_billing_events.organization_id and m.user_id=(select auth.uid())));
+create policy gmp_api_usage_events_admin_read on public.gmp_api_usage_events for select to authenticated using(exists(select 1 from public.gmp_organization_members m where m.organization_id=gmp_api_usage_events.organization_id and m.user_id=(select auth.uid()) and m.role in('owner','admin')));
+create policy gmp_einvoice_attempts_member_read on public.gmp_einvoice_attempts for select to authenticated using(exists(select 1 from public.gmp_einvoice_submissions s join public.gmp_organization_members m on m.organization_id=s.organization_id where s.id=gmp_einvoice_attempts.submission_id and m.user_id=(select auth.uid())));
+
+drop trigger if exists gmp_ai_jobs_updated_at on public.gmp_ai_jobs;
+create trigger gmp_ai_jobs_updated_at before update on public.gmp_ai_jobs for each row execute function public.gmp_set_updated_at();
+drop trigger if exists gmp_whatsapp_messages_updated_at on public.gmp_whatsapp_messages;
+create trigger gmp_whatsapp_messages_updated_at before update on public.gmp_whatsapp_messages for each row execute function public.gmp_set_updated_at();

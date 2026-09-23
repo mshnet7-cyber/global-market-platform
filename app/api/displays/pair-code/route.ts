@@ -1,3 +1,5 @@
+import { isSameOriginRequest } from "../../../../lib/request-security";
+import { readBoundedRequestJson } from "../../../../lib/bounded-body";
 import { NextResponse } from "next/server";
 import crypto from "node:crypto";
 import { createSupabaseAdminClient } from "../../../../lib/supabase/admin";
@@ -12,13 +14,21 @@ function subscriptionIsUsable(subscription: { status?: string | null; current_pe
 }
 
 export async function POST(request: Request) {
+  if (!isSameOriginRequest(request)) return new Response(JSON.stringify({ error: "cross_site_request" }), { status: 403, headers: { "content-type": "application/json", "cache-control": "no-store" } });
+
   const context = await getMerchantContext();
   const admin = createSupabaseAdminClient();
   if (!admin) return NextResponse.json({ ok: false, error: "not_configured" }, { status: 503 });
   if (!context.user) return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   if (!context.organization || !context.planCode || context.role === "viewer") return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
 
-  const body = await request.json().catch(() => null) as { screen_id?: string } | null;
+  let body: { screen_id?: string } | null;
+  try {
+    body = await readBoundedRequestJson<{ screen_id?: string }>(request, 64 * 1024);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "invalid_json";
+    return NextResponse.json({ ok: false, error: message }, { status: message === "request_body_too_large" ? 413 : 400 });
+  }
   const screenId = String(body?.screen_id ?? "").trim();
   if (!screenId) return NextResponse.json({ ok: false, error: "invalid_screen" }, { status: 400 });
 

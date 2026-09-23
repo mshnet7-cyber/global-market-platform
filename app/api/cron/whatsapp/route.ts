@@ -3,6 +3,10 @@ import { createSupabaseAdminClient } from "../../../../lib/supabase/admin";
 import { getWhatsAppStatus, sendWhatsAppMessage } from "../../../../lib/stage3/whatsapp";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+// Keep each invocation comfortably below Cloudflare Workers subrequest limits.
+const CF_SAFE_BATCH_LIMIT = 10;
 
 const json = (data: unknown, status = 200) => NextResponse.json(data, {
   status,
@@ -13,7 +17,7 @@ function retryDelay(attempt: number) {
   return Math.min(24 * 60 * 60_000, Math.pow(2, Math.max(0, attempt - 1)) * 30_000 + Math.floor(Math.random() * 5_000));
 }
 
-export async function POST(request: Request) {
+async function run(request: Request) {
   const secret = process.env.CRON_SECRET?.trim() || process.env.GMP_CRON_SECRET?.trim();
   const provided = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") || request.headers.get("x-cron-secret");
   if (!secret || !provided || provided !== secret) return json({ error: "unauthorized" }, 401);
@@ -24,7 +28,7 @@ export async function POST(request: Request) {
   const admin = createSupabaseAdminClient();
   if (!admin) return json({ error: "service_not_configured" }, 503);
 
-  const { data, error } = await admin.rpc("gmp_claim_due_whatsapp_messages", { p_limit: 25 });
+  const { data, error } = await admin.rpc("gmp_claim_due_whatsapp_messages", { p_limit: CF_SAFE_BATCH_LIMIT });
   if (error) return json({ error: error.message }, 503);
 
   let processed = 0;
@@ -74,3 +78,7 @@ export async function POST(request: Request) {
 
   return json({ success: true, processed, sent, failed: processed - sent });
 }
+
+
+export async function GET(request: Request) { return run(request); }
+export async function POST(request: Request) { return run(request); }
