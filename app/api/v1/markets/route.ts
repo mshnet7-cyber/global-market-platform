@@ -5,6 +5,7 @@ import { getSnapshot } from "../../../../lib/providers";
 import { withTrustStatus } from "../../../../lib/market-trust";
 import { randomUUID } from "crypto";
 import { recordApiUsage } from "../../../../lib/stage3/developer-api";
+import type { Quote } from "../../../../lib/types";
 
 function errorResponse(error: unknown) {
   const message=error instanceof Error?error.message:"api_error";
@@ -22,7 +23,7 @@ export async function GET(request:Request){
     const kind=url.searchParams.get("kind")==="stocks"?"stocks":"markets";
     const instrument=url.searchParams.get("instrument")?.toUpperCase()??null;
     const country=url.searchParams.get("country")?.toUpperCase()||appConfig.defaultCountry; const currency=(url.searchParams.get("currency")?.toUpperCase()||"USD"); if(!/^[A-Z]{3}$/.test(currency)) return NextResponse.json({error:"invalid_currency",request_id:randomUUID()},{status:400,headers:apiCorsHeaders()}); const snapshot=await getSnapshot(currency,language,false,true);
-    const quotes=(kind==="stocks"?snapshot.stocks:snapshot.markets).map(withTrustStatus).filter(q=>!instrument||q.symbol===instrument||q.instrument.toUpperCase().includes(instrument));
+    const quotes=(kind==="stocks"?snapshot.stocks:snapshot.markets).map(withTrustStatus).filter((q: Quote)=>!instrument||q.symbol===instrument||q.instrument.toUpperCase().includes(instrument));
     const requestId=randomUUID(); await recordApiUsage({apiKeyId:key.id,organizationId:key.organizationId,requestId,route:"/api/v1/markets",method:"GET",statusCode:200,latencyMs:Date.now()-start,apiVersion:"1"}); return NextResponse.json({api_version:"1",request_id:requestId,generated_at:snapshot.generatedAt,kind,country,count:quotes.length,data:quotes}, {headers:apiCorsHeaders()});
   }catch(error){return errorResponse(error);}
 }
