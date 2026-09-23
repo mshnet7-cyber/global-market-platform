@@ -10,6 +10,7 @@ test("commercial workflow APIs and UI are present",()=>{
  assert.match(api,/gmp_convert_sales_quote/);
  assert.match(api,/gmp_create_sales_quote/);
  assert.doesNotMatch(api,/from\("gmp_sales_quotes"\)\.insert/);
+ assert.doesNotMatch(api,/gmp_branches.*store_id/);
  assert.match(api,/price_item/);
  assert.match(page,/تحويل إلى فاتورة/);
  assert.match(page,/حفظ سعر المنتج/);
@@ -41,4 +42,15 @@ test("quote RPCs use invoker security and fail-closed conversion state",()=>{
  assert.match(migration,/gmp_convert_sales_quote/);
  assert.match(migration,/quote_conversion_state_invalid/);
  assert.match(migration,/sale_conversion_missing_id/);
+});
+
+test("quote creation enforces financial totals at the database boundary",()=>{
+ const migration=fs.readFileSync("supabase/migrations/20260923023000_commercial_quote_total_integrity.sql","utf8");
+ assert.match(migration,/calculated_subtotal/);
+ assert.match(migration,/quote_subtotal_mismatch/);
+ assert.match(migration,/quote_total_mismatch/);
+ assert.match(migration,/calculated_total/);
+ assert.match(migration,/round\(calculated_subtotal,3\)/);
+ assert.match(migration,/security invoker/);
+ assert.doesNotMatch(migration,/b\.store_id/);
 });

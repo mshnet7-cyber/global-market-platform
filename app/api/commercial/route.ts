@@ -47,10 +47,6 @@ export async function POST(request:Request){
    if(!(await belongsToOrg(access,"gmp_stores",storeId)))return json({error:"store_not_found"},404);
    const customerId=txt(b.customer_id,80);if(customerId&&!await belongsToOrg(access,"gmp_customers",customerId))return json({error:"customer_not_found"},404);
    const branchId=txt(b.branch_id,80);if(branchId&&!await belongsToOrg(access,"gmp_branches",branchId))return json({error:"branch_not_found"},404);
-   if(branchId){
-    const {data:branch}=await access.supabase.from("gmp_branches").select("store_id").eq("id",branchId).eq("organization_id",access.organization.id).maybeSingle();
-    if(branch?.store_id&&branch.store_id!==storeId)return json({error:"branch_store_mismatch"},409);
-   }
    const lines=Array.isArray(b.lines)?b.lines.slice(0,100):[];if(!lines.length)return json({error:"lines_required"},400);
    const normalized=lines.map((l:any)=>{
     const q=num(l.quantity)||1,p=num(l.unit_price),m=num(l.making_charge),d=num(l.discount_amount),v=num(l.vat_amount);
