@@ -202,6 +202,40 @@ export async function fetchMarketaux(language: string): Promise<NewsItem[] | nul
   }
 }
 
+export async function fetchGdeltNews(language: string): Promise<NewsItem[] | null> {
+  try {
+    const url = new URL("https://api.gdeltproject.org/api/v2/doc/doc");
+    url.searchParams.set("query", '("gold" OR "silver" OR "precious metals" OR "financial markets" OR "central bank" OR "interest rates" OR "currency")');
+    url.searchParams.set("mode", "artlist");
+    url.searchParams.set("format", "json");
+    url.searchParams.set("maxrecords", "25");
+    url.searchParams.set("timespan", "6h");
+    url.searchParams.set("sort", "datedesc");
+    const json = await safeJson<{ articles?: unknown }>(url.toString());
+    if (!Array.isArray(json.articles)) return [];
+    return json.articles.map((item: any, i: number) => {
+      const title = String(item.title ?? "Untitled");
+      const published = String(item.seendate ?? new Date().toISOString()).replace(/^(\\d{4})(\\d{2})(\\d{2})(\\d{2})(\\d{2})(\\d{2}).*$/, "$1-$2-$3T$4:$5:$6Z");
+      const category = /gold|silver|precious metal|ذهب|فضة/i.test(title) ? "gold" : /stock|share|equity|سهم|أسهم/i.test(title) ? "stocks" : "markets";
+      return {
+        id: String(item.url ?? `gdelt-${i}`),
+        title,
+        source: String(item.domain ?? item.sourcecountry ?? "GDELT"),
+        url: String(item.url ?? "#"),
+        publishedAt: published,
+        language: String(item.language ?? language),
+        country: item.sourcecountry ? String(item.sourcecountry) : undefined,
+        category,
+        urgency: /breaking|urgent|alert|عاجل/i.test(title) ? 94 : 66,
+        confidence: 72,
+        status: newsStatus(published),
+      } satisfies NewsItem;
+    }).filter((item: NewsItem) => item.url !== "#");
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchNewsData(language: string): Promise<NewsItem[] | null> {
   const key = process.env.NEWSDATA_API_KEY;
   if (!key) return null;
