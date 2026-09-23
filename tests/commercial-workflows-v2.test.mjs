@@ -10,6 +10,7 @@ test("commercial workflow APIs and UI are present",()=>{
  assert.match(api,/gmp_convert_sales_quote/);
  assert.match(api,/gmp_create_sales_quote/);
  assert.doesNotMatch(api,/from\("gmp_sales_quotes"\)\.insert/);
+ assert.doesNotMatch(api,/gmp_branches.*store_id/);
  assert.match(api,/price_item/);
  assert.match(page,/تحويل إلى فاتورة/);
  assert.match(page,/حفظ سعر المنتج/);
@@ -51,4 +52,5 @@ test("quote creation enforces financial totals at the database boundary",()=>{
  assert.match(migration,/calculated_total/);
  assert.match(migration,/round\(calculated_subtotal,3\)/);
  assert.match(migration,/security invoker/);
+ assert.doesNotMatch(migration,/b\.store_id/);
 });
