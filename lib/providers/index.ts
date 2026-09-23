@@ -1,7 +1,7 @@
 import { unstable_cache } from "next/cache";
 import { mockGold, mockMarkets, mockNews, mockSilver, mockStocks } from "./mock";
 import { getPublicMarketQuotes } from "./market-data";
-import { fetchFrankfurterRate, fetchMarketaux, fetchNewsData, getFreeMetal, rankAndDeduplicateNews } from "../free-data";
+import { fetchFrankfurterRate, fetchGdeltNews, fetchMarketaux, fetchNewsData, getFreeMetal, rankAndDeduplicateNews } from "../free-data";
 import { createSupabaseAdminClient } from "../supabase/admin";
 import { withTrustStatus } from "../market-trust";
 import { evaluateMarketAlerts } from "../alerts";
@@ -14,7 +14,7 @@ export const providerRegistry = {
   fx: ["Frankfurter", "CBO for OMR", "Demo fallback"],
   markets: ["Alpha Vantage (EOD/delayed, licensed display required)", "EODHD (EOD, licensed display required)", "Demo fallback"],
   stocks: ["Alpha Vantage (EOD/delayed, licensed display required)", "EODHD (EOD, licensed display required)", "Demo fallback"],
-  news: ["Marketaux", "NewsData.io", "Official feeds / RSS where permitted", "Demo fallback"],
+  news: ["Marketaux", "NewsData.io", "GDELT", "Official feeds / RSS where permitted", "Demo fallback"],
 } as const;
 
 function quoteInstrumentCode(metal: "gold" | "silver", currency: string) {
@@ -178,11 +178,12 @@ async function buildSnapshot(currency = "OMR", language = "ar", allowDemo = fals
     : [Promise.resolve({ quotes: [], provider: "Alpha Vantage" as const }), Promise.resolve({ quotes: [], provider: "Alpha Vantage" as const })];
 
   const started = Date.now();
-  const [liveGold, liveSilver, marketauxNews, newsdataNews, publicMarkets, publicStocks, currencies] = await Promise.all([
+  const [liveGold, liveSilver, marketauxNews, newsdataNews, gdeltNews, publicMarkets, publicStocks, currencies] = await Promise.all([
     getFreeMetal(currency, "XAU", "gold"),
     getFreeMetal(currency, "XAG", "silver"),
     fetchMarketaux(language),
     fetchNewsData(language),
+    fetchGdeltNews(language),
     ...marketPromises,
     getPublicCurrencyQuotes(currency),
   ]);
@@ -200,7 +201,7 @@ async function buildSnapshot(currency = "OMR", language = "ar", allowDemo = fals
   }
   if (!liveSilver) await recordProviderOutcome("Gold API", "failure");
 
-  const news = rankAndDeduplicateNews([...(marketauxNews ?? []), ...(newsdataNews ?? [])]);
+  const news = rankAndDeduplicateNews([...(marketauxNews ?? []), ...(newsdataNews ?? []), ...(gdeltNews ?? [])]);
   const unavailableGold = mockGold(currency);
   const unavailableSilver = mockSilver(currency);
   return {
