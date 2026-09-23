@@ -24,6 +24,14 @@ test("commercial workflow APIs and UI are present",()=>{
  assert.match(atomicMigration,/insert into public.gmp_sales_quote_lines/);
 });
 
+test("quote API preserves explicit zero header discount and VAT",()=>{
+ const api=fs.readFileSync("app/api/commercial/route.ts","utf8");
+ assert.match(api,/b\.discount_amount===null\|\|b\.discount_amount===undefined\?/);
+ assert.match(api,/b\.vat_amount===null\|\|b\.vat_amount===undefined\?/);
+ assert.doesNotMatch(api,/const discount=num\(b\.discount_amount\)\|\|/);
+ assert.doesNotMatch(api,/const vat=num\(b\.vat_amount\)\|\|/);
+});
+
 test("commercial database hardening is encoded",()=>{
  const migration=fs.readFileSync("supabase/migrations/20260923020000_commercial_integrity_query_hardening.sql","utf8");
  assert.match(migration,/create unique index if not exists gmp_sales_quotes_converted_sale_unique_idx/);
