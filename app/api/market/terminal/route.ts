@@ -3,6 +3,7 @@ import { appConfig, countries, isValidLanguage } from "../../../../lib/config";
 import { getSnapshot } from "../../../../lib/providers";
 import { getPublicPriceHistory, HISTORY_RANGES, isPublicHistoryInstrument } from "../../../../lib/market-history";
 import { withTrustStatus } from "../../../../lib/market-trust";
+import type { Quote } from "../../../../lib/types";
 
 export async function GET(request: Request) {
   const url=new URL(request.url);
@@ -22,8 +23,8 @@ export async function GET(request: Request) {
   return NextResponse.json({
     gold:snapshot.gold,
     silver:snapshot.silver,
-    markets:allQuotes.filter(q=>snapshot.markets.some(m=>(m.symbol??m.instrument)===(q.symbol??q.instrument))),
-    stocks:allQuotes.filter(q=>snapshot.stocks.some(m=>(m.symbol??m.instrument)===(q.symbol??q.instrument))),
+    markets:allQuotes.filter(q=>snapshot.markets.some((m: Quote)=>(m.symbol??m.instrument)===(q.symbol??q.instrument))),
+    stocks:allQuotes.filter(q=>snapshot.stocks.some((m: Quote)=>(m.symbol??m.instrument)===(q.symbol??q.instrument))),
     providers:snapshot.providers,
     generatedAt:snapshot.generatedAt,
     history,
