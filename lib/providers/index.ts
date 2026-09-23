@@ -142,10 +142,11 @@ const PUBLIC_CURRENCIES = [
 
 async function getPublicCurrencyQuotes(localCurrency: string): Promise<Quote[]> {
   const local = localCurrency.toUpperCase();
-  const usdToLocal = await fetchFrankfurterRate("USD", local);
+  const provider = local === "OMR" ? "cbo" : undefined;
+  const usdToLocal = await fetchFrankfurterRate("USD", local, provider);
   if (usdToLocal == null || usdToLocal <= 0) return [];
   const results = await Promise.all(PUBLIC_CURRENCIES.map(async (item) => {
-    const usdToForeign = await fetchFrankfurterRate("USD", item.code);
+    const usdToForeign = await fetchFrankfurterRate("USD", item.code, provider);
     if (usdToForeign == null || usdToForeign <= 0) return null;
     const rate = usdToLocal / usdToForeign;
     if (!Number.isFinite(rate) || rate <= 0) return null;
@@ -163,7 +164,7 @@ async function getPublicCurrencyQuotes(localCurrency: string): Promise<Quote[]> 
       currency: local,
       unit: item.code,
       timestamp,
-      provider: "Frankfurter / ECB reference",
+      provider: provider === "cbo" ? "Central Bank of Oman via Frankfurter" : "Frankfurter reference",
       status: "DELAYED" as const,
       receivedAt: timestamp,
     } satisfies Quote;
