@@ -123,7 +123,7 @@ export async function POST(request:Request){
    if(!list)return json({error:"price_list_not_found"},404);
    if(!(await belongsToOrg(access,"gmp_products",productId)))return json({error:"product_not_found"},404);
    if(list.store_id){const {data:product}=await access.supabase.from("gmp_products").select("store_id").eq("id",productId).eq("organization_id",access.organization.id).maybeSingle();if(product?.store_id&&product.store_id!==list.store_id)return json({error:"product_store_mismatch"},409);}
-   const {data:item,error}=await access.supabase.from("gmp_price_list_items").upsert({price_list_id:priceListId,product_id:productId,sell_price:num(b.sell_price)||null,buy_price:num(b.buy_price)||null,making_charge:num(b.making_charge),min_quantity:b.min_quantity===null||b.min_quantity===undefined?null:num(b.min_quantity),max_quantity:b.max_quantity===null||b.max_quantity===undefined?null:num(b.max_quantity)},{onConflict:"price_list_id,product_id"}).select("*").single();
+   const {data:item,error}=await access.supabase.from("gmp_price_list_items").upsert({price_list_id:priceListId,product_id:productId,sell_price:b.sell_price===null||b.sell_price===undefined?null:num(b.sell_price),buy_price:b.buy_price===null||b.buy_price===undefined?null:num(b.buy_price),making_charge:num(b.making_charge),min_quantity:b.min_quantity===null||b.min_quantity===undefined?null:num(b.min_quantity),max_quantity:b.max_quantity===null||b.max_quantity===undefined?null:num(b.max_quantity)},{onConflict:"price_list_id,product_id"}).select("*").single();
    if(error)return json({error:error.message},400);return json({success:true,row:item});
   }
   if(action==="price_list"){
