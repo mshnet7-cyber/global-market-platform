@@ -1,3 +1,6 @@
+export const SUPPORTED_PUBLIC_LANGUAGES = ["ar", "en", "bn", "ur", "hi"] as const;
+export type SupportedPublicLanguage = (typeof SUPPORTED_PUBLIC_LANGUAGES)[number];
+
 export const appConfig = {
   name: "Global Market Platform",
   defaultCountry: "OM",
