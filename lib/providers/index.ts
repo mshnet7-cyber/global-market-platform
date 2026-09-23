@@ -167,15 +167,16 @@ async function getPublicCurrencyQuotes(localCurrency: string): Promise<Quote[]> 
       provider: provider === "cbo" ? "Central Bank of Oman via Frankfurter" : "Frankfurter reference",
       status: "DELAYED" as const,
       receivedAt: timestamp,
-    } satisfies Quote;
+    } as Quote;
   }));
   return results.filter((quote): quote is Quote => quote !== null);
 }
 
 async function buildSnapshot(currency = "OMR", language = "ar", allowDemo = false, includePublicMarkets = false) {
-  const marketPromises = includePublicMarkets
+  const emptyMarketResult: Awaited<ReturnType<typeof getPublicMarketQuotes>> = { quotes: [], provider: "Alpha Vantage" };
+  const marketPromises: [Promise<Awaited<ReturnType<typeof getPublicMarketQuotes>>>, Promise<Awaited<ReturnType<typeof getPublicMarketQuotes>>>] = includePublicMarkets
     ? [getPublicMarketQuotes("markets"), getPublicMarketQuotes("stocks")]
-    : [Promise.resolve({ quotes: [], provider: "Alpha Vantage" as const }), Promise.resolve({ quotes: [], provider: "Alpha Vantage" as const })];
+    : [Promise.resolve(emptyMarketResult), Promise.resolve(emptyMarketResult)];
 
   const started = Date.now();
   const [liveGold, liveSilver, marketauxNews, newsdataNews, gdeltNews, publicMarkets, publicStocks, currencies] = await Promise.all([
