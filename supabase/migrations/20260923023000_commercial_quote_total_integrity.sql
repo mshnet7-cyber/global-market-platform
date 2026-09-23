@@ -26,8 +26,6 @@ declare
   generated_quote_no text;
   line_count integer := 0;
   calculated_subtotal numeric := 0;
-  calculated_discount numeric := 0;
-  calculated_vat numeric := 0;
   normalized_discount numeric := greatest(coalesce(p_discount_amount,0),0);
   normalized_vat numeric := greatest(coalesce(p_vat_amount,0),0);
   calculated_total numeric;
@@ -56,14 +54,6 @@ begin
       where b.id=p_branch_id and b.organization_id=p_organization_id
     ) then
       raise exception 'branch_not_found';
-    end if;
-    if exists (
-      select 1 from public.gmp_branches b
-      where b.id=p_branch_id
-        and b.store_id is not null
-        and b.store_id<>p_store_id
-    ) then
-      raise exception 'branch_store_mismatch';
     end if;
   end if;
 
@@ -109,10 +99,6 @@ begin
       + greatest(coalesce((line->>'quantity')::numeric,1),0)
         * greatest(coalesce((line->>'unit_price')::numeric,0),0)
       + greatest(coalesce((line->>'making_charge')::numeric,0),0);
-    calculated_discount := calculated_discount
-      + greatest(coalesce((line->>'discount_amount')::numeric,0),0);
-    calculated_vat := calculated_vat
-      + greatest(coalesce((line->>'vat_amount')::numeric,0),0);
     line_count := line_count + 1;
   end loop;
 
