@@ -328,3 +328,20 @@ input,select,textarea{accent-color:var(--launch-gold)}
   .stage1-nav-title .eyebrow{font-size:8px}
   .stage1-nav .nav-actions{margin-inline-start:auto}
 }
+
+
+/* UI QA final pass: safe responsive behavior for wide data tables and tabs. */
+@media(max-width:900px){
+  .stage2-tabs,.stage3-tabs{overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;-webkit-overflow-scrolling:touch;padding-bottom:4px}
+  .stage2-tabs button,.stage3-tabs button{flex:0 0 auto;min-height:42px}
+  .stage2-table-wrap,.table-wrap,.data-table-wrap{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .stage2-page-head,.stage2-public-head,.stage3-header{align-items:flex-start;flex-direction:column}
+}
+@media(max-width:600px){
+  .stage2-page,.stage2-public{padding-inline:12px}
+  .stage2-page-head h1,.stage2-public-head h1{font-size:clamp(30px,10vw,44px)}
+  .stage2-head-actions,.stage3-header .actions{width:100%;display:grid;grid-template-columns:1fr 1fr}
+  .stage2-head-actions .btn,.stage3-header .actions .btn{width:100%}
+  .stage2-form-grid,.stage3-grid{grid-template-columns:1fr!important}
+  .stage2-section-title,.stage2-panel-head,.section-head{gap:12px}
+}
