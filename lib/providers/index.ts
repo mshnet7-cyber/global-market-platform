@@ -1,7 +1,7 @@
 import { unstable_cache } from "next/cache";
 import { mockGold, mockMarkets, mockNews, mockSilver, mockStocks } from "./mock";
 import { getPublicMarketQuotes } from "./market-data";
-import { fetchMarketaux, fetchNewsData, getFreeMetal, rankAndDeduplicateNews } from "../free-data";
+import { fetchFrankfurterRate, fetchMarketaux, fetchNewsData, getFreeMetal, rankAndDeduplicateNews } from "../free-data";
 import { createSupabaseAdminClient } from "../supabase/admin";
 import { withTrustStatus } from "../market-trust";
 import { evaluateMarketAlerts } from "../alerts";
@@ -130,18 +130,60 @@ async function persistPublicQuotes(quotes: Quote[]) {
   }
 }
 
+const PUBLIC_CURRENCIES = [
+  { code: "USD", name: "US Dollar" },
+  { code: "EUR", name: "Euro" },
+  { code: "GBP", name: "British Pound" },
+  { code: "CHF", name: "Swiss Franc" },
+  { code: "JPY", name: "Japanese Yen" },
+  { code: "INR", name: "Indian Rupee" },
+  { code: "TRY", name: "Turkish Lira" },
+] as const;
+
+async function getPublicCurrencyQuotes(localCurrency: string): Promise<Quote[]> {
+  const local = localCurrency.toUpperCase();
+  const usdToLocal = await fetchFrankfurterRate("USD", local);
+  if (usdToLocal == null || usdToLocal <= 0) return [];
+  const results = await Promise.all(PUBLIC_CURRENCIES.map(async (item) => {
+    const usdToForeign = await fetchFrankfurterRate("USD", item.code);
+    if (usdToForeign == null || usdToForeign <= 0) return null;
+    const rate = usdToLocal / usdToForeign;
+    if (!Number.isFinite(rate) || rate <= 0) return null;
+    const timestamp = new Date().toISOString();
+    return {
+      instrument: `1 ${item.code} — ${item.name}`,
+      symbol: `FX:${item.code}`,
+      exchange: "Frankfurter / ECB",
+      spot: rate,
+      bid: rate,
+      ask: rate,
+      previousClose: null,
+      change: null,
+      changePercent: null,
+      currency: local,
+      unit: item.code,
+      timestamp,
+      provider: "Frankfurter / ECB reference",
+      status: "DELAYED" as const,
+      receivedAt: timestamp,
+    } satisfies Quote;
+  }));
+  return results.filter((quote): quote is Quote => quote !== null);
+}
+
 async function buildSnapshot(currency = "OMR", language = "ar", allowDemo = false, includePublicMarkets = false) {
   const marketPromises = includePublicMarkets
     ? [getPublicMarketQuotes("markets"), getPublicMarketQuotes("stocks")]
     : [Promise.resolve({ quotes: [], provider: "Alpha Vantage" as const }), Promise.resolve({ quotes: [], provider: "Alpha Vantage" as const })];
 
   const started = Date.now();
-  const [liveGold, liveSilver, marketauxNews, newsdataNews, publicMarkets, publicStocks] = await Promise.all([
+  const [liveGold, liveSilver, marketauxNews, newsdataNews, publicMarkets, publicStocks, currencies] = await Promise.all([
     getFreeMetal(currency, "XAU", "gold"),
     getFreeMetal(currency, "XAG", "silver"),
     fetchMarketaux(language),
     fetchNewsData(language),
     ...marketPromises,
+    getPublicCurrencyQuotes(currency),
   ]);
 
   await Promise.all([
@@ -165,6 +207,7 @@ async function buildSnapshot(currency = "OMR", language = "ar", allowDemo = fals
     silver: liveSilver ?? (allowDemo ? unavailableSilver : { ...unavailableSilver, status: "UNAVAILABLE" as const, spot: null, bid: null, ask: null, perGram24k: null, purities: { "999": null } }),
     markets: allowDemo ? mockMarkets() : publicMarkets.quotes,
     stocks: allowDemo ? mockStocks() : publicStocks.quotes,
+    currencies: currencies,
     news: news.length ? news : (allowDemo ? mockNews(language) : []),
     providers: providerRegistry,
     generatedAt: new Date().toISOString(),
