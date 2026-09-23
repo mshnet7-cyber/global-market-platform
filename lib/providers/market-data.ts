@@ -183,6 +183,11 @@ async function fetchEodhd(symbols: readonly SymbolDef[]): Promise<ProviderResult
   return quotes.length ? { quotes, provider: "EODHD" } : null;
 }
 
+export function marketDataDisplayState() {
+  const licensed = commercialDisplayAllowed();
+  return { commercialDisplayAllowed: licensed, providerConfigured: configuredProvider(), reason: licensed ? "licensed_display_enabled" : "display_license_not_enabled" } as const;
+}
+
 export async function getPublicMarketQuotes(kind: "stocks" | "markets"): Promise<ProviderResult> {
   const symbols = kind === "stocks" ? MARKET_SYMBOLS : MARKET_INDEX_SYMBOLS;
   const configured = configuredProvider();
