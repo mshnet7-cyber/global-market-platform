@@ -6,8 +6,9 @@ import { useState } from "react";
 const LANGUAGES = [
   { code: "ar", label: "العربية" },
   { code: "en", label: "English" },
-  { code: "tr", label: "Türkçe" },
-  { code: "de", label: "Deutsch" },
+  { code: "bn", label: "বাংলা" },
+  { code: "ur", label: "اردو" },
+  { code: "hi", label: "हिन्दी" },
 ] as const;
 
 type Language = (typeof LANGUAGES)[number]["code"];
@@ -46,6 +47,9 @@ export default function DisplayPreferences({ language, initialTheme, initialFont
     en: { prefs: "Display settings", font: "Font size", decrease: "Decrease text size", reset: "Reset text size", increase: "Increase text size", light: "Light mode", dark: "Dark mode" },
     tr: { prefs: "Görüntü ayarları", font: "Yazı boyutu", decrease: "Yazıyı küçült", reset: "Varsayılan boyut", increase: "Yazıyı büyüt", light: "Açık tema", dark: "Koyu tema" },
     de: { prefs: "Anzeigeeinstellungen", font: "Schriftgröße", decrease: "Text verkleinern", reset: "Standardgröße", increase: "Text vergrößern", light: "Helles Design", dark: "Dunkles Design" },
+    bn: { prefs: "ডিসপ্লে সেটিংস", font: "ফন্টের আকার", decrease: "লেখা ছোট করুন", reset: "ডিফল্ট আকার", increase: "লেখা বড় করুন", light: "লাইট মোড", dark: "ডার্ক মোড" },
+    ur: { prefs: "ڈسپلے کی ترتیبات", font: "فونٹ سائز", decrease: "متن چھوٹا کریں", reset: "طے شدہ سائز", increase: "متن بڑا کریں", light: "لائٹ موڈ", dark: "ڈارک موڈ" },
+    hi: { prefs: "डिस्प्ले सेटिंग्स", font: "फ़ॉन्ट आकार", decrease: "टेक्स्ट छोटा करें", reset: "डिफ़ॉल्ट आकार", increase: "टेक्स्ट बड़ा करें", light: "लाइट मोड", dark: "डार्क मोड" },
   }[language];
 
   return (
@@ -68,7 +72,7 @@ export default function DisplayPreferences({ language, initialTheme, initialFont
       >
         {theme === "dark" ? <Sun size={16} strokeWidth={2} /> : <Moon size={16} strokeWidth={2} />}
       </button>
-      <div className="preference-language" role="group" aria-label={language === "ar" ? "اللغة" : language === "tr" ? "Dil" : language === "de" ? "Sprache" : "Language"}>
+      <div className="preference-language" role="group" aria-label={language === "ar" ? "اللغة" : language === "tr" ? "Dil" : language === "de" ? "Sprache" : language === "bn" ? "ভাষা" : language === "ur" ? "زبان" : language === "hi" ? "भाषा" : "Language"}>
         <Languages size={15} strokeWidth={2} aria-hidden="true" />
         {LANGUAGES.map((item) => (
           <button
