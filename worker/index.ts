@@ -11,7 +11,7 @@ function getCronSecret(env: Record<string, unknown>) {
   return secret;
 }
 
-export default {
+const worker = {
   fetch(request: Request, env: Record<string, unknown>, ctx: ExecutionContext) {
     return handler.fetch(request, env, ctx);
   },
