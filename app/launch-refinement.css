@@ -345,3 +345,7 @@ input,select,textarea{accent-color:var(--launch-gold)}
   .stage2-form-grid,.stage3-grid{grid-template-columns:1fr!important}
   .stage2-section-title,.stage2-panel-head,.section-head{gap:12px}
 }
+
+/* Keyboard focus hardening for interactive controls */
+button:focus-visible,.stage2-tabs button:focus-visible,.stage3-tabs button:focus-visible,.mobile-site-menu summary:focus-visible,.mobile-site-menu nav a:focus-visible{outline:2px solid #d8b56a;outline-offset:3px}
+@media(prefers-reduced-motion:reduce){.market-hero-visual *,.hero-platform-points *{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
