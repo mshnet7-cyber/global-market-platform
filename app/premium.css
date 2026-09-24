@@ -67,3 +67,7 @@
   .market-hero-card{border-radius:19px}
   .visual-market-cards{grid-template-columns:1fr}
 }
+
+
+/* Resilient error surfaces */
+.error-page{min-height:100vh;display:grid;place-items:center;padding:24px;background:var(--launch-bg);position:relative;z-index:2}.error-card{width:min(680px,100%);padding:38px;border:1px solid rgba(216,181,106,.22);border-radius:22px;background:linear-gradient(155deg,#13212a,#09141b);box-shadow:var(--launch-shadow);text-align:center}.error-card .eyebrow{justify-content:center}.error-code{font-size:clamp(72px,14vw,132px);font-weight:900;line-height:.9;letter-spacing:-.08em;color:var(--launch-gold-hi);margin:20px 0}.error-card h1{margin:0 0 10px;font-size:clamp(28px,5vw,42px);letter-spacing:-.04em}.error-card p{max-width:520px;margin:0 auto;color:var(--launch-muted);font-size:13px;line-height:1.85}.error-actions{display:flex;justify-content:center;flex-wrap:wrap;gap:9px;margin-top:24px}.error-actions .btn{min-width:150px}@media(max-width:480px){.error-card{padding:26px 20px}.error-actions{display:grid}.error-actions .btn{width:100%}}
