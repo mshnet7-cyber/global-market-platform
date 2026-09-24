@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-const s=readFileSync("supabase/migrations/20260924030500_gmp_sale_duplicate_line_inventory_guard_v1.sql","utf8");
+const s=readFileSync("supabase/migrations/20260924030503_gmp_sale_duplicate_line_inventory_guard_v1.sql","utf8");
 const ok=(n,c)=>{if(!c)throw new Error(n)};
 ok("sale rpc preserved",s.includes("gmp_create_and_post_sale"));
 ok("aggregate quantity",s.includes("sum(nullif(value->>'quantity','')::numeric)"));
