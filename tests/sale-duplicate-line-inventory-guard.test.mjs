@@ -1,0 +1,10 @@
+import { readFileSync } from "node:fs";
+const s=readFileSync("supabase/migrations/20260924030500_gmp_sale_duplicate_line_inventory_guard_v1.sql","utf8");
+const ok=(n,c)=>{if(!c)throw new Error(n)};
+ok("sale rpc preserved",s.includes("gmp_create_and_post_sale"));
+ok("aggregate quantity",s.includes("sum(nullif(value->>'quantity','')::numeric)"));
+ok("aggregate weight",s.includes("sum(coalesce(nullif(value->>'weight_grams','')::numeric,0))"));
+ok("group by product",s.includes("group by (value->>'product_id')"));
+ok("stock guard",s.includes("if v_available<v_qty or v_available_weight<v_weight then raise exception 'insufficient inventory'"));
+ok("authenticated only",s.includes("GRANT EXECUTE ON FUNCTION public.gmp_create_and_post_sale")&&s.includes("REVOKE EXECUTE ON FUNCTION public.gmp_create_and_post_sale"));
+console.log("sale-duplicate-line-inventory-guard: 6 checks passed");
