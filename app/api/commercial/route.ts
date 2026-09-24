@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireStage2Permission } from "../../../lib/stage2-access";
 import { isSameOriginRequest } from "../../../lib/request-security";
+import { readBoundedRequestJson } from "../../../lib/bounded-body";
 const json=(data:unknown,status=200)=>NextResponse.json(data,{status,headers:{"cache-control":"no-store"}});
 const txt=(v:unknown,n=300)=>String(v??"").trim().slice(0,n);
 const num=(v:unknown)=>{const n=Number(v);return Number.isFinite(n)?Math.max(0,n):0;};
@@ -41,7 +42,7 @@ export async function GET(request:Request){
 export async function POST(request:Request){
  if(!isSameOriginRequest(request))return json({error:"cross_site_request"},403);
  try{
-  const access=await requireStage2Permission("erp.write",["business"]),b=await request.json(),action=txt(b.action,50);
+  const access=await requireStage2Permission("erp.write",["business"]),b=await readBoundedRequestJson<Record<string,unknown>>(request,128 * 1024),action=txt(b.action,50);
   if(action==="quote"){
    const storeId=txt(b.store_id,80);if(!uuid(storeId))return json({error:"store_required"},400);
    if(!(await belongsToOrg(access,"gmp_stores",storeId)))return json({error:"store_not_found"},404);
