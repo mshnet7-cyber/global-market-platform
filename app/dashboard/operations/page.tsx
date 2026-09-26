@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { FormEvent } from "react";
+import type { FormEvent, ReactNode } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { code128BModules } from "../../../lib/code128.js";
 
 type Data = {
   role: string; planCode: string; stores: any[]; branches: any[]; products: any[]; customers: any[]; suppliers: any[];
@@ -18,6 +19,19 @@ const money=(v:any)=>v==null||!Number.isFinite(Number(v))?"—":Number(v).toLoca
 const num=(v:any)=>Number.isFinite(Number(v))?Number(v):0;
 const ROLE_LABELS:Record<string,string>={owner:"مالك",admin:"مدير",viewer:"مشاهد"};
 const STATUS_LABELS:Record<string,string>={draft:"مسودة",published:"منشور",suspended:"موقوف",new:"جديد",contacted:"تم التواصل",confirmed:"مؤكد",fulfilled:"مكتمل",cancelled:"ملغى",failed:"فشل",queued:"في الطابور",sending:"جارٍ الإرسال",submitted:"تم الإرسال",accepted:"مقبولة",rejected:"مرفوضة",active:"مفعّل",inactive:"غير مفعّل",LIVE:"مباشر",planned:"مخطط",ready:"جاهز",received:"تم الاستلام",in_repair:"مع الورشة",delivered:"تم التسليم",configured:"مُهيأ",disabled:"معطل"};
+
+function Code128Barcode({value}:{value:string}){
+  const modules=code128BModules(value);
+  const bars:ReactNode[]=[];
+  let x=10,black=true;
+  for(let i=0;i<modules.length;i++){
+    const width=Number(modules[i]);
+    if(black)bars.push(<rect key={i} x={x} y="0" width={width} height="38" fill="#000"/>);
+    x+=width;black=!black;
+  }
+  return <svg className="barcode-svg" role="img" aria-label={"باركود "+value} viewBox={"0 0 "+(x+10)+" 38"} preserveAspectRatio="none">{bars}</svg>;
+}
+
 const AVAILABILITY_LABELS:Record<string,string>={in_stock:"متوفر",out_of_stock:"غير متوفر",backorder:"طلب مسبق"};
 function displayValue(column:string,value:any){
   if(value==null)return "—";
@@ -32,7 +46,7 @@ export default function OperationsPage(){
   const searchParams = useSearchParams();
   const requestedTab = searchParams.get("tab") || "overview";
   const initialTab=tabs.some(([key])=>key===requestedTab)?requestedTab:"overview";
-  const [tab,setTab]=useState(initialTab),[data,setData]=useState<Data|null>(null),[loading,setLoading]=useState(true),[message,setMessage]=useState(""),[busy,setBusy]=useState(false);
+  const [tab,setTab]=useState(initialTab),[data,setData]=useState<Data|null>(null),[loading,setLoading]=useState(true),[message,setMessage]=useState(""),[busy,setBusy]=useState(false),[barcodeLabel,setBarcodeLabel]=useState<any>(null);
   const [displayData,setDisplayData]=useState<any>(null),[team,setTeam]=useState<any>(null),[dooh,setDooh]=useState<any>(null),[directory,setDirectory]=useState<any[]>([]);
   const [storeId,setStoreId]=useState(""),[productId,setProductId]=useState(""),[qty,setQty]=useState("1"),[weight,setWeight]=useState("0"),[price,setPrice]=useState("0"),[payment,setPayment]=useState("cash");
   const get=useCallback(async(url:string)=>{const r=await fetch(url,{cache:"no-store"});const d=await r.json().catch(()=>null);if(!r.ok)throw new Error(d?.error||"request_failed");return d;},[]);
@@ -59,6 +73,17 @@ export default function OperationsPage(){
   if(!data)return <main className="stage2-page"><div className="stage2-empty"><h1>مركز تشغيل التاجر</h1><p>{message||"يلزم تسجيل الدخول وخطة نشطة."}</p><Link href="/login?next=/dashboard/operations" className="btn btn-primary">تسجيل الدخول</Link></div></main>;
 
   const submitField=(id:string)=>{const el=document.getElementById(id) as HTMLInputElement|null;return el?.value||""};
+
+  function setProductLabel(p:any){
+    const store=data?.stores.find((x:any)=>x.id===p.store_id);
+    setBarcodeLabel({store:store?.name??"",name:p.name??"",sku:p.sku??"",karat:p.karat??"",weight:p.weight_grams??p.current_weight_grams??p.initial_weight??0,barcode:p.barcode??"",barcodeGenerated:p.barcode_generated===true});
+  }
+  async function createInventoryProduct(){
+    const productData={store_id:submitField("i-store"),name:submitField("i-name"),sku:submitField("i-sku"),barcode:submitField("i-barcode"),karat:submitField("i-karat"),category:submitField("i-cat"),price:num(submitField("i-price")),cost_price:num(submitField("i-cost")),making_charge:num(submitField("i-making")),initial_quantity:num(submitField("i-qty")),initial_weight:num(submitField("i-weight"))};
+    const result=await act({action:"product",...productData});
+    if(result?.barcode)setProductLabel({...productData,...result});
+  }
+
 
   return <main className="stage2-page">
     <header className="stage2-page-head">
@@ -98,10 +123,20 @@ export default function OperationsPage(){
     {tab==="inventory"&&<section id="stage2-panel-inventory" className="stage2-section" role="tabpanel" aria-labelledby="stage2-tab-inventory">
       <div className="stage2-form-grid">
         <label>المحل<select id="i-store">{data.stores.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
-        <label>اسم الصنف<input id="i-name" required/></label><label>SKU<input id="i-sku"/></label><label>الباركود<input id="i-barcode"/></label><label>العيار<input id="i-karat" defaultValue="21K"/></label><label>الفئة<input id="i-cat"/></label><label>السعر<input id="i-price" inputMode="decimal"/></label><label>التكلفة<input id="i-cost" inputMode="decimal"/></label><label>المصنعية<input id="i-making" inputMode="decimal"/></label><label>كمية افتتاحية<input id="i-qty" defaultValue="0" inputMode="decimal"/></label><label>وزن افتتاحي<input id="i-weight" defaultValue="0" inputMode="decimal"/></label>
+        <label>اسم الصنف<input id="i-name" required/></label><label>SKU<input id="i-sku"/></label><label>الباركود<input id="i-barcode" placeholder="اتركه فارغًا لتوليد باركود داخلي"/><small>لا يُعد رقم GS1 تجاريًا.</small></label><label>العيار<input id="i-karat" defaultValue="21K"/></label><label>الفئة<input id="i-cat"/></label><label>السعر<input id="i-price" inputMode="decimal"/></label><label>التكلفة<input id="i-cost" inputMode="decimal"/></label><label>المصنعية<input id="i-making" inputMode="decimal"/></label><label>كمية افتتاحية<input id="i-qty" defaultValue="0" inputMode="decimal"/></label><label>وزن افتتاحي<input id="i-weight" defaultValue="0" inputMode="decimal"/></label>
       </div>
-      <button className="btn btn-primary" disabled={busy} onClick={()=>void act({action:"product",store_id:submitField("i-store"),name:submitField("i-name"),sku:submitField("i-sku"),barcode:submitField("i-barcode"),karat:submitField("i-karat"),category:submitField("i-cat"),price:num(submitField("i-price")),cost_price:num(submitField("i-cost")),making_charge:num(submitField("i-making")),initial_quantity:num(submitField("i-qty")),initial_weight:num(submitField("i-weight"))})}>إضافة صنف</button>
-      <Table rows={data.products.slice(0,100)} columns={["sku","name","karat","current_quantity","current_weight_grams","cost_price","price"]} labels={["SKU","الصنف","العيار","الكمية","الوزن","التكلفة","السعر"]}/>
+      <button className="btn btn-primary" disabled={busy} onClick={()=>void createInventoryProduct()}>إضافة صنف</button>
+      <div className="stage2-table-wrap"><table><thead><tr><th>SKU</th><th>الصنف</th><th>العيار</th><th>الكمية</th><th>الوزن غ</th><th>الباركود</th><th>التكلفة</th><th>السعر</th><th></th></tr></thead><tbody>{data.products.slice(0,100).map((p:any)=><tr key={p.id}><td>{p.sku||"—"}</td><td>{p.name}</td><td>{p.karat||"—"}</td><td>{money(p.current_quantity)}</td><td>{money(p.current_weight_grams)}</td><td>{p.barcode||"—"}</td><td>{money(p.cost_price)}</td><td>{money(p.price)}</td><td><button className="btn" disabled={!p.barcode} onClick={()=>setProductLabel(p)}>طباعة ملصق</button></td></tr>)}</tbody></table></div>
+
+      {barcodeLabel&&<section className="stage2-panel barcode-print-root" aria-label="ملصق باركود للصنف">
+        <div className="barcode-label">
+          <strong>ARCANETIC Gold</strong><small>{barcodeLabel.store} · {barcodeLabel.karat||"عيار غير محدد"} · {money(barcodeLabel.weight)} غ</small>
+          <b>{barcodeLabel.name}</b>{barcodeLabel.sku&&<small>SKU {barcodeLabel.sku}</small>}
+          <Code128Barcode value={barcodeLabel.barcode}/>
+          <span className="barcode-human">{barcodeLabel.barcode}</span>
+        </div>
+        <div className="barcode-print-controls"><button className="btn btn-primary" onClick={()=>window.print()}>طباعة الملصق</button><button className="btn" onClick={()=>setBarcodeLabel(null)}>إغلاق</button><small>باركود Code 128 داخلي للمحل؛ اختبر حجم الملصق والماسح والطابعة قبل الطباعة الكمية.</small></div>
+      </section>}
     </section>}
 
     {tab==="purchases"&&<section id="stage2-panel-purchases" className="stage2-section" role="tabpanel" aria-labelledby="stage2-tab-purchases">

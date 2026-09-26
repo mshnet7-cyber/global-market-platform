@@ -344,13 +344,15 @@ export async function POST(request: Request) {
     if (action === "product") {
       const access = await requirePermission("inventory.write",["pro","business"]);
       const storeId=text(b.store_id,80); if(!await orgStore(access.supabase,access.organization.id,storeId))return json({error:"store_not_found"},404);
-      const {data,error}=await access.supabase.rpc("gmp_create_inventory_product",{
+      const {data,error}=await access.supabase.rpc("gmp_create_inventory_product_with_barcode",{
         p_organization_id:access.organization.id,p_store_id:storeId,p_name:text(b.name,180),p_sku:text(b.sku,80),
         p_barcode:text(b.barcode,80),p_category:text(b.category,100),p_karat:text(b.karat,20),p_price:positive(b.price),
         p_cost_price:positive(b.cost_price),p_making_charge:positive(b.making_charge),
         p_initial_quantity:positive(b.initial_quantity),p_initial_weight:positive(b.initial_weight)
       });
-      if(error)return json({error:error.message},400); void auditStage2(access,"merchant.inventory.product.create","product",data?.product_id ?? null); return json(data,201);
+      if(error)return json({error:error.message},400);
+      void auditStage2(access,"merchant.inventory.product.create","product",data?.product_id??null,{barcode_generated:data?.barcode_generated===true});
+      return json(data,201);
     }
 
     if (action === "sale") {
