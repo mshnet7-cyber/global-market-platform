@@ -203,7 +203,7 @@ function RepairWorkspace({stores,customers,repairs,onCreate,onCreateCustomer,onS
   function operationRef(key:string){if(!operationRefs.current[key])operationRefs.current[key]=crypto.randomUUID();return operationRefs.current[key];}
   const store=stores.find(s=>s.id===storeId)||stores[0];
   const branchCustomers=customers.filter(c=>!store?.branch_id||!c.branch_id||c.branch_id===store.branch_id);
-  useEffect(()=>{if(!storeId&&stores[0]?.id)setStoreId(stores[0].id);},[storeId,stores]);
+
   async function uploadPhoto(file:File,branchId:string|null){
     const form=new FormData();form.set("action","upload");form.set("document_type","repair_photo");form.set("file",file);if(branchId)form.set("branch_id",branchId);
     const response=await fetch("/api/merchant/documents",{method:"POST",body:form});
