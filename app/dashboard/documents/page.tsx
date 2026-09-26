@@ -94,7 +94,7 @@ export default function DocumentsPage(){
     setBusy(true);setMessage("");
     try{
       if(doc.document_type!=="supplier_invoice"||doc.review_status!=="approved")throw new Error("اعتمد فاتورة المورد قبل تحويلها إلى مسودة شراء.");
-      const r=await fetch("/api/stage2?action=erp",{cache:"no-store"});
+      const r=await fetch("/api/stage2?action=purchase_context",{cache:"no-store"});
       const d=await r.json();
       if(!r.ok)throw new Error(d.error??"تعذر تحميل بيانات المؤسسة");
       const sources=invoiceSources(doc.ai_extracted_data);

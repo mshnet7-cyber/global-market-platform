@@ -26,6 +26,8 @@ test("approved supplier invoice conversion creates an atomic draft purchase with
   assert.ok(migration.includes("gmp_purchases_organization_source_document_uidx"));
   assert.ok(api.includes('requirePermission("erp.write"'));
   assert.ok(api.includes('rpc("gmp_create_purchase_from_document"'));
+  assert.ok(api.includes('action === "purchase_context"'));
+  assert.ok(documents.includes('action=purchase_context'));
   assert.ok(documents.includes('doc.document_type!=="supplier_invoice"||doc.review_status!=="approved"'));
   assert.ok(documents.includes("راجع القيم يدويًا"));
   assert.ok(documents.includes("لم تتم إضافة أي كمية إلى المخزون"));

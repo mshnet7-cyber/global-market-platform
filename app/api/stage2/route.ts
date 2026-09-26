@@ -138,6 +138,16 @@ export async function GET(request: Request) {
       return json({ rows:data ?? [] });
     }
 
+    if (action === "purchase_context") {
+      const access = await requirePermission("erp.read",["pro","business"]);
+      const [stores,suppliers] = await Promise.all([
+        access.supabase.from("gmp_stores").select("id,name,branch_id").eq("organization_id",access.organization.id).eq("active",true).order("name"),
+        access.supabase.from("gmp_suppliers").select("id,name").eq("organization_id",access.organization.id).eq("active",true).order("name")
+      ]);
+      if(stores.error||suppliers.error)return json({error:stores.error?.message||suppliers.error?.message||"purchase_context_unavailable"},400);
+      return json({stores:stores.data??[],suppliers:suppliers.data??[]});
+    }
+
     if (action === "erp") {
       const access = await requirePermission("erp.read");
       const storeIds = (await access.supabase.from("gmp_stores").select("id").eq("organization_id", access.organization.id)).data?.map((x:any)=>x.id) ?? [];
@@ -381,7 +391,7 @@ export async function POST(request: Request) {
         p_source_document_id:sourceDocumentId
       });
       if(error)return json({error:error.message},400);
-      void auditStage2(access,"merchant.purchase.from_document","purchase",data?.purchase_id??null,{source_document_id:sourceDocumentId});
+      if(!data?.already_linked)void auditStage2(access,"merchant.purchase.from_document","purchase",data?.purchase_id??null,{source_document_id:sourceDocumentId});
       return json(data,data?.already_linked?200:201);
     }
 
