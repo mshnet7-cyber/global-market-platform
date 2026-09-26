@@ -364,6 +364,27 @@ export async function POST(request: Request) {
       if(error)return json({error:error.message},400); void auditStage2(access,"merchant.purchase.create","purchase",data?.purchase_id ?? null); return json(data,201);
     }
 
+
+    if (action === "purchase_from_document") {
+      const access = await requirePermission("erp.write",["pro","business"]);
+      const sourceDocumentId=text(b.source_document_id,80);
+      if(!isUuid(sourceDocumentId))return json({error:"source_document_id_required"},400);
+      const lines=Array.isArray(b.lines)?b.lines:[];
+      if(!lines.length||lines.length>100)return json({error:"purchase_lines_required"},400);
+      const {data,error}=await access.supabase.rpc("gmp_create_purchase_from_document",{
+        p_organization_id:access.organization.id,
+        p_branch_id:isUuid(text(b.branch_id,80))?text(b.branch_id,80):null,
+        p_store_id:text(b.store_id,80),
+        p_supplier_id:isUuid(text(b.supplier_id,80))?text(b.supplier_id,80):null,
+        p_invoice_no:text(b.invoice_no,100),
+        p_lines:lines,
+        p_source_document_id:sourceDocumentId
+      });
+      if(error)return json({error:error.message},400);
+      void auditStage2(access,"merchant.purchase.from_document","purchase",data?.purchase_id??null,{source_document_id:sourceDocumentId});
+      return json(data,data?.already_linked?200:201);
+    }
+
     if (action === "expense") {
       const access = await requirePermission("erp.write",["business"]);
       const {data,error}=await access.supabase.rpc("gmp_create_and_post_expense",{
