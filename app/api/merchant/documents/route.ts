@@ -21,9 +21,21 @@ function matchesFileSignature(type:string, bytes:Uint8Array) {
 
 const json=(data:unknown,status=200)=>NextResponse.json(data,{status,headers:{"cache-control":"no-store"}});
 
-export async function GET(){
+export async function GET(request:Request){
   try{
     const {supabase,organization}=await requireMerchantPlan(["business"]);
+    const url=new URL(request.url);
+    if(url.searchParams.get("action")==="signed_url"){
+      const storagePath=String(url.searchParams.get("storage_path")??"").trim();
+      if(!storagePath.startsWith(organization.id+"/"))return json({error:"document_not_found"},404);
+      const {data:doc,error}=await supabase.from("gmp_documents").select("storage_path")
+        .eq("organization_id",organization.id).eq("document_type","repair_photo").eq("storage_path",storagePath).maybeSingle();
+      if(error||!doc)return json({error:"document_not_found"},404);
+      const admin=createSupabaseAdminClient();if(!admin)return json({error:"service_not_configured"},503);
+      const {data:signed,error:signedError}=await admin.storage.from(BUCKET).createSignedUrl(doc.storage_path,120);
+      if(signedError||!signed?.signedUrl)return json({error:"document_url_unavailable"},503);
+      return json({url:signed.signedUrl,expires_in:120});
+    }
     const {data,error}=await supabase.from("gmp_documents").select("id,branch_id,document_type,storage_path,content_type,file_hash,language,ai_extracted_data,ai_confidence,review_status,reviewed_by,reviewed_at,created_at").eq("organization_id",organization.id).order("created_at",{ascending:false}).limit(100);
     if(error)return json({error:error.message},400);
     return json({documents:data??[],integration:getAiStatus()});
