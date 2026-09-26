@@ -12,9 +12,10 @@ import "./stage3.css";
 import "./visual-polish.css";
 
 export const metadata: Metadata = {
-  title: "Global Market Platform | Global market prices",
-  description: "Global market information for gold, silver, currencies, markets, stocks and news, with professional merchant display tools.",
-  keywords: ["gold prices", "silver prices", "global markets", "currencies", "merchant display", "Global Market"],
+  title: "ARCANETIC Gold | Global Market",
+  description: "ARCANETIC Gold connects global gold and precious-metal market intelligence with professional tools for gold shops, repair workflows, inventory and trade.",
+  keywords: ["ARCANETIC Gold", "gold prices", "silver prices", "global markets", "gold shop software", "Global Market"],
+  openGraph: { title: "ARCANETIC Gold | Global Market", description: "Gold and precious-metal market intelligence and business tools.", images: ["/brand/arcanetic-gold.png"] },
   robots: { index: true, follow: true },
   manifest: "/manifest.webmanifest",
 };

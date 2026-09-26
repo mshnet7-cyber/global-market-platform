@@ -138,6 +138,16 @@ export async function GET(request: Request) {
       return json({ rows:data ?? [] });
     }
 
+    if (action === "purchase_context") {
+      const access = await requirePermission("erp.read",["pro","business"]);
+      const [stores,suppliers] = await Promise.all([
+        access.supabase.from("gmp_stores").select("id,name,branch_id").eq("organization_id",access.organization.id).eq("active",true).order("name"),
+        access.supabase.from("gmp_suppliers").select("id,name").eq("organization_id",access.organization.id).eq("active",true).order("name")
+      ]);
+      if(stores.error||suppliers.error)return json({error:stores.error?.message||suppliers.error?.message||"purchase_context_unavailable"},400);
+      return json({stores:stores.data??[],suppliers:suppliers.data??[]});
+    }
+
     if (action === "erp") {
       const access = await requirePermission("erp.read");
       const storeIds = (await access.supabase.from("gmp_stores").select("id").eq("organization_id", access.organization.id)).data?.map((x:any)=>x.id) ?? [];
@@ -150,7 +160,7 @@ export async function GET(request: Request) {
         access.supabase.from("gmp_sales").select("id,store_id,branch_id,customer_id,invoice_no,status,subtotal,discount_amount,vat_amount,total,payment_method,issued_at,created_at").eq("organization_id",access.organization.id).order("created_at",{ascending:false}).limit(150),
         access.supabase.from("gmp_purchases").select("id,store_id,branch_id,supplier_id,invoice_no,status,subtotal,vat_amount,total,purchase_date,created_at").eq("organization_id",access.organization.id).order("created_at",{ascending:false}).limit(150),
         access.supabase.from("gmp_expenses").select("id,branch_id,category,description,amount,vat_amount,expense_date,status,created_at").eq("organization_id",access.organization.id).order("created_at",{ascending:false}).limit(150),
-        access.supabase.from("gmp_repair_orders").select("id,branch_id,customer_id,repair_no,item_description,metal,karat,weight_received_grams,weight_delivered_grams,repair_type,status,amount,expected_delivery_at,received_at,ready_at,delivered_at,created_at").eq("organization_id",access.organization.id).order("created_at",{ascending:false}).limit(150),
+        access.supabase.from("gmp_repair_orders").select("id,store_id,branch_id,customer_id,repair_no,item_description,metal,karat,weight_received_grams,weight_delivered_grams,repair_type,status,amount,before_photo_path,after_photo_path,expected_delivery_at,received_at,ready_at,delivered_at,created_at").eq("organization_id",access.organization.id).order("created_at",{ascending:false}).limit(150),
         access.supabase.from("gmp_person_gold_purchases").select("id,branch_id,transaction_no,seller_name,seller_phone,karat,weight_grams,market_reference_price,purchase_price,payment_method,status,risk_level,created_at").eq("organization_id",access.organization.id).order("created_at",{ascending:false}).limit(150),
         access.supabase.from("gmp_accounts").select("id,code,name,account_type,system_key,active").eq("organization_id",access.organization.id).order("code"),
         access.supabase.from("gmp_journal_entries").select("id,branch_id,reference_type,reference_id,entry_no,description,entry_date,status,created_at").eq("organization_id",access.organization.id).order("created_at",{ascending:false}).limit(150),
@@ -334,13 +344,15 @@ export async function POST(request: Request) {
     if (action === "product") {
       const access = await requirePermission("inventory.write",["pro","business"]);
       const storeId=text(b.store_id,80); if(!await orgStore(access.supabase,access.organization.id,storeId))return json({error:"store_not_found"},404);
-      const {data,error}=await access.supabase.rpc("gmp_create_inventory_product",{
+      const {data,error}=await access.supabase.rpc("gmp_create_inventory_product_with_barcode",{
         p_organization_id:access.organization.id,p_store_id:storeId,p_name:text(b.name,180),p_sku:text(b.sku,80),
         p_barcode:text(b.barcode,80),p_category:text(b.category,100),p_karat:text(b.karat,20),p_price:positive(b.price),
         p_cost_price:positive(b.cost_price),p_making_charge:positive(b.making_charge),
         p_initial_quantity:positive(b.initial_quantity),p_initial_weight:positive(b.initial_weight)
       });
-      if(error)return json({error:error.message},400); void auditStage2(access,"merchant.inventory.product.create","product",data?.product_id ?? null); return json(data,201);
+      if(error)return json({error:error.message},400);
+      void auditStage2(access,"merchant.inventory.product.create","product",data?.product_id??null,{barcode_generated:data?.barcode_generated===true});
+      return json(data,201);
     }
 
     if (action === "sale") {
@@ -362,6 +374,27 @@ export async function POST(request: Request) {
         p_invoice_no:text(b.invoice_no,100),p_lines:Array.isArray(b.lines)?b.lines:[]
       });
       if(error)return json({error:error.message},400); void auditStage2(access,"merchant.purchase.create","purchase",data?.purchase_id ?? null); return json(data,201);
+    }
+
+
+    if (action === "purchase_from_document") {
+      const access = await requirePermission("erp.write",["pro","business"]);
+      const sourceDocumentId=text(b.source_document_id,80);
+      if(!isUuid(sourceDocumentId))return json({error:"source_document_id_required"},400);
+      const lines=Array.isArray(b.lines)?b.lines:[];
+      if(!lines.length||lines.length>100)return json({error:"purchase_lines_required"},400);
+      const {data,error}=await access.supabase.rpc("gmp_create_purchase_from_document",{
+        p_organization_id:access.organization.id,
+        p_branch_id:isUuid(text(b.branch_id,80))?text(b.branch_id,80):null,
+        p_store_id:text(b.store_id,80),
+        p_supplier_id:isUuid(text(b.supplier_id,80))?text(b.supplier_id,80):null,
+        p_invoice_no:text(b.invoice_no,100),
+        p_lines:lines,
+        p_source_document_id:sourceDocumentId
+      });
+      if(error)return json({error:error.message},400);
+      if(!data?.already_linked)void auditStage2(access,"merchant.purchase.from_document","purchase",data?.purchase_id??null,{source_document_id:sourceDocumentId});
+      return json(data,data?.already_linked?200:201);
     }
 
     if (action === "expense") {
@@ -386,26 +419,100 @@ export async function POST(request: Request) {
     }
 
     if (action === "repair") {
-      const access=await requirePermission("erp.write",["pro","business"]);
-      const id=text(b.id,80); const status=text(b.status,30)||"received";
-      const allowed=["received","in_repair","ready","delivered","cancelled"];
-      if(!allowed.includes(status))return json({error:"invalid_repair_status"},400);
-      const base={branch_id:isUuid(text(b.branch_id,80))?text(b.branch_id,80):null,customer_id:isUuid(text(b.customer_id,80))?text(b.customer_id,80):null,
-        item_description:text(b.item_description,500),metal:text(b.metal,30)||null,karat:text(b.karat,20)||null,
-        weight_received_grams:positive(b.weight_received_grams),weight_delivered_grams:b.weight_delivered_grams==null?null:positive(b.weight_delivered_grams),
-        damage_description:text(b.damage_description,1200)||null,repair_type:text(b.repair_type,100)||null,status,
-        expected_days:b.expected_days==null?null:Math.max(0,Math.floor(Number(b.expected_days))),
-        expected_delivery_at:b.expected_delivery_at?new Date(String(b.expected_delivery_at)).toISOString():null,
-        amount:positive(b.amount),before_photo_path:text(b.before_photo_path,500)||null,after_photo_path:text(b.after_photo_path,500)||null,notes:text(b.notes,1500)||null,
-        delivered_by:isUuid(text(b.delivered_by,80))?text(b.delivered_by,80):null
-      };
-      if(!base.item_description || base.weight_received_grams<=0)return json({error:"repair_item_and_weight_required"},400);
-      if(id && isUuid(id)){
-        const {data,error}=await access.supabase.from("gmp_repair_orders").update(base).eq("id",id).eq("organization_id",access.organization.id).select("*").single();
-        if(error)return json({error:error.message},400); void auditStage2(access,"merchant.repair.update","repair_order",data?.id ?? null,{status}); return json({success:true,row:data});
+      const access=await requirePermission("erp.write",["business"]);
+      const id=text(b.id,80);
+      const status=text(b.status,30)||"received";
+      const clientRef=text(b.client_ref,128);
+      const storeId=text(b.store_id,80);
+      if(!/^[A-Za-z0-9_-]{16,128}$/.test(clientRef))return json({error:"repair_client_ref_invalid"},400);
+      if(!isUuid(storeId))return json({error:"repair_store_required"},400);
+
+      if(!id){
+        if(status!=="received")return json({error:"invalid_repair_status"},400);
+        const customerId=text(b.customer_id,80);
+        const photoId=text(b.before_photo_document_id,80);
+        const weight=Number(b.weight_received_grams);
+        const amount=Number(b.amount);
+        const karat=text(b.karat,20);
+        if(!isUuid(customerId))return json({error:"repair_customer_required"},400);
+        if(!isUuid(photoId))return json({error:"repair_photo_required"},400);
+        if(!Number.isFinite(weight)||weight<=0)return json({error:"repair_weight_required"},400);
+        if(!Number.isFinite(amount)||amount<0)return json({error:"invalid_repair_amount"},400);
+        const {data:result,error}=await access.supabase.rpc("gmp_create_repair_intake",{
+          p_organization_id:access.organization.id,p_client_ref:clientRef,p_store_id:storeId,p_customer_id:customerId,
+          p_item_description:text(b.item_description,500),p_metal:text(b.metal,30),p_karat:karat,
+          p_weight_received_grams:weight,p_repair_type:text(b.repair_type,100),p_damage_description:text(b.damage_description,1200),
+          p_amount:amount,p_notes:text(b.notes,1500),p_before_photo_document_id:photoId
+        });
+        if(error)return json({error:error.message||"repair_intake_failed"},400);
+        const repairId=text(result?.repair_id,80);
+        if(!isUuid(repairId))return json({error:"repair_intake_result_invalid"},502);
+        const {data:row,error:rowError}=await access.supabase.from("gmp_repair_orders")
+          .select("id,store_id,branch_id,customer_id,repair_no,item_description,metal,karat,weight_received_grams,weight_delivered_grams,repair_type,status,amount,before_photo_path,after_photo_path,received_at,ready_at,delivered_at,created_at")
+          .eq("id",repairId).eq("organization_id",access.organization.id).maybeSingle();
+        if(rowError||!row)return json({error:"repair_intake_record_unavailable"},502);
+        if(!result?.idempotent)await recordAuditEvent({action:"merchant.repair.receive",organizationId:access.organization.id,userId:access.user.id,entityType:"repair_order",entityId:repairId,metadata:{status:row.status}});
+        return json({success:true,row,idempotent:result?.idempotent===true},result?.idempotent?200:201);
       }
-      const {data,error}=await access.supabase.from("gmp_repair_orders").insert({...base,organization_id:access.organization.id,created_by:access.user.id}).select("*").single();
-      if(error)return json({error:error.message},400); void auditStage2(access,"merchant.repair.create","repair_order",data?.id ?? null,{status}); return json({success:true,row:data},201);
+
+      if(!isUuid(id))return json({error:"repair_id_invalid"},400);
+      if(status==="in_repair"){
+        const workshopName=text(b.workshop_name,160);
+        if(!workshopName)return json({error:"repair_workshop_required"},400);
+        const {data:result,error}=await access.supabase.rpc("gmp_send_repair_to_workshop",{
+          p_organization_id:access.organization.id,p_repair_id:id,p_store_id:storeId,p_client_ref:clientRef,p_workshop_name:workshopName
+        });
+        if(error)return json({error:error.message||"repair_workshop_send_failed"},400);
+        const {data:row,error:rowError}=await access.supabase.from("gmp_repair_orders")
+          .select("id,store_id,branch_id,customer_id,repair_no,item_description,metal,karat,weight_received_grams,weight_delivered_grams,repair_type,status,amount,before_photo_path,after_photo_path,received_at,ready_at,delivered_at,created_at")
+          .eq("id",id).eq("organization_id",access.organization.id).maybeSingle();
+        if(rowError||!row)return json({error:"repair_workshop_record_unavailable"},502);
+        if(!result?.idempotent)await recordAuditEvent({action:"merchant.repair.workshop_sent",organizationId:access.organization.id,userId:access.user.id,entityType:"repair_order",entityId:id,metadata:{status:row.status,workshop_name:workshopName}});
+        return json({success:true,row,idempotent:result?.idempotent===true});
+      }
+
+      if(status==="ready"){
+        const photoId=text(b.after_photo_document_id,80);
+        const weight=Number(b.weight_delivered_grams);
+        const amount=Number(b.amount);
+        if(!isUuid(photoId))return json({error:"repair_photo_required"},400);
+        if(!Number.isFinite(weight)||weight<=0)return json({error:"repair_delivery_weight_required"},400);
+        if(!Number.isFinite(amount)||amount<0)return json({error:"invalid_repair_amount"},400);
+        const {data:result,error}=await access.supabase.rpc("gmp_mark_repair_ready",{
+          p_organization_id:access.organization.id,p_repair_id:id,p_store_id:storeId,
+          p_weight_delivered_grams:weight,p_amount:amount,p_after_photo_document_id:photoId,p_client_ref:clientRef
+        });
+        if(error)return json({error:error.message||"repair_ready_failed"},400);
+        const {data:row,error:rowError}=await access.supabase.from("gmp_repair_orders")
+          .select("id,store_id,branch_id,customer_id,repair_no,item_description,metal,karat,weight_received_grams,weight_delivered_grams,repair_type,status,amount,before_photo_path,after_photo_path,received_at,ready_at,delivered_at,created_at")
+          .eq("id",id).eq("organization_id",access.organization.id).maybeSingle();
+        if(rowError||!row)return json({error:"repair_ready_record_unavailable"},502);
+        let notification:any={queued:false,reason:"idempotent_replay"};
+        if(!result?.idempotent){
+          await recordAuditEvent({action:"merchant.repair.ready",organizationId:access.organization.id,userId:access.user.id,entityType:"repair_order",entityId:id,metadata:{status:row.status}});
+          const [{data:customer},{data:store}]=await Promise.all([
+            access.supabase.from("gmp_customers").select("phone").eq("id",row.customer_id).eq("organization_id",access.organization.id).maybeSingle(),
+            access.supabase.from("gmp_stores").select("name").eq("id",row.store_id).eq("organization_id",access.organization.id).maybeSingle()
+          ]);
+          notification=await queueCustomerWhatsApp({organizationId:access.organization.id,recipient:customer?.phone,kind:"repair_ready",parameters:[row.repair_no||id],metadata:{repair_id:id,store_name:store?.name||""}});
+        }
+        return json({success:true,row,notification,idempotent:result?.idempotent===true});
+      }
+
+      if(status==="delivered"){
+        const paymentMethod=text(b.payment_method,20)||"cash";
+        const {data:result,error}=await access.supabase.rpc("gmp_deliver_repair",{
+          p_organization_id:access.organization.id,p_repair_id:id,p_store_id:storeId,p_payment_method:paymentMethod,p_client_ref:clientRef
+        });
+        if(error)return json({error:error.message||"repair_delivery_failed"},400);
+        const {data:row,error:rowError}=await access.supabase.from("gmp_repair_orders")
+          .select("id,store_id,branch_id,customer_id,repair_no,item_description,metal,karat,weight_received_grams,weight_delivered_grams,repair_type,status,amount,before_photo_path,after_photo_path,received_at,ready_at,delivered_at,created_at")
+          .eq("id",id).eq("organization_id",access.organization.id).maybeSingle();
+        if(rowError||!row)return json({error:"repair_delivery_record_unavailable"},502);
+        if(!result?.idempotent)await recordAuditEvent({action:"merchant.repair.delivered",organizationId:access.organization.id,userId:access.user.id,entityType:"repair_order",entityId:id,metadata:{status:row.status,payment_method:paymentMethod}});
+        return json({success:true,row,idempotent:result?.idempotent===true});
+      }
+      return json({error:"invalid_repair_status_transition"},400);
     }
 
     if (action === "gold_purchase") {

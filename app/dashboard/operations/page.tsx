@@ -1,8 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { FormEvent, ReactNode } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { code128BModules } from "../../../lib/code128.js";
 
 type Data = {
   role: string; planCode: string; stores: any[]; branches: any[]; products: any[]; customers: any[]; suppliers: any[];
@@ -16,7 +18,20 @@ const tabs = [
 const money=(v:any)=>v==null||!Number.isFinite(Number(v))?"—":Number(v).toLocaleString("en-OM",{minimumFractionDigits:3,maximumFractionDigits:3});
 const num=(v:any)=>Number.isFinite(Number(v))?Number(v):0;
 const ROLE_LABELS:Record<string,string>={owner:"مالك",admin:"مدير",viewer:"مشاهد"};
-const STATUS_LABELS:Record<string,string>={draft:"مسودة",published:"منشور",suspended:"موقوف",new:"جديد",contacted:"تم التواصل",confirmed:"مؤكد",fulfilled:"مكتمل",cancelled:"ملغى",failed:"فشل",queued:"في الطابور",sending:"جارٍ الإرسال",submitted:"تم الإرسال",accepted:"مقبولة",rejected:"مرفوضة",active:"مفعّل",inactive:"غير مفعّل",LIVE:"مباشر",planned:"مخطط",ready:"جاهز",configured:"مُهيأ",disabled:"معطل"};
+const STATUS_LABELS:Record<string,string>={draft:"مسودة",published:"منشور",suspended:"موقوف",new:"جديد",contacted:"تم التواصل",confirmed:"مؤكد",fulfilled:"مكتمل",cancelled:"ملغى",failed:"فشل",queued:"في الطابور",sending:"جارٍ الإرسال",submitted:"تم الإرسال",accepted:"مقبولة",rejected:"مرفوضة",active:"مفعّل",inactive:"غير مفعّل",LIVE:"مباشر",planned:"مخطط",ready:"جاهز",received:"تم الاستلام",in_repair:"مع الورشة",delivered:"تم التسليم",configured:"مُهيأ",disabled:"معطل"};
+
+function Code128Barcode({value}:{value:string}){
+  const modules=code128BModules(value);
+  const bars:ReactNode[]=[];
+  let x=10,black=true;
+  for(let i=0;i<modules.length;i++){
+    const width=Number(modules[i]);
+    if(black)bars.push(<rect key={i} x={x} y="0" width={width} height="38" fill="#000"/>);
+    x+=width;black=!black;
+  }
+  return <svg className="barcode-svg" role="img" aria-label={"باركود "+value} viewBox={"0 0 "+(x+10)+" 38"} preserveAspectRatio="none">{bars}</svg>;
+}
+
 const AVAILABILITY_LABELS:Record<string,string>={in_stock:"متوفر",out_of_stock:"غير متوفر",backorder:"طلب مسبق"};
 function displayValue(column:string,value:any){
   if(value==null)return "—";
@@ -31,7 +46,7 @@ export default function OperationsPage(){
   const searchParams = useSearchParams();
   const requestedTab = searchParams.get("tab") || "overview";
   const initialTab=tabs.some(([key])=>key===requestedTab)?requestedTab:"overview";
-  const [tab,setTab]=useState(initialTab),[data,setData]=useState<Data|null>(null),[loading,setLoading]=useState(true),[message,setMessage]=useState(""),[busy,setBusy]=useState(false);
+  const [tab,setTab]=useState(initialTab),[data,setData]=useState<Data|null>(null),[loading,setLoading]=useState(true),[message,setMessage]=useState(""),[busy,setBusy]=useState(false),[barcodeLabel,setBarcodeLabel]=useState<any>(null);
   const [displayData,setDisplayData]=useState<any>(null),[team,setTeam]=useState<any>(null),[dooh,setDooh]=useState<any>(null),[directory,setDirectory]=useState<any[]>([]);
   const [storeId,setStoreId]=useState(""),[productId,setProductId]=useState(""),[qty,setQty]=useState("1"),[weight,setWeight]=useState("0"),[price,setPrice]=useState("0"),[payment,setPayment]=useState("cash");
   const get=useCallback(async(url:string)=>{const r=await fetch(url,{cache:"no-store"});const d=await r.json().catch(()=>null);if(!r.ok)throw new Error(d?.error||"request_failed");return d;},[]);
@@ -53,11 +68,22 @@ export default function OperationsPage(){
   useEffect(()=>{const id=window.setTimeout(()=>{void load();},0);return()=>window.clearTimeout(id);},[load]);
   useEffect(()=>{const id=window.setTimeout(()=>{void aux();},0);return()=>window.clearTimeout(id);},[aux]);
   const product=useMemo(()=>data?.products?.find(p=>p.id===productId),[data,productId]);
-  async function act(payload:any){setBusy(true);setMessage("");try{await post(payload);setMessage("تم حفظ العملية");await load();await aux();}catch(e){setMessage(e instanceof Error?e.message:"حدث خطأ");}finally{setBusy(false);}}
+  async function act(payload:any){setBusy(true);setMessage("");try{const result=await post(payload);setMessage(result?.notification?.queued===false?"تم تحديث الإصلاح، لكن تعذر إرسال إشعار واتساب: "+(result.notification.reason||"تحقق من رقم العميل أو إعدادات الإشعارات"):"تم حفظ العملية");await load();await aux();return result;}catch(e){setMessage(e instanceof Error?e.message:"حدث خطأ");return null;}finally{setBusy(false);}}
   if(loading)return <main className="stage2-page"><div className="stage2-empty">جارٍ تحميل مركز التشغيل…</div></main>;
   if(!data)return <main className="stage2-page"><div className="stage2-empty"><h1>مركز تشغيل التاجر</h1><p>{message||"يلزم تسجيل الدخول وخطة نشطة."}</p><Link href="/login?next=/dashboard/operations" className="btn btn-primary">تسجيل الدخول</Link></div></main>;
 
   const submitField=(id:string)=>{const el=document.getElementById(id) as HTMLInputElement|null;return el?.value||""};
+
+  function setProductLabel(p:any){
+    const store=data?.stores.find((x:any)=>x.id===p.store_id);
+    setBarcodeLabel({store:store?.name??"",name:p.name??"",sku:p.sku??"",karat:p.karat??"",weight:p.weight_grams??p.current_weight_grams??p.initial_weight??0,barcode:p.barcode??"",barcodeGenerated:p.barcode_generated===true});
+  }
+  async function createInventoryProduct(){
+    const productData={store_id:submitField("i-store"),name:submitField("i-name"),sku:submitField("i-sku"),barcode:submitField("i-barcode"),karat:submitField("i-karat"),category:submitField("i-cat"),price:num(submitField("i-price")),cost_price:num(submitField("i-cost")),making_charge:num(submitField("i-making")),initial_quantity:num(submitField("i-qty")),initial_weight:num(submitField("i-weight"))};
+    const result=await act({action:"product",...productData});
+    if(result?.barcode)setProductLabel({...productData,...result});
+  }
+
 
   return <main className="stage2-page">
     <header className="stage2-page-head">
@@ -97,10 +123,20 @@ export default function OperationsPage(){
     {tab==="inventory"&&<section id="stage2-panel-inventory" className="stage2-section" role="tabpanel" aria-labelledby="stage2-tab-inventory">
       <div className="stage2-form-grid">
         <label>المحل<select id="i-store">{data.stores.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
-        <label>اسم الصنف<input id="i-name" required/></label><label>SKU<input id="i-sku"/></label><label>الباركود<input id="i-barcode"/></label><label>العيار<input id="i-karat" defaultValue="21K"/></label><label>الفئة<input id="i-cat"/></label><label>السعر<input id="i-price" inputMode="decimal"/></label><label>التكلفة<input id="i-cost" inputMode="decimal"/></label><label>المصنعية<input id="i-making" inputMode="decimal"/></label><label>كمية افتتاحية<input id="i-qty" defaultValue="0" inputMode="decimal"/></label><label>وزن افتتاحي<input id="i-weight" defaultValue="0" inputMode="decimal"/></label>
+        <label>اسم الصنف<input id="i-name" required/></label><label>SKU<input id="i-sku"/></label><label>الباركود<input id="i-barcode" placeholder="اتركه فارغًا لتوليد باركود داخلي"/><small>لا يُعد رقم GS1 تجاريًا.</small></label><label>العيار<input id="i-karat" defaultValue="21K"/></label><label>الفئة<input id="i-cat"/></label><label>السعر<input id="i-price" inputMode="decimal"/></label><label>التكلفة<input id="i-cost" inputMode="decimal"/></label><label>المصنعية<input id="i-making" inputMode="decimal"/></label><label>كمية افتتاحية<input id="i-qty" defaultValue="0" inputMode="decimal"/></label><label>وزن افتتاحي<input id="i-weight" defaultValue="0" inputMode="decimal"/></label>
       </div>
-      <button className="btn btn-primary" disabled={busy} onClick={()=>void act({action:"product",store_id:submitField("i-store"),name:submitField("i-name"),sku:submitField("i-sku"),barcode:submitField("i-barcode"),karat:submitField("i-karat"),category:submitField("i-cat"),price:num(submitField("i-price")),cost_price:num(submitField("i-cost")),making_charge:num(submitField("i-making")),initial_quantity:num(submitField("i-qty")),initial_weight:num(submitField("i-weight"))})}>إضافة صنف</button>
-      <Table rows={data.products.slice(0,100)} columns={["sku","name","karat","current_quantity","current_weight_grams","cost_price","price"]} labels={["SKU","الصنف","العيار","الكمية","الوزن","التكلفة","السعر"]}/>
+      <button className="btn btn-primary" disabled={busy} onClick={()=>void createInventoryProduct()}>إضافة صنف</button>
+      <div className="stage2-table-wrap"><table><thead><tr><th>SKU</th><th>الصنف</th><th>العيار</th><th>الكمية</th><th>الوزن غ</th><th>الباركود</th><th>التكلفة</th><th>السعر</th><th></th></tr></thead><tbody>{data.products.slice(0,100).map((p:any)=><tr key={p.id}><td>{p.sku||"—"}</td><td>{p.name}</td><td>{p.karat||"—"}</td><td>{money(p.current_quantity)}</td><td>{money(p.current_weight_grams)}</td><td>{p.barcode||"—"}</td><td>{money(p.cost_price)}</td><td>{money(p.price)}</td><td><button className="btn" disabled={!p.barcode} onClick={()=>setProductLabel(p)}>طباعة ملصق</button></td></tr>)}</tbody></table></div>
+
+      {barcodeLabel&&<section className="stage2-panel barcode-print-root" aria-label="ملصق باركود للصنف">
+        <div className="barcode-label">
+          <strong>ARCANETIC Gold</strong><small>{barcodeLabel.store} · {barcodeLabel.karat||"عيار غير محدد"} · {money(barcodeLabel.weight)} غ</small>
+          <b>{barcodeLabel.name}</b>{barcodeLabel.sku&&<small>SKU {barcodeLabel.sku}</small>}
+          <Code128Barcode value={barcodeLabel.barcode}/>
+          <span className="barcode-human">{barcodeLabel.barcode}</span>
+        </div>
+        <div className="barcode-print-controls"><button className="btn btn-primary" onClick={()=>window.print()}>طباعة الملصق</button><button className="btn" onClick={()=>setBarcodeLabel(null)}>إغلاق</button><small>باركود Code 128 داخلي للمحل؛ اختبر حجم الملصق والماسح والطابعة قبل الطباعة الكمية.</small></div>
+      </section>}
     </section>}
 
     {tab==="purchases"&&<section id="stage2-panel-purchases" className="stage2-section" role="tabpanel" aria-labelledby="stage2-tab-purchases">
@@ -124,8 +160,8 @@ export default function OperationsPage(){
     </section>}
 
     {tab==="repairs"&&<section id="stage2-panel-repairs" className="stage2-section" role="tabpanel" aria-labelledby="stage2-tab-repairs">
-      <SimpleForm title="استلام إصلاح" fields={["item_description","metal","karat","weight_received_grams","repair_type","amount","notes"]} submit={async f=>act({action:"repair",item_description:f.item_description,metal:f.metal,karat:f.karat,weight_received_grams:num(f.weight_received_grams),repair_type:f.repair_type,amount:num(f.amount),notes:f.notes})}/>
-      <Table rows={data.repairs.slice(0,80)} columns={["repair_no","item_description","weight_received_grams","status","amount"]} labels={["#","القطعة","الوزن","الحالة","المبلغ"]}/>
+      <RepairWorkspace stores={data.stores} customers={data.customers} repairs={data.repairs}
+        onCreate={(payload:any)=>act(payload)} onCreateCustomer={(payload:any)=>act(payload)} onSend={(payload:any)=>act(payload)} onReady={(payload:any)=>act(payload)} onDeliver={(payload:any)=>act(payload)} busy={busy}/>
     </section>}
 
     {tab==="buy-gold"&&<section id="stage2-panel-buy-gold" className="stage2-section" role="tabpanel" aria-labelledby="stage2-tab-buy-gold">
@@ -184,6 +220,155 @@ const FIELD_LABELS: Record<string,string> = {
   priority:"الأولوية", weight:"الوزن", supplier_id:"المورد", invoice_no:"رقم الفاتورة", raw_description:"وصف الصنف",
   quantity:"الكمية", unit_cost:"تكلفة الوحدة", making_charge:"المصنعية", risk_level:"مستوى المخاطر",
 };
+
+function repairHtml(value:any){return String(value??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");}
+
+function RepairWorkspace({stores,customers,repairs,onCreate,onCreateCustomer,onSend,onReady,onDeliver,busy}:{stores:any[];customers:any[];repairs:any[];onCreate:(v:any)=>Promise<any>;onCreateCustomer:(v:any)=>Promise<any>;onSend:(v:any)=>Promise<any>;onReady:(v:any)=>Promise<any>;onDeliver:(v:any)=>Promise<any>;busy:boolean}){
+  const [storeId,setStoreId]=useState(stores[0]?.id||"");
+  const [customerId,setCustomerId]=useState("");
+  const [showCustomerForm,setShowCustomerForm]=useState(false);
+  const [message,setMessage]=useState("");
+  const [working,setWorking]=useState(false);
+  const [lastReceipt,setLastReceipt]=useState<any>(null);
+  const [sendId,setSendId]=useState("");
+  const [readyId,setReadyId]=useState("");
+  const [photoUrls,setPhotoUrls]=useState<Record<string,string>>({});
+  const operationRefs=useRef<Record<string,string>>({});
+  const operationPhotos=useRef<Record<string,string>>({});
+  function operationRef(key:string){if(!operationRefs.current[key])operationRefs.current[key]=crypto.randomUUID();return operationRefs.current[key];}
+  const store=stores.find(s=>s.id===storeId)||stores[0];
+  const branchCustomers=customers.filter(c=>!store?.branch_id||!c.branch_id||c.branch_id===store.branch_id);
+
+  async function uploadPhoto(file:File,branchId:string|null){
+    const form=new FormData();form.set("action","upload");form.set("document_type","repair_photo");form.set("file",file);if(branchId)form.set("branch_id",branchId);
+    const response=await fetch("/api/merchant/documents",{method:"POST",body:form});
+    const result=await response.json().catch(()=>null);
+    if(!response.ok||!result?.document?.id)throw new Error(result?.error||"تعذر رفع الصورة");
+    return result.document.id as string;
+  }
+  function printReceipt(row:any){
+    if(!row)return;
+    const shop=stores.find(s=>s.id===row.store_id)||{};
+    const customer=customers.find(c=>c.id===row.customer_id)||{};
+    const win=window.open("","_blank","width=720,height=800");
+    if(!win){setMessage("اسمح بفتح نافذة الإيصال للطباعة.");return;}
+    const html="<!doctype html><html lang='ar' dir='rtl'><head><meta charset='utf-8'><title>إيصال إصلاح "+repairHtml(row.repair_no)+"</title><style>body{font-family:Arial,sans-serif;padding:30px;color:#15212b}main{max-width:620px;margin:auto;border:1px solid #d9e0e4;border-radius:16px;padding:28px}.logo{width:210px;display:block;margin:0 auto 18px}.head{text-align:center;border-bottom:1px solid #d9e0e4;padding-bottom:18px}.number{font-size:26px;font-weight:800;letter-spacing:1px}.row{display:flex;justify-content:space-between;gap:20px;padding:11px 0;border-bottom:1px solid #edf0f2}.label{color:#62717d}.note{text-align:center;margin-top:24px;color:#62717d;font-size:12px}@media print{body{padding:0}main{border:0}}</style></head><body><main><div class='head'><img class='logo' src='/brand/arcanetic-gold.png' alt='ARCANETIC Gold'><h1>"+repairHtml(shop.name||"المحل")+"</h1><div>إيصال استلام إصلاح</div><div class='number'>"+repairHtml(row.repair_no||row.id)+"</div></div><div class='row'><span class='label'>العميل</span><strong>"+repairHtml(customer.name||"—")+"</strong></div><div class='row'><span class='label'>الهاتف</span><strong>"+repairHtml(customer.phone||"—")+"</strong></div><div class='row'><span class='label'>القطعة</span><strong>"+repairHtml(row.item_description)+"</strong></div><div class='row'><span class='label'>العيار / المعدن</span><strong>"+repairHtml(row.karat||"—")+" / "+repairHtml(row.metal||"—")+"</strong></div><div class='row'><span class='label'>وزن الاستلام</span><strong>"+repairHtml(row.weight_received_grams)+" غرام</strong></div><div class='row'><span class='label'>"+(row.status==="ready"||row.status==="delivered"?"رسوم الإصلاح":"رسوم تقديرية")+"</span><strong>"+repairHtml(money(row.amount))+" OMR</strong></div><div class='row'><span class='label'>تاريخ الاستلام</span><strong>"+repairHtml(row.received_at?new Date(row.received_at).toLocaleString("ar-OM"):new Date().toLocaleString("ar-OM"))+"</strong></div><div class='note'>احتفظ بهذا الرقم لمتابعة الإصلاح. الوزن المسجل يدويًا. القطعة أمانة للعميل وليست من مخزون المحل.</div></main><script>window.onload=function(){window.print()}</script></body></html>";
+    win.document.open();win.document.write(html);win.document.close();
+  }
+  async function createCustomer(e:FormEvent<HTMLFormElement>){
+    e.preventDefault();setWorking(true);setMessage("");
+    try{
+      const values=new FormData(e.currentTarget);const name=String(values.get("customer_name")||"").trim();const phone=String(values.get("customer_phone")||"").trim();
+      const result=await onCreateCustomer({action:"customer",branch_id:store?.branch_id||"",name,phone,phone_normalized:phone.replace(/[^0-9+]/g,""),language:"ar"});
+      if(!result?.success||!result?.row?.id)throw new Error("تعذر حفظ ملف العميل");
+      setCustomerId(result.row.id);setShowCustomerForm(false);setMessage("تم إنشاء ملف العميل وربطه بطلب الإصلاح.");
+    }catch(error){setMessage(error instanceof Error?error.message:"تعذر إنشاء ملف العميل");}
+    finally{setWorking(false);}
+  }
+  async function create(e:FormEvent<HTMLFormElement>){
+    e.preventDefault();setWorking(true);setMessage("");
+    try{
+      if(!store?.id)throw new Error("اختر المحل أولًا");
+      if(!customerId)throw new Error("اختر العميل أولًا");
+      const form=e.currentTarget;const values=new FormData(form);const file=values.get("before_photo");
+      if(!(file instanceof File)||file.size===0)throw new Error("صورة القطعة قبل الإصلاح مطلوبة");
+      const photoId=operationPhotos.current["intake"]||await uploadPhoto(file,store.branch_id||null);operationPhotos.current["intake"]=photoId;
+      const result=await onCreate({action:"repair",status:"received",client_ref:operationRef("intake"),store_id:store.id,customer_id:customerId,item_description:String(values.get("item_description")||""),metal:String(values.get("metal")||""),karat:String(values.get("karat")||""),weight_received_grams:String(values.get("weight_received_grams")||""),repair_type:String(values.get("repair_type")||""),damage_description:String(values.get("damage_description")||""),amount:String(values.get("amount")||"0"),notes:String(values.get("notes")||""),before_photo_document_id:photoId});
+      if(!result?.success||!result?.row)throw new Error("لم يتم حفظ الإصلاح؛ راجع رسالة النظام");
+      setLastReceipt(result.row);delete operationRefs.current["intake"];delete operationPhotos.current["intake"];setMessage("تم تسجيل الإصلاح. رقم الإيصال: "+(result.row.repair_no||result.row.id));form.reset();setCustomerId("");
+    }catch(error){setMessage(error instanceof Error?error.message:"تعذر تسجيل الإصلاح");}
+    finally{setWorking(false);}
+  }
+  async function sendToWorkshop(e:FormEvent<HTMLFormElement>,row:any){
+    e.preventDefault();setWorking(true);setMessage("");
+    try{
+      const values=new FormData(e.currentTarget);
+      const result=await onSend({action:"repair",status:"in_repair",id:row.id,store_id:row.store_id||store?.id,client_ref:operationRef("send:"+row.id),workshop_name:String(values.get("workshop_name")||"")});
+      if(!result?.success)throw new Error("تعذر تسجيل إرسال القطعة للورشة");
+      setSendId("");delete operationRefs.current["send:"+row.id];setMessage("سُجل إرسال القطعة إلى الورشة.");
+    }catch(error){setMessage(error instanceof Error?error.message:"تعذر إرسال القطعة للورشة");}
+    finally{setWorking(false);}
+  }
+  async function markReady(e:FormEvent<HTMLFormElement>,row:any){
+    e.preventDefault();setWorking(true);setMessage("");
+    try{
+      const form=e.currentTarget;const values=new FormData(form);const file=values.get("after_photo");
+      if(!(file instanceof File)||file.size===0)throw new Error("صورة القطعة بعد الإصلاح مطلوبة");
+      const photoKey="ready:"+row.id;const photoId=operationPhotos.current[photoKey]||await uploadPhoto(file,row.branch_id||store?.branch_id||null);operationPhotos.current[photoKey]=photoId;
+      const result=await onReady({action:"repair",status:"ready",id:row.id,store_id:row.store_id||store?.id,client_ref:operationRef("ready:"+row.id),weight_delivered_grams:String(values.get("weight_delivered_grams")||""),amount:String(values.get("amount")||"0"),after_photo_document_id:photoId});
+      if(!result?.success)throw new Error("تعذر تحديث حالة الإصلاح");
+      setReadyId("");delete operationRefs.current["ready:"+row.id];delete operationPhotos.current["ready:"+row.id];setMessage("عاد الإصلاح من الورشة وأصبح جاهزًا. تم طلب إرسال إشعار واتساب للعميل.");
+    }catch(error){setMessage(error instanceof Error?error.message:"تعذر تحديث الإصلاح");}
+    finally{setWorking(false);}
+  }
+  async function deliver(e:FormEvent<HTMLFormElement>,row:any){
+    e.preventDefault();if(!window.confirm("تأكيد تسليم القطعة للعميل؟"))return;
+    setWorking(true);setMessage("");
+    try{
+      const values=new FormData(e.currentTarget);
+      const result=await onDeliver({action:"repair",status:"delivered",id:row.id,store_id:row.store_id||store?.id,client_ref:operationRef("deliver:"+row.id),payment_method:String(values.get("payment_method")||"cash")});
+      if(!result?.success)throw new Error("تعذر إتمام التسليم");
+      delete operationRefs.current["deliver:"+row.id];setMessage("تم تسجيل التسليم والتحصيل.");
+    }catch(error){setMessage(error instanceof Error?error.message:"تعذر تسليم القطعة");}
+    finally{setWorking(false);}
+  }
+  async function preparePhoto(path:string){
+    setWorking(true);setMessage("");
+    try{
+      const response=await fetch("/api/merchant/documents?action=signed_url&storage_path="+encodeURIComponent(path),{cache:"no-store"});
+      const result=await response.json().catch(()=>null);
+      if(!response.ok||!result?.url)throw new Error(result?.error||"تعذر فتح الصورة");
+      setPhotoUrls(current=>({...current,[path]:result.url}));
+    }catch(error){setMessage(error instanceof Error?error.message:"تعذر فتح الصورة");}
+    finally{setWorking(false);}
+  }
+  return <div className="stage2-repairs">
+    <div className="stage2-panel stage2-repair-info"><div><div className="eyebrow">دورة القطعة</div><h2>استلام موثّق حتى التسليم</h2><p>كل استلام وإرسال للورشة وعودة وتسليم يسجَّل في دفتر عهدة مستقل لقطعة العميل، بعيدًا عن مخزون الذهب التجاري. قطعة العميل تُسجّل في دفتر عهدة مستقل عن مخزون الذهب المملوك للمحل. الوزن يُدخل يدويًا حاليًا، ويمكن إضافة تكامل ميزان بعد تحديد الجهاز وواجهته.</p></div><span className="stage2-badge">صور خاصة بالمؤسسة</span></div>
+    <section className="stage2-panel stage2-repair-customer">
+      <div className="stage2-panel-head"><div><div className="eyebrow">ملف العميل</div><h2>اختيار أو إضافة العميل</h2></div><button className="btn" type="button" onClick={()=>setShowCustomerForm(!showCustomerForm)}>{showCustomerForm?"إغلاق":"إضافة عميل جديد"}</button></div>
+      {showCustomerForm&&<form className="stage2-repair-customer-form" onSubmit={e=>void createCustomer(e)}><label>اسم العميل<input name="customer_name" maxLength={150} required /></label><label>رقم الهاتف مع رمز الدولة<input name="customer_phone" type="tel" maxLength={60} required /></label><button className="btn btn-primary" type="submit" disabled={working||busy}>حفظ ملف العميل</button></form>}
+    </section>
+    <form className="stage2-panel stage2-repair-form" onSubmit={create}>
+      <div className="stage2-panel-head"><div><div className="eyebrow">استلام إصلاح</div><h2>فتح طلب جديد</h2></div><span className="stage2-badge">صورة مطلوبة</span></div>
+      <div className="stage2-repair-form-grid">
+        <label>المحل<select value={store?.id||""} onChange={e=>setStoreId(e.target.value)} required>{stores.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
+        <label>العميل<select value={customerId} onChange={e=>setCustomerId(e.target.value)} required><option value="">اختر عميلًا مسجلًا</option>{branchCustomers.map(c=><option key={c.id} value={c.id}>{c.name}{c.phone?" · "+c.phone:""}</option>)}</select></label>
+        <label>وصف القطعة<input name="item_description" required maxLength={500} /></label>
+        <label>المعدن<select name="metal" defaultValue="gold" required><option value="gold">ذهب</option></select></label>
+        <label>عيار الذهب<input name="karat" type="number" min="1" max="24" step="0.1" required /></label>
+        <label>الوزن عند الاستلام (غرام، يدوي)<input name="weight_received_grams" type="number" min="0.001" step="0.001" required /></label>
+        <label>نوع الإصلاح<input name="repair_type" required maxLength={100} /></label>
+        <label>الموعد المتوقع (ملاحظة)<input name="notes" maxLength={1500} /></label>
+        <label className="stage2-repair-wide">وصف الضرر أو ملاحظات الورشة<textarea name="damage_description" rows={2} maxLength={1200} /></label>
+        <label>رسوم تقديرية (OMR)<input name="amount" type="number" min="0" step="0.001" defaultValue="0" /></label>
+        <label>صورة القطعة قبل الإصلاح<input name="before_photo" type="file" accept="image/*" capture="environment" required /></label>
+      </div>
+      {stores.length===0&&<p role="alert">أضف محلًا أولًا من إعدادات المؤسسة.</p>}
+      {customers.length===0&&<p role="alert">أضف العميل من بطاقة ملف العميل قبل فتح طلب الإصلاح.</p>}
+      <button className="btn btn-primary" type="submit" disabled={working||busy||!stores.length||!branchCustomers.length}>{working||busy?"جارٍ الحفظ…":"تسجيل الإصلاح وإصدار إيصال"}</button>
+      {lastReceipt&&<button className="btn" type="button" onClick={()=>printReceipt(lastReceipt)}>طباعة إيصال {lastReceipt.repair_no||lastReceipt.id}</button>}
+    </form>
+    {message&&<div className="stage2-alert" role="status">{message}</div>}
+    <div className="stage2-panel"><div className="stage2-panel-head"><h2>طلبات الإصلاح</h2><span className="stage2-badge">{repairs.length}</span></div>
+      <div className="stage2-table-wrap"><table><thead><tr><th>رقم الإيصال</th><th>العميل</th><th>القطعة</th><th>وزن الاستلام</th><th>الحالة</th><th>الصور</th><th>الإجراء</th></tr></thead><tbody>
+        {repairs.map((row:any)=><tr key={row.id}>
+          <td>{row.repair_no||row.id}</td><td>{customers.find(c=>c.id===row.customer_id)?.name||"—"}</td><td>{row.item_description}<small>{row.karat?row.karat+" عيار":""}</small></td><td>{row.weight_received_grams} غ</td><td>{displayValue("status",row.status)}</td>
+          <td><div className="stage2-repair-photo-links">{row.before_photo_path&&<><button className="btn" type="button" disabled={working} onClick={()=>void preparePhoto(row.before_photo_path)}>{photoUrls[row.before_photo_path]?"تحديث رابط صورة الاستلام":"عرض صورة الاستلام"}</button>{photoUrls[row.before_photo_path]&&<a href={photoUrls[row.before_photo_path]} target="_blank" rel="noreferrer">فتح الصورة</a>}</>}{row.after_photo_path&&<><button className="btn" type="button" disabled={working} onClick={()=>void preparePhoto(row.after_photo_path)}>{photoUrls[row.after_photo_path]?"تحديث رابط صورة الإنجاز":"عرض صورة الإنجاز"}</button>{photoUrls[row.after_photo_path]&&<a href={photoUrls[row.after_photo_path]} target="_blank" rel="noreferrer">فتح الصورة</a>}</>}</div></td>
+          <td><div className="stage2-repair-actions">
+            <button className="btn" type="button" onClick={()=>printReceipt(row)}>الإيصال</button>
+            {row.store_id&&row.status==="received"&&<button className="btn btn-primary" type="button" onClick={()=>setSendId(sendId===row.id?"":row.id)}>إرسال للورشة</button>}
+            {row.store_id&&row.status==="in_repair"&&<button className="btn btn-primary" type="button" onClick={()=>setReadyId(readyId===row.id?"":row.id)}>استلام من الورشة</button>}
+            {row.store_id&&row.status==="ready"&&<form className="stage2-repair-deliver" onSubmit={e=>void deliver(e,row)}><select name="payment_method" aria-label="طريقة تحصيل رسوم الإصلاح"><option value="cash">نقدًا</option><option value="bank">تحويل بنكي</option><option value="card">بطاقة</option><option value="wallet">محفظة</option><option value="other">أخرى</option></select><button className="btn btn-primary" type="submit" disabled={working||busy}>تسليم وتحصيل</button></form>}
+          </div>
+          {!row.store_id&&<small>هذا الطلب قديم أو غير مربوط بمحل؛ يحتاج مراجعته قبل متابعة حركة العهدة.</small>}
+          {sendId===row.id&&row.store_id&&row.status==="received"&&<form className="stage2-repair-ready-form" onSubmit={e=>void sendToWorkshop(e,row)}><label>اسم الورشة<input name="workshop_name" maxLength={160} required /></label><button className="btn btn-primary" type="submit" disabled={working||busy}>تأكيد الإرسال للورشة</button></form>}
+          {readyId===row.id&&row.store_id&&row.status==="in_repair"&&<form className="stage2-repair-ready-form" onSubmit={e=>void markReady(e,row)}><label>وزن ما بعد الإصلاح (غ)<input name="weight_delivered_grams" type="number" min="0.001" step="0.001" defaultValue={row.weight_received_grams} required /></label><label>رسوم الإصلاح النهائية (OMR)<input name="amount" type="number" min="0" step="0.001" defaultValue={row.amount||0} required /></label><label>صورة بعد الإصلاح وقبل التسليم<input name="after_photo" type="file" accept="image/*" capture="environment" required /></label><button className="btn btn-primary" type="submit" disabled={working||busy}>تأكيد العودة والجاهزية وإشعار العميل</button></form>}
+          </td>
+        </tr>)}
+      </tbody></table></div>
+    </div>
+  </div>;
+}
 
 function SimpleForm({title,fields,submit}:{title:string;fields:string[];submit:(f:any)=>Promise<void>|void}){
   const requiredFields = new Set(["name","title","advertiser_name","seller_name","seller_phone","identity_document_path","item_description","weight_received_grams","purchase_price","category","amount"]);
