@@ -17,7 +17,7 @@ const tabs = [
 const money=(v:any)=>v==null||!Number.isFinite(Number(v))?"—":Number(v).toLocaleString("en-OM",{minimumFractionDigits:3,maximumFractionDigits:3});
 const num=(v:any)=>Number.isFinite(Number(v))?Number(v):0;
 const ROLE_LABELS:Record<string,string>={owner:"مالك",admin:"مدير",viewer:"مشاهد"};
-const STATUS_LABELS:Record<string,string>={draft:"مسودة",published:"منشور",suspended:"موقوف",new:"جديد",contacted:"تم التواصل",confirmed:"مؤكد",fulfilled:"مكتمل",cancelled:"ملغى",failed:"فشل",queued:"في الطابور",sending:"جارٍ الإرسال",submitted:"تم الإرسال",accepted:"مقبولة",rejected:"مرفوضة",active:"مفعّل",inactive:"غير مفعّل",LIVE:"مباشر",planned:"مخطط",ready:"جاهز",received:"تم الاستلام",in_repair:"مع الورشة",delivered:"تم التسليم",cancelled:"ملغى",configured:"مُهيأ",disabled:"معطل"};
+const STATUS_LABELS:Record<string,string>={draft:"مسودة",published:"منشور",suspended:"موقوف",new:"جديد",contacted:"تم التواصل",confirmed:"مؤكد",fulfilled:"مكتمل",cancelled:"ملغى",failed:"فشل",queued:"في الطابور",sending:"جارٍ الإرسال",submitted:"تم الإرسال",accepted:"مقبولة",rejected:"مرفوضة",active:"مفعّل",inactive:"غير مفعّل",LIVE:"مباشر",planned:"مخطط",ready:"جاهز",received:"تم الاستلام",in_repair:"مع الورشة",delivered:"تم التسليم",configured:"مُهيأ",disabled:"معطل"};
 const AVAILABILITY_LABELS:Record<string,string>={in_stock:"متوفر",out_of_stock:"غير متوفر",backorder:"طلب مسبق"};
 function displayValue(column:string,value:any){
   if(value==null)return "—";
